@@ -98,7 +98,7 @@ esac
 
 case "${targ}" in
 *-*-freebsd* | *-*-kfreebsd*-gnu)
-	os_obs="fbsd-tdep.o solib-svr4.o";;
+	os_obs="fbsd-tdep.o solib-svr4.o fbsd-kld.o fbsd-kthr.o";;
 *-*-netbsd* | *-*-knetbsd*-gnu)
 	os_obs="nbsd-tdep.o solib-svr4.o";;
 *-*-openbsd*)
@@ -115,7 +115,7 @@ aarch64*-*-elf | aarch64*-*-rtems*)
 
 aarch64*-*-freebsd*)
 	# Target: FreeBSD/aarch64
-	gdb_target_obs="aarch64-fbsd-tdep.o"
+	gdb_target_obs="aarch64-fbsd-tdep.o aarch64-fbsd-kern.o"
 	;;
 
 aarch64*-*-linux*)
@@ -168,7 +168,7 @@ arm*-*-linux*)
 	;;
 arm*-*-freebsd*)
 	# Target: FreeBSD/arm
-	gdb_target_obs="arm-fbsd-tdep.o"
+	gdb_target_obs="arm-fbsd-tdep.o arm-fbsd-kern.o"
 	;;
 arm*-*-netbsd* | arm*-*-knetbsd*-gnu)
 	# Target: NetBSD/arm
@@ -267,7 +267,11 @@ i[34567]86-*-dicos*)
 	;;
 i[34567]86-*-freebsd* | i[34567]86-*-kfreebsd*-gnu)
 	# Target: FreeBSD/i386
-	gdb_target_obs="i386-bsd-tdep.o i386-fbsd-tdep.o "
+	gdb_target_obs="i386-bsd-tdep.o i386-fbsd-tdep.o i386fbsd-kern.o"
+	if test "x$enable_64_bit_bfd" = "xyes"; then
+	    # Target: FreeBSD amd64
+	    gdb_target_obs="amd64fbsd-tdep.o amd64fbsd-kern.o ${gdb_target_obs}"
+	fi
 	;;
 i[34567]86-*-netbsd* | i[34567]86-*-knetbsd*-gnu)
 	# Target: NetBSD/i386
@@ -421,7 +425,7 @@ mips*-*-netbsd* | mips*-*-knetbsd*-gnu)
 	;;
 mips*-*-freebsd*)
 	# Target: MIPS running FreeBSD
-	gdb_target_obs="mips-tdep.o mips-fbsd-tdep.o"
+	gdb_target_obs="mips-tdep.o mips-fbsd-tdep.o mipsfbsd-kern.o"
 	gdb_sim=../sim/mips/libsim.a
 	;;
 mips64*-*-openbsd*)
@@ -488,7 +492,7 @@ or1k-*-* | or1knd-*-*)
 powerpc*-*-freebsd*)
 	# Target: FreeBSD/powerpc
 	gdb_target_obs="rs6000-tdep.o ppc-sysv-tdep.o ppc64-tdep.o \
-		        ppc-fbsd-tdep.o \
+		        ppc-fbsd-tdep.o ppcfbsd-kern.o \
 			ravenscar-thread.o ppc-ravenscar-thread.o"
 	;;
 
@@ -622,6 +626,7 @@ sparc64-*-linux*)
 sparc*-*-freebsd* | sparc*-*-kfreebsd*-gnu)
 	# Target: FreeBSD/sparc64
 	gdb_target_obs="sparc-tdep.o sparc64-tdep.o sparc64-fbsd-tdep.o \
+			sparc64fbsd-kern.o \
 			ravenscar-thread.o sparc-ravenscar-thread.o"
 	;;
 sparc-*-netbsd* | sparc-*-knetbsd*-gnu)
@@ -749,8 +754,8 @@ x86_64-*-linux*)
 	;;
 x86_64-*-freebsd* | x86_64-*-kfreebsd*-gnu)
 	# Target: FreeBSD/amd64
-	gdb_target_obs="amd64-fbsd-tdep.o ${i386_tobjs} \
-			i386-bsd-tdep.o i386-fbsd-tdep.o"
+	gdb_target_obs="amd64-fbsd-tdep.o amd64fbsd-kern.o ${i386_tobjs} \
+			i386-bsd-tdep.o i386-fbsd-tdep.o i386fbsd-kern.o"
 	;;
 x86_64-*-mingw* | x86_64-*-cygwin*)
         # Target: MingW/amd64
