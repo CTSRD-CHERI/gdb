@@ -126,8 +126,45 @@ mips_fbsd_nat_target::store_registers (struct regcache *regcache, int regnum)
     }
 }
 
+#ifdef PT_GETQTRACE
+#include "gdbcmd.h"
+
+static  struct cmd_list_element *qtrace_cmdlist = NULL;
+
+static void
+cmd_qtrace_start (char *args, int from_tty)
+{
+  if (ptrace (PT_SETQTRACE, get_ptrace_pid (inferior_ptid), NULL, 1)
+      == -1)
+    perror_with_name (_("Couldn't enable qtrace"));
+}
+
+static void
+cmd_qtrace_stop (char *args, int from_tty)
+{
+  if (ptrace (PT_SETQTRACE, get_ptrace_pid (inferior_ptid), NULL, 0)
+      == -1)
+    perror_with_name (_("Couldn't disable qtrace"));
+}
+
+static void
+add_qtrace_commands (void)
+{
+  add_prefix_cmd ("qtrace", class_obscure, cmd_qtrace_start,
+		  _("Start tracing."), &qtrace_cmdlist, "qtrace ", 0,
+		  &cmdlist);
+
+  add_cmd ("stop", class_obscure, cmd_qtrace_stop, _("Stop tracing."),
+	   &qtrace_cmdlist);
+}
+#endif
+
 void
 _initialize_mips_fbsd_nat (void)
 {
   add_inf_child_target (&the_mips_fbsd_nat_target);
+
+#ifdef PT_GETQTRACE
+  add_qtrace_commands ();
+#endif
 }
