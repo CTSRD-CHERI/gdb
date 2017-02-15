@@ -672,14 +672,25 @@ scan_dyntag (const int desired_dyntag, bfd *abfd, CORE_ADDR *ptr,
 	    entry.  */
 	 if (ptr)
 	   {
+#if 0
 	     struct type *ptr_type;
+#else
+	     enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
+#endif
 	     gdb_byte ptr_buf[8];
 	     CORE_ADDR ptr_addr_1;
 
+#if 0
 	     ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
+#endif
 	     ptr_addr_1 = dyn_addr + (buf - bufstart) + arch_size / 8;
 	     if (target_read_memory (ptr_addr_1, ptr_buf, arch_size / 8) == 0)
+#if 0
 	       dyn_ptr = extract_typed_address (ptr_buf, ptr_type);
+#else
+	       dyn_ptr = extract_unsigned_integer (ptr_buf, arch_size / 8,
+						   byte_order);
+#endif
 	     *ptr = dyn_ptr;
 	     if (ptr_addr)
 	       *ptr_addr = dyn_addr + (buf - bufstart);
@@ -781,6 +792,7 @@ elf_locate_base (void)
   if (scan_dyntag (DT_MIPS_RLD_MAP, exec_bfd, &dyn_ptr, NULL)
       || scan_dyntag_auxv (DT_MIPS_RLD_MAP, &dyn_ptr, NULL))
     {
+#if 0
       struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
       gdb_byte *pbuf;
       int pbuf_size = TYPE_LENGTH (ptr_type);
@@ -791,6 +803,18 @@ elf_locate_base (void)
       if (target_read_memory (dyn_ptr, pbuf, pbuf_size))
 	return 0;
       return extract_typed_address (pbuf, ptr_type);
+#else
+      enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
+      gdb_byte *pbuf;
+      int pbuf_size = gdbarch_addr_bit (target_gdbarch ()) / TARGET_CHAR_BIT;
+
+      pbuf = (gdb_byte *) alloca (pbuf_size);
+      /* DT_MIPS_RLD_MAP contains an address of the address
+	 of the dynamic link structure.  */
+      if (target_read_memory (dyn_ptr, pbuf, pbuf_size))
+	return 0;
+      return extract_unsigned_integer (pbuf, pbuf_size, byte_order);
+#endif
     }
 
   /* Then check DT_MIPS_RLD_MAP_REL.  MIPS executables now use this form
@@ -3059,7 +3083,7 @@ svr4_clear_solib (void)
 static CORE_ADDR
 svr4_truncate_ptr (CORE_ADDR addr)
 {
-  if (gdbarch_ptr_bit (target_gdbarch ()) == sizeof (CORE_ADDR) * 8)
+  if (gdbarch_ptr_bit (target_gdbarch ()) >= sizeof (CORE_ADDR) * 8)
     /* We don't need to truncate anything, and the bit twiddling below
        will fail due to overflow problems.  */
     return addr;
