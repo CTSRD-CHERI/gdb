@@ -10118,6 +10118,9 @@ elfcore_grok_freebsd_note (bfd *abfd, Elf_Internal_Note *note)
 	return TRUE;
       }
 
+    case NT_FREEBSD_CAPREGS:
+      return elfcore_make_note_pseudosection (abfd, ".reg-cap", note);
+
     case NT_X86_XSTATE:
       if (note->namesz == 8)
 	return elfcore_grok_xstatereg (abfd, note);
