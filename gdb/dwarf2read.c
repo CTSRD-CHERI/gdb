@@ -16848,6 +16848,9 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
   attr_byte_size = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr_byte_size)
     byte_size = DW_UNSND (attr_byte_size);
+  /* XXX: CHERI Hack. */
+  else if (gdbarch_ptr_bit (gdbarch) >= 128)
+    byte_size = gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT;
   else
     byte_size = cu_header->addr_size;
 
