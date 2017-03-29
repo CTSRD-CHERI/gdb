@@ -1923,6 +1923,14 @@ decode_frame_entry_1 (struct comp_unit *unit, const gdb_byte *start,
 	  cie->return_address_register = uleb128;
 	}
 
+      /*
+       * XXX: Gross, vile hack until CIE in purecap binaries is fixed.
+       */
+      if ((gdbarch_ptr_bit (gdbarch) == 128
+	   || gdbarch_ptr_bit (gdbarch) == 256)
+	  && cie->return_address_register == 31)
+	cie->return_address_register = 72 + 17;
+
       cie->return_address_register
 	= dwarf2_frame_adjust_regnum (gdbarch,
 				      cie->return_address_register,
