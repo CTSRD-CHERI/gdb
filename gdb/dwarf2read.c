@@ -14920,7 +14920,8 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
 
       /* Get bit size of field (zero if none).  */
       attr = dwarf2_attr (die, DW_AT_bit_size, cu);
-      if (attr)
+      if (attr
+	  && !(TYPE_CODE (check_typedef (fp->type)) == TYPE_CODE_PTR))
 	{
 	  FIELD_BITSIZE (*fp) = DW_UNSND (attr);
 	}
