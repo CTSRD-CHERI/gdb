@@ -580,6 +580,7 @@ gdbarch_from_bfd (bfd *abfd)
   gdbarch_info_init (&info);
 
   info.abfd = abfd;
+  info.target_desc = target_current_description ();
   return gdbarch_find_by_info (info);
 }
 
