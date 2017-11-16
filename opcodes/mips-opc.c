@@ -143,6 +143,24 @@ decode_mips_operand (const char *p)
 	}
       break;
 
+    case '/':
+      switch (p[1])
+	{
+	case 'm': REG (5, 6, GP);
+	case 'o': UINT (11, 0);
+	case 'O': INT_ADJ(8, 3, 127, 0, FALSE);
+	case 'P': INT_ADJ(8, 3, 127, 1, FALSE);
+	case 'Q': INT_ADJ(8, 3, 127, 2, FALSE);
+	case 'R': INT_ADJ(8, 3, 127, 3, FALSE);
+	case 'b': REG (5, 11, CAP);
+	case 's': INT_ADJ(11, 0, 2047, 4, FALSE);
+	case 'v': REG (5, 6, CAP);
+	case 'w': REG (5, 16, CAP);
+	case 'x': REG (5, 21, CAP);
+	  break;
+	}
+      break;
+
     case '<': BIT (5, 6, 0);			/* (0 .. 31) */
     case '>': BIT (5, 6, 32);			/* (32 .. 63) */
     case '%': UINT (3, 21);
@@ -452,6 +470,226 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"balc",		"+'",		0xe8000000, 0xfc000000,	WR_31|NODS,		0,		I37,		0,	0 },
 {"lapc",		"s,-A",		0xec000000, 0xfc180000, WR_1,			RD_pc,		I37,		0,	0 },
 {"la",			"t,A(b)",	0,    (int) M_LA_AB,	INSN_MACRO,		0,		I1,		0,	0 },
+
+/* CHERI capability specific instructions.
+
+   XXX: These need a custom INSN_ bit.  */
+
+/* Old Capability-Inspection (B.1.1) */
+{"cgetperm", "t,/b",       0x48000000, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgettype", "t,/b",       0x48000001, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetbase", "t,/b",       0x48000002, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetlen",  "t,/b",       0x48000003, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgettag",  "t,/b",        0x48000005, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetsealed", "t,/b",      0x48000006, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetoffset", "t,/b",      0x49a00002, 0xffe007ff, 0, 0, I1, 0, 0},
+
+/* Old Capability-Modification (B.1.2) */
+{"cseal",     "/w,/b,/v",   0x48400000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cunseal",   "/w,/b,/v",   0x48600000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"candperm", "/w,/b,/m",            0x48800000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"ccleartag", "/w,/b",     0x48800005, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cincoffset", "/w,/b,/m",   0x49a00000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetdefault", "/b",	0x49a00000, 0xffff07ff, 0, 0, I1},
+{"cgetdefault", "/w",	0x49a00000, 0xffe0ffff, 0, 0, I1},
+{"cmove",    "/w,/b",       0x49a00000, 0xffe007ff, 0, 0, I1, 0, 0},
+{"csetoffset", "/w,/b,/m",   0x49a00001, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetbounds", "/w,/b,/m",   0x48200000, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Old Pointer-Arithmetic (B.1.3) */
+{"ctoptr",   "t,/b,/v",     0x49800000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cfromptr", "/w,/b,/m",            0x48800007, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Old Pointer-Comparison (B.1.4) */
+{"ceq",              "t,/b,/v",    0x49c00000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cne",              "t,/b,/v",    0x49c00001, 0xffe0003f, 0, 0, I1, 0, 0},
+{"clt",              "t,/b,/v",    0x49c00002, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cle",              "t,/b,/v",    0x49c00003, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cltu",      "t,/b,/v",    0x49c00004, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cleu",      "t,/b,/v",    0x49c00005, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cexeq",     "t,/b,/v",    0x49c00006, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cnexeq",    "t,/b,/v",    0x49c00007, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Old Exception-Handling (B.1.5) */
+{"cgetcause", "t",          0x48000004, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"csetcause", "/m",          0x48800004, 0xfffff83f, 0, 0, I1, 0, 0},
+
+/* Old Control-Flow (B.1.6) */
+{"cjr",       "/b",         0x49000000, 0xffff07ff, UBD, 0, I1, 0, 0},
+{"cjalr",     "/b,/w",      0x48e00000, 0xffe007ff, UBD, 0, I1, 0, 0},
+{"ccall",     "/w,/b",      0x48a00000, 0xffe007ff, 0, 0, I1, 0, 0},
+{"creturn",   "",          0x48c00000, 0xffffffff, 0, 0, I1, 0, 0},
+
+/* Old Assertion (B.1.7) */
+{"ccheckperm", "/w,/m",      0x49600000, 0xffe0f83f, 0, 0, I1, 0, 0},
+{"cchecktype", "/w,/b",     0x49600001, 0xffe007ff, 0, 0, I1, 0, 0},
+
+/* Capability-Inspection (B.2.1) */
+{"cgetperm", "t,/b",       0x4800003f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgettype", "t,/b",       0x4800007f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetbase", "t,/b",       0x480000bf, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetlen",  "t,/b",       0x480000ff, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgettag",  "t,/b",       0x4800013f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetsealed", "t,/b",     0x4800017f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetoffset", "t,/b",     0x480001bf, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetpcc", "/w",          0x480007ff, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"cgetpccsetoffset", "/w,d", 0x480001ff, 0xffe007ff, 0, 0, I1, 0, 0},
+
+/* Capability-Modification (B.2.2) */
+{"cseal",    "/w,/b,/v",   0x4800000b, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cunseal",  "/w,/b,/v",   0x4800000c, 0xffe0003f, 0, 0, I1, 0, 0},
+{"candperm", "/w,/b,/m",   0x4800000d, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetoffset", "/w,/b,/m", 0x4800000f, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetbounds", "/w,/b,/m", 0x48000008, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetboundsexact", "/w,/b,/m", 0x48000009, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetboundsimm", "/w,/b,/o", 0x4a800000, 0xffe00000, 0, 0, I1, 0, 0},
+{"ccleartag", "/w,/b",     0x480002ff, 0xffe007ff, 0, 0, I1, 0, 0},
+{"csetdefault", "/b",      0x48000011, 0xffff07ff, 0, 0, I1, 0, 0},
+{"cgetdefault", "/w",      0x48000011, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"cincoffset", "/w,/b,/m", 0x48000011, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cincoffsetimm", "/w,/b,/o", 0x4a600000, 0xffe00000, 0, 0, I1, 0, 0},
+{"cbuildcap", "/w,/b,/v",  0x4800001d, 0xffe0003f, 0, 0, I1, 0, 0},
+{"ccopytype", "/w,/b,/v",  0x4800001e, 0xffe0003f, 0, 0, I1, 0, 0},
+{"ccseal",   "/w,/b,/v",   0x4800001f, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Pointer-Arithmetic (B.2.3) */
+{"ctoptr",   "t,/b,/v",    0x48000012, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cfromptr", "/w,/b,/m",   0x48000013, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csub",     "t,/b,/v",    0x4800000a, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cmove",    "/w,/b",      0x4800003f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cmovz",    "/w,/b,/m",   0x4800001b, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cmovn",    "/w,/b,/m",   0x4800001c, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Pointer-Comparison (B.2.4) */
+{"ceq",      "t,/b,/v",    0x48000014, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cne",      "t,/b,/v",    0x48000015, 0xffe0003f, 0, 0, I1, 0, 0},
+{"clt",      "t,/b,/v",    0x48000016, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cle",      "t,/b,/v",    0x48000017, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cltu",     "t,/b,/v",    0x48000018, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cleu",     "t,/b,/v",    0x48000019, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cnexeq",   "t,/b,/v",    0x48000021, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cexeq",    "t,/b,/v",    0x4800001a, 0xffe0003f, 0, 0, I1, 0, 0},
+
+/* Exception-Handling (B.2.5) */
+{"cgetcause", "t",         0x48000fff, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"csetcause", "t",         0x480017ff, 0xfffff83f, 0, 0, I1, 0, 0},
+
+/* Control-Flow (B.2.6) */
+{"cbtu",     "/w,p",       0x49200000, 0xffe00000, CBD, 0, I1, 0, 0},
+{"cbts",     "/w,p",       0x49400000, 0xffe00000, CBD, 0, I1, 0, 0},
+{"cbez",     "/w,p",       0x4a200000, 0xffe00000, CBD, 0, I1, 0, 0},
+{"cbnz",     "/w,p",       0x4a400000, 0xffe00000, CBD, 0, I1, 0, 0},
+{"cjr",      "/w",         0x48001fff, 0xffe0ffff, UBD, 0, I1, 0, 0},
+{"cjalr",    "/b,/w",      0x4800033f, 0xffe007ff, UBD, 0, I1, 0, 0},
+{"ccall",    "/w,/b,/o",   0x48a00000, 0xffe00000, 0, 0, I1, 0, 0},
+{"creturn",  "",           0x48a007ff, 0xffffffff, 0, 0, I1, 0, 0},
+
+/* Assertion (B.2.7) */
+{"ccheckperm", "/w,/d",    0x4800023f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cchecktype", "/w,/b",    0x4800027f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"ctestsubset", "t,/b,/v", 0x48000020, 0xffe0003f, 0, 0, I1, 0, 0},
+
+
+
+/* Fast Register-Clearing (B.1.8 / B.2.9) */
+{"clearlo",  "i",          0x49e00000, 0xffff0000, 0, 0, I1, 0, 0},
+{"clearhi",  "i",          0x49e10000, 0xffff0000, 0, 0, I1, 0, 0},
+{"cclearlo", "i",          0x49e20000, 0xffff0000, 0, 0, I1, 0, 0},
+{"cclearhi", "i",          0x49e30000, 0xffff0000, 0, 0, I1, 0, 0},
+{"fpclearlo","i",          0x49e40000, 0xffff0000, 0, 0, I1, 0, 0},
+{"fpclearhi","i",          0x49e50000, 0xffff0000, 0, 0, I1, 0, 0},
+
+/* Memory Access (B.1.9) */
+{"csc",      "/x,d,/s(/w)", 0xf8000000, 0xfc000000, 0, 0, I1, 0, 0},
+{"clc",      "/x,d,/s(/w)", 0xd8000000, 0xfc000000, 0, 0, I1, 0, 0},
+{"cscr",     "/x,d(/w)",    0xf8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clcr",     "/x,d(/w)",    0xd8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"csci",     "/x,/s(/w)",   0xf8000000, 0xfc00f800, 0, 0, I1, 0, 0},
+{"clci",     "/x,/s(/w)",   0xd8000000, 0xfc00f800, 0, 0, I1, 0, 0},
+
+{"clbu",     "v,d,/O(/w)",  0xc8000000, 0xfc000007, 0, 0, I1, 0, 0},
+{"clhu",     "v,d,/P(/w)",  0xc8000001, 0xfc000007, 0, 0, I1, 0, 0},
+{"clwu",     "v,d,/Q(/w)",  0xc8000002, 0xfc000007, 0, 0, I1, 0, 0},
+/* there is no cldu */
+{"cld",      "v,d,/R(/w)",  0xc8000003, 0xfc000007, 0, 0, I1, 0, 0},
+{"clb",      "v,d,/O(/w)",  0xc8000004, 0xfc000007, 0, 0, I1, 0, 0},
+{"clh",      "v,d,/P(/w)",  0xc8000005, 0xfc000007, 0, 0, I1, 0, 0},
+{"clw",      "v,d,/Q(/w)",  0xc8000006, 0xfc000007, 0, 0, I1, 0, 0},
+
+{"clbur",    "v,d(/w)",     0xc8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clhur",    "v,d(/w)",     0xc8000001, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clwur",    "v,d(/w)",     0xc8000002, 0xfc0007ff, 0, 0, I1, 0, 0},
+/* there is no cldur */
+{"cldr",     "v,d(/w)",     0xc8000003, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clbr",     "v,d(/w)",     0xc8000004, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clhr",     "v,d(/w)",     0xc8000005, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clwr",     "v,d(/w)",     0xc8000006, 0xfc0007ff, 0, 0, I1, 0, 0},
+
+{"clbui",    "v,/O(/w)",    0xc8000000, 0xfc00f807, 0, 0, I1, 0, 0},
+{"clhui",    "v,/P(/w)",    0xc8000001, 0xfc00f807, 0, 0, I1, 0, 0},
+{"clwui",    "v,/Q(/w)",    0xc8000002, 0xfc00f807, 0, 0, I1, 0, 0},
+/* There is no cldui. Call this opcode cldi as sign-extend and zero-extend
+ * are the same for double-words
+ */
+{"cldi",     "v,/R(/w)",    0xc8000003, 0xfc00f807, 0, 0, I1, 0, 0},
+{"clbi",     "v,/O(/w)",    0xc8000004, 0xfc00f807, 0, 0, I1, 0, 0},
+{"clhi",     "v,/P(/w)",    0xc8000005, 0xfc00f807, 0, 0, I1, 0, 0},
+{"clwi",     "v,/Q(/w)",    0xc8000006, 0xfc00f807, 0, 0, I1, 0, 0},
+
+{"csb",      "v,d,/O(/w)",  0xe8000000, 0xfc000007, 0, 0, I1, 0, 0},
+{"csh",      "v,d,/P(/w)",  0xe8000001, 0xfc000007, 0, 0, I1, 0, 0},
+{"csw",      "v,d,/Q(/w)",  0xe8000002, 0xfc000007, 0, 0, I1, 0, 0},
+{"csd",      "v,d,/R(/w)",  0xe8000003, 0xfc000007, 0, 0, I1, 0, 0},
+{"csbh",     "v,d,/O(/w)",  0xe8000004, 0xfc000007, 0, 0, I1, 0, 0},
+{"cshh",     "v,d,/P(/w)",  0xe8000005, 0xfc000007, 0, 0, I1, 0, 0},
+{"cswh",     "v,d,/Q(/w)",  0xe8000006, 0xfc000007, 0, 0, I1, 0, 0},
+/* there is no csdh */
+
+{"csbr",     "v,d(/w)",     0xe8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"cshr",     "v,d(/w)",     0xe8000001, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"cswr",     "v,d(/w)",     0xe8000002, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"csdr",     "v,d(/w)",     0xe8000003, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"csbhr",    "v,d(/w)",     0xe8000004, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"cshhr",    "v,d(/w)",     0xe8000005, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"cswhr",    "v,d(/w)",     0xe8000006, 0xfc0007ff, 0, 0, I1, 0, 0},
+/* there is no csdhr */
+
+{"csbi",      "v,/O(/w)",   0xe8000000, 0xfc00f807, 0, 0, I1, 0, 0},
+{"cshi",      "v,/P(/w)",   0xe8000001, 0xfc00f807, 0, 0, I1, 0, 0},
+{"cswi",      "v,/Q(/w)",   0xe8000002, 0xfc00f807, 0, 0, I1, 0, 0},
+{"csdi",      "v,/R(/w)",   0xe8000003, 0xfc00f807, 0, 0, I1, 0, 0},
+{"csbhi",     "v,/O(/w)",   0xe8000004, 0xfc00f807, 0, 0, I1, 0, 0},
+{"cshhi",     "v,/P(/w)",   0xe8000005, 0xfc00f807, 0, 0, I1, 0, 0},
+{"cswhi",     "v,/Q(/w)",   0xe8000006, 0xfc00f807, 0, 0, I1, 0, 0},
+/* there is no csdhi */
+
+/* Atomic Memory-Access (B.1.10) */
+{"cscb",      "/m,t,/b",     0x4a000000, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csch",      "/m,t,/b",     0x4a000001, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cscw",      "/m,t,/b",     0x4a000002, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cscd",      "/m,t,/b",     0x4a000003, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cscc",      "/m,/w,/b",    0x4a000007, 0xffe0003f, 0, 0, I1, 0, 0},
+
+{"cllbu",     "t,/b",       0x4a000008, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllhu",     "t,/b",       0x4a000009, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllwu",     "t,/b",       0x4a00000a, 0xffe007ff, 0, 0, I1, 0, 0},
+{"clld",      "t,/b",       0x4a00000b, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllb",      "t,/b",       0x4a00000c, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllh",      "t,/b",       0x4a00000d, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllw",      "t,/b",       0x4a00000e, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cllc",      "/w,/b",      0x4a00000f, 0xffe007ff, 0, 0, I1, 0, 0},
+
+/* Deprecated and Remove (B.1.11) */
+{"clld",      "v,d,/O(/w)", 0xc8000007, 0xfc000007, 0, 0, I1, 0, 0},
+{"cscd",      "v,d,/O(/w)", 0xe8000007, 0xfc000007, 0, 0, I1, 0, 0},
+{"clldr",     "v,d(/w)",    0xc8000007, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"cscdr",     "v,d(/w)",    0xe8000007, 0xfc0007ff, 0, 0, I1, 0, 0},
+{"clldi",     "v,/O(/w)",   0xc8000007, 0xfc00f807, 0, 0, I1, 0, 0},
+{"cscdi",     "v,/O(/w)",   0xe8000007, 0xfc00f807, 0, 0, I1, 0, 0},
+/* XXX: Not documented as removed */
+{"csettype", "/w,/b,/m",    0x48800001, 0xffe0003f, 0, 0, I1, 0, 0},
+{"cincbase", "/w,/b,/m",    0x48800002, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetlen",  "/w,/b,/m",    0x48800003, 0xffe0003f, 0, 0, I1, 0, 0},
 
 /* Loongson specific instructions.  Loongson 3A redefines the Coprocessor 2
    instructions.  Put them here so that disassembler will find them first.
