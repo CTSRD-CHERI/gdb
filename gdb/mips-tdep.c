@@ -1627,8 +1627,20 @@ is_cheri_branch_op (unsigned long inst, struct gdbarch *gdbarch)
   if (itype_op (inst) == 18)
     switch (itype_rs (inst))
       {
-      case 7:		/* CJALR */
-      case 8:		/* CJR */
+      case 0:
+	if (rtype_funct (inst) != 0x3f)
+	  break;
+	switch (rtype_shamt (inst)) {
+	case 0xc:	/* CJALR */
+	  return 1;
+	case 0x1f:
+	  if (rtype_rd (inst) == 0x3)
+	    return 1;	/* CJR */
+	  break;
+	}
+	break;
+      case 7:		/* CJALR (old) */
+      case 8:		/* CJR (old) */
       case 9:		/* CBTU */
       case 10:		/* CBTS */
 	return 1;
@@ -1724,8 +1736,18 @@ mips32_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	{
 	  switch (itype_rs (inst))
 	    {
-	    case 7:		/* CJALR */
-	    case 8:		/* CJR */
+	    case 0:
+	      switch (rtype_shamt (inst)) {
+	      case 0xc:		/* CJALR */
+		pc = get_cheri_register_signed (regcache, rtype_rd (inst));
+		break;
+	      case 0x1f:	/* CJR */
+		pc = get_cheri_register_signed (regcache, rtype_rt (inst));
+		break;
+	      }
+	      break;
+	    case 7:		/* CJALR (old) */
+	    case 8:		/* CJR (old) */
 	      pc = get_cheri_register_signed (regcache, rtype_rd (inst));
 	      break;
 	    case 9:		/* CBTU */
