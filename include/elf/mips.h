@@ -270,6 +270,9 @@ END_RELOC_NUMBERS (R_MIPS_maxext)
 /* EABI in 64 bit mode */
 #define E_MIPS_ABI_EABI64       0x00004000
 
+/* CheriABI */
+#define E_MIPS_ABI_CHERIABI     0x0000c000
+
 
 /* Machine variant if we know it.  This field was invented at Cygnus,
    but it is hoped that other vendors will adopt it.  If some standard
@@ -300,6 +303,8 @@ END_RELOC_NUMBERS (R_MIPS_maxext)
 #define E_MIPS_MACH_LS2E        0x00A00000
 #define E_MIPS_MACH_LS2F        0x00A10000
 #define E_MIPS_MACH_LS3A        0x00A20000
+#define E_MIPS_MACH_CHERI128    0x00c10000
+#define E_MIPS_MACH_CHERI256    0x00c20000
 
 /* Processor specific section indices.  These sections do not actually
    exist.  Symbols with a st_shndx field corresponding to one of these
