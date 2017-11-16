@@ -69,6 +69,9 @@ struct mips_regnum
   int lo;		/* ...  */
   int dspacc;		/* SmartMIPS/DSP accumulators.  */
   int dspctl;		/* DSP control.  */
+  int cap0;		/* CHERI capabilities.  */
+  int cap_pcc;
+  int cap_cause;
 };
 extern const struct mips_regnum *mips_regnum (struct gdbarch *gdbarch);
 
@@ -182,6 +185,9 @@ extern void mips_write_pc (struct regcache *regcache, CORE_ADDR pc);
    registers.  */
 extern struct target_desc *mips_tdesc_gp32;
 extern struct target_desc *mips_tdesc_gp64;
+
+extern struct target_desc *tdesc_mips64_cheri128;
+extern struct target_desc *tdesc_mips64_cheri256;
 
 /* Return non-zero if PC is in a MIPS SVR4 lazy binding stub section.  */
 
