@@ -931,7 +931,8 @@ distclean-tags:
 check-am: all-am
 check: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) check-recursive
-all-am: Makefile $(INFO_DEPS) $(PROGRAMS) $(MANS) $(HEADERS) gconfig.h
+#all-am: Makefile $(INFO_DEPS) $(PROGRAMS) $(MANS) $(HEADERS) gconfig.h
+all-am: Makefile $(PROGRAMS) $(MANS) $(HEADERS) gconfig.h
 installdirs: installdirs-recursive
 installdirs-am:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(infodir)" "$(DESTDIR)$(man1dir)"; do \
