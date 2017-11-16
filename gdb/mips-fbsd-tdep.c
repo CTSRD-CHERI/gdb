@@ -29,6 +29,9 @@
 
 #include "solib-svr4.h"
 
+#include "elf-bfd.h"
+#include "elf/mips.h"
+
 /* Core file support. */
 
 /* Number of registers in `struct reg' from <machine/reg.h>.  The
@@ -42,6 +45,43 @@
    34th holds FIR on FreeBSD 12.0 and newer kernels.  On older kernels
    it was a zero-filled dummy for padding.  */
 #define MIPS_FBSD_NUM_FPREGS	34
+
+/* Number of general capability registers in `struct cheri_frame' from
+   <machine/cheri.h>.  The structure contains the first 27 capability
+   registers followed by the PCC and cap_cause.  */
+#define MIPS_FBSD_NUM_CAPREGS	29
+
+size_t
+mips_fbsd_capregsize (struct gdbarch *gdbarch)
+{
+  int cap0;
+
+  cap0 = mips_regnum (gdbarch)->cap0;
+  gdb_assert(cap0 != -1);
+  return register_size (gdbarch, cap0);
+}
+
+/* Implement the core_read_description gdbarch method.  */
+
+static const struct target_desc *
+mips_fbsd_core_read_description (struct gdbarch *gdbarch,
+				 struct target_ops *target,
+				 bfd *abfd)
+{
+  asection *capstate = bfd_get_section_by_name (abfd, ".reg-cap");
+
+  if (capstate)
+    {
+      size_t size = bfd_section_size (abfd, capstate);
+      size_t capregbits = size / MIPS_FBSD_NUM_CAPREGS * TARGET_CHAR_BIT;
+
+      if (capregbits == 256)
+	return tdesc_mips64_cheri256;
+      else if (capregbits == 128)
+	return tdesc_mips64_cheri128;
+    }
+  return NULL;
+}
 
 /* Supply a single register.  The register size might not match, so use
    regcache->raw_supply_integer ().  */
@@ -109,6 +149,44 @@ mips_fbsd_supply_gregs (struct regcache *regcache, int regnum,
       mips_fbsd_supply_reg (regcache, i, regs + i * regsize, regsize);
 }
 
+/* Supply the capability registers stored in CAPREGS to REGCACHE.  Each
+   capability register in CAPREGS is REGSIZE bytes in length.  */
+
+void
+mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
+			  const void *capregs, size_t regsize)
+{
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  const gdb_byte *regs = (const gdb_byte *) capregs;
+  int cap0, i;
+
+  cap0 = mips_regnum (gdbarch)->cap0;
+  if (cap0 == -1)
+    return;
+
+  for (i = 0; i < 27; i++)
+    if (regnum == cap0 + i || regnum == -1)
+      {
+	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
+	regcache_raw_supply (regcache, cap0 + i, regs + i * regsize);
+      }
+
+  if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
+    {
+      gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
+		  == regsize);
+      regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_pcc,
+			   regs + 27 * regsize);
+    }
+  if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
+    regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_cause,
+			 regs + 28 * regsize);
+  if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
+    regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_cause + 1,
+			 regs + 28 * regsize + 8);
+}
+
+
 /* Collect the floating-point registers from REGCACHE and store them
    in FPREGS.  Each floating-point register in FPREGS is REGSIZE bytes
    in length.  */
@@ -151,6 +229,44 @@ mips_fbsd_collect_gregs (const struct regcache *regcache, int regnum,
   for (i = 0; i <= mips_regnum (gdbarch)->pc; i++)
     if (regnum == i || regnum == -1)
       mips_fbsd_collect_reg (regcache, i, regs + i * regsize, regsize);
+}
+
+/* Collect the capability registers from REGCACHE and store them in
+   CAPREGS.  Each capability register in CAPREGS is REGSIZE bytes in
+   length.  */
+
+void
+mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
+			   void *capregs, size_t regsize)
+{
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  gdb_byte *regs = (gdb_byte *) capregs;
+  int cap0, i;
+
+  cap0 = mips_regnum (gdbarch)->cap0;
+  if (cap0 == -1)
+    return;
+
+  for (i = 0; i < 27; i++)
+    if (regnum == cap0 + i || regnum == -1)
+      {
+	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
+	regcache_raw_collect (regcache, cap0 + i, regs + i * regsize);
+      }
+
+  if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
+    {
+      gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
+		  == regsize);
+      regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_pcc,
+			    regs + 27 * regsize);
+    }
+  if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
+    regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_cause,
+			  regs + 28 * regsize);
+  if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
+    regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_cause + 1,
+			  regs + 28 * regsize + 8);
 }
 
 /* Supply register REGNUM from the buffer specified by FPREGS and LEN
@@ -219,6 +335,51 @@ mips_fbsd_collect_gregset (const struct regset *regset,
   mips_fbsd_collect_gregs (regcache, regnum, gregs, regsize);
 }
 
+/* Supply register REGNUM from the buffer specified by CAPREGS and LEN
+   in the capability register set REGSET to register cache REGCACHE.
+   If REGNUM is -1, do this for all registers in REGSET.  */
+
+static void
+mips_fbsd_supply_capregset (const struct regset *regset,
+			    struct regcache *regcache, int regnum,
+			    const void *capregs, size_t len)
+{
+  size_t capregsize = mips_fbsd_capregsize (get_regcache_arch (regcache));
+
+  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
+
+  mips_fbsd_supply_capregs (regcache, regnum, capregs, capregsize);
+}
+
+/* Collect register REGNUM from the register cache REGCACHE and store
+   it in the buffer specified by CAPREGS and LEN in the general-purpose
+   register set REGSET.  If REGNUM is -1, do this for all registers in
+   REGSET.  */
+
+static void
+mips_fbsd_collect_capregset (const struct regset *regset,
+			     const struct regcache *regcache,
+			     int regnum, void *capregs, size_t len)
+{
+  size_t capregsize = mips_fbsd_capregsize (get_regcache_arch (regcache));
+
+  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
+
+  mips_fbsd_collect_capregs (regcache, regnum, capregs, capregsize);
+}
+
+static int
+mips_fbsd_cannot_store_register (struct gdbarch *gdbarch, int regno)
+{
+  if (regno == MIPS_ZERO_REGNUM
+	  || regno == mips_regnum (gdbarch)->fp_implementation_revision)
+    return (1);
+  if (mips_regnum (gdbarch)->cap0 != -1 && regno >= mips_regnum (gdbarch)->cap0
+      && regno < mips_regnum (gdbarch)->cap0 + MIPS_FBSD_NUM_CAPREGS)
+    return (1);
+  return (0);
+}
+
 /* FreeBSD/mips register sets.  */
 
 static const struct regset mips_fbsd_gregset =
@@ -235,6 +396,13 @@ static const struct regset mips_fbsd_fpregset =
   mips_fbsd_collect_fpregset,
 };
 
+static const struct regset mips_fbsd_capregset =
+{
+  NULL,
+  mips_fbsd_supply_capregset,
+  mips_fbsd_collect_capregset,
+};
+
 /* Iterate over core file register note sections.  */
 
 static void
@@ -249,6 +417,13 @@ mips_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
       &mips_fbsd_gregset, NULL, cb_data);
   cb (".reg2", MIPS_FBSD_NUM_FPREGS * regsize, MIPS_FBSD_NUM_FPREGS * regsize,
       &mips_fbsd_fpregset, NULL, cb_data);
+  if (mips_regnum (gdbarch)->cap0 != -1)
+    {
+      size_t capregsize = mips_fbsd_capregsize (gdbarch);
+      cb(".reg-cap", MIPS_FBSD_NUM_CAPREGS * capregsize,
+	 MIPS_FBSD_NUM_CAPREGS * capregsize, &mips_fbsd_capregset,
+	 "capability", cb_data);
+    }
 }
 
 /* Signal trampoline support.  */
@@ -520,10 +695,212 @@ mips_fbsd_lp64_fetch_link_map_offsets (void)
   return lmp;
 }
 
+static struct link_map_offsets *
+mips_fbsd_c128_fetch_link_map_offsets (void)
+{
+  static struct link_map_offsets lmo;
+  static struct link_map_offsets *lmp = NULL;
+
+  if (lmp == NULL)
+    {
+      lmp = &lmo;
+
+      lmo.r_version_offset = 0;
+      lmo.r_version_size = 4;
+      lmo.r_map_offset = 16;
+      lmo.r_brk_offset = 32;
+      lmo.r_ldsomap_offset = -1;
+
+      lmo.link_map_size = 96;
+      lmo.l_addr_offset = 0;
+      lmo.l_name_offset = 32;
+      lmo.l_ld_offset = 48;
+      lmo.l_next_offset = 64;
+      lmo.l_prev_offset = 80;
+    }
+
+  return lmp;
+}
+
+static struct link_map_offsets *
+mips_fbsd_c256_fetch_link_map_offsets (void)
+{
+  static struct link_map_offsets lmo;
+  static struct link_map_offsets *lmp = NULL;
+
+  if (lmp == NULL)
+    {
+      lmp = &lmo;
+
+      lmo.r_version_offset = 0;
+      lmo.r_version_size = 4;
+      lmo.r_map_offset = 32;
+      lmo.r_brk_offset = 64;
+      lmo.r_ldsomap_offset = -1;
+
+      lmo.link_map_size = 192;
+      lmo.l_addr_offset = 0;
+      lmo.l_name_offset = 64;
+      lmo.l_ld_offset = 96;
+      lmo.l_next_offset = 128;
+      lmo.l_prev_offset = 160;
+    }
+
+  return lmp;
+}
+
+/* Both capability formats store the cursor at the same relative offset
+   from the start of the capability.  */
+
+static CORE_ADDR
+mips_fbsd_cheri_pointer_to_address (struct gdbarch *gdbarch, struct type *type,
+				    const gdb_byte *buf)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  if (type->length <= 8)
+    return extract_signed_integer (buf, type->length, byte_order);
+  else
+    return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+static void
+mips_fbsd_cheri_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
+				    gdb_byte *buf, CORE_ADDR addr)
+{
+  /* XXX: This does not generate a valid capability.  However, a round-trip
+     that converts an address to a pointer back to an address will work
+     with this implementation. */
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  memset (buf, 0, type->length);
+  if (type->length <= 8)
+    store_signed_integer (buf, type->length, byte_order, addr);
+  else
+    store_signed_integer (buf + 8, 8, byte_order, addr);
+}
+
+static CORE_ADDR
+mips_fbsd_cheri_integer_to_address (struct gdbarch *gdbarch,
+				    struct type *type, const gdb_byte *buf)
+{
+  return mips_fbsd_cheri_pointer_to_address (gdbarch, type, buf);
+}
+
+static CORE_ADDR
+mips_fbsd_cheri_read_pc (struct regcache *regcache)
+{
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
+
+  regcache_cooked_read (regcache, gdbarch_num_regs(gdbarch) +
+			mips_regnum (gdbarch)->cap_pcc, buf);
+  return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+static CORE_ADDR
+mips_fbsd_cheri_unwind_pc (struct gdbarch *gdbarch,
+			   struct frame_info *next_frame)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
+
+  frame_unwind_register (next_frame, gdbarch_num_regs(gdbarch) +
+			 mips_regnum (gdbarch)->cap_pcc, buf);
+  return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+static CORE_ADDR
+mips_fbsd_cheri_unwind_sp (struct gdbarch *gdbarch,
+			   struct frame_info *next_frame)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
+  CORE_ADDR base;
+
+  frame_unwind_register (next_frame, gdbarch_num_regs (gdbarch)
+			 + mips_regnum (gdbarch)->cap0 + 11, buf);
+  return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+/* default_auxv_parse almost works, but we want to parse entries that
+   pass pointers and extract the pointer instead of returning just
+   the first N bytes as an address.  */
+
+static int
+mips_fbsd_cheri_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
+			   gdb_byte *endptr, CORE_ADDR *typep, CORE_ADDR *valp)
+{
+  const int sizeof_auxv_field = gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT;
+  const int sizeof_long = gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT;
+  const enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte *ptr = *readptr;
+
+  if (endptr == ptr)
+    return 0;
+
+  if (endptr - ptr < sizeof_auxv_field * 2)
+    return -1;
+
+  *typep = extract_unsigned_integer (ptr, sizeof_long, byte_order);
+  ptr += sizeof_auxv_field;
+
+  switch (*typep)
+    {
+    case AT_PHDR:
+    case AT_BASE:
+    case AT_ENTRY:
+    case AT_FREEBSD_EXECPATH:
+    case AT_FREEBSD_CANARY:
+    case AT_FREEBSD_PAGESIZES:
+    case AT_FREEBSD_TIMEKEEP:
+      *valp = extract_typed_address (ptr,
+				     builtin_type (gdbarch)->builtin_data_ptr);
+      break;
+    default:
+      *valp = extract_unsigned_integer (ptr, sizeof_long, byte_order);
+    }
+  ptr += sizeof_auxv_field;
+
+  *readptr = ptr;
+  return 1;
+}
+
+static int
+mips_fbsd_is_cheri(struct bfd *abfd)
+{
+  if ((elf_elfheader (abfd)->e_flags & (EF_MIPS_ABI | EF_MIPS_MACH))
+      == (E_MIPS_ABI_CHERIABI | E_MIPS_MACH_CHERI256)
+      || (elf_elfheader (abfd)->e_flags & (EF_MIPS_ABI | EF_MIPS_MACH))
+      == (E_MIPS_ABI_CHERIABI | E_MIPS_MACH_CHERI128))
+    return 1;
+  return 0;
+}
+
+static int
+mips_fbsd_cheri_size(struct bfd *abfd)
+{
+  if ((elf_elfheader (abfd)->e_flags & EF_MIPS_ABI) == E_MIPS_ABI_CHERIABI)
+    {
+      switch (elf_elfheader (abfd)->e_flags & EF_MIPS_MACH)
+	{
+	case E_MIPS_MACH_CHERI256:
+	  return 256;
+	case E_MIPS_MACH_CHERI128:
+	  return 128;
+	default:
+	  return 0;
+	}
+    }
+  return 0;
+}
+
 static void
 mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
   enum mips_abi abi = mips_abi (gdbarch);
+  int cap_size;
 
   /* Generic FreeBSD support.  */
   fbsd_init_abi (info, gdbarch);
@@ -545,6 +922,34 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, mips_fbsd_iterate_over_regset_sections);
+
+  set_gdbarch_cannot_store_register (gdbarch, mips_fbsd_cannot_store_register);
+
+  set_gdbarch_core_read_description (gdbarch, mips_fbsd_core_read_description);
+
+  /* CheriABI */
+  if (mips_regnum (gdbarch)->cap0 != -1 && info.abfd != NULL
+      && mips_fbsd_is_cheri (info.abfd)) {
+    cap_size = mips_fbsd_cheri_size (info.abfd);
+    set_gdbarch_addr_bit (gdbarch, 64);
+    set_gdbarch_ptr_bit (gdbarch, cap_size);
+    set_gdbarch_dwarf2_addr_size (gdbarch, 8);
+    set_gdbarch_pointer_to_address (gdbarch,
+				    mips_fbsd_cheri_pointer_to_address);
+    set_gdbarch_address_to_pointer (gdbarch,
+				    mips_fbsd_cheri_address_to_pointer);
+    set_gdbarch_integer_to_address (gdbarch,
+				    mips_fbsd_cheri_integer_to_address);
+    set_gdbarch_read_pc (gdbarch, mips_fbsd_cheri_read_pc);
+    set_gdbarch_unwind_pc (gdbarch, mips_fbsd_cheri_unwind_pc);
+    set_gdbarch_unwind_sp (gdbarch, mips_fbsd_cheri_unwind_sp);
+    set_gdbarch_auxv_parse (gdbarch, mips_fbsd_cheri_auxv_parse);
+    set_solib_svr4_fetch_link_map_offsets
+      (gdbarch, cap_size == 128 ?
+       mips_fbsd_c128_fetch_link_map_offsets :
+       mips_fbsd_c256_fetch_link_map_offsets);
+    return;
+  }
 
   /* FreeBSD/mips has SVR4-style shared libraries.  */
   set_solib_svr4_fetch_link_map_offsets
