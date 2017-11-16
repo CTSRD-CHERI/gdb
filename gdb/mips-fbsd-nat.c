@@ -25,6 +25,9 @@
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <machine/reg.h>
+#ifdef PT_GETCAPREGS
+#include <sys/sysctl.h>
+#endif
 
 #include "fbsd-nat.h"
 #include "mips-tdep.h"
@@ -35,9 +38,23 @@ struct mips_fbsd_nat_target final : public fbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
+  const struct target_desc *read_description () override;
 };
 
 static mips_fbsd_nat_target the_mips_fbsd_nat_target;
+
+#ifdef PT_GETCAPREGS
+/* Normally this would just use `struct capreg' directly, but determing
+   the register size dynamically permits a single gdb binary compiled
+   for FreeBSD/mips to work under either c128 or c256.  */
+
+/* Number of general capability registers in `struct cheri_frame' from
+   <machine/cheri.h>.  The structure contains the first 27 capability
+   registers followed by the PCC and cap_cause.  */
+#define MIPS_FBSD_NUM_CAPREGS	29
+
+static int capreg_size = -1;
+#endif
 
 /* Determine if PT_GETREGS fetches REGNUM.  */
 
@@ -56,6 +73,20 @@ getfpregs_supplies (struct gdbarch *gdbarch, int regnum)
   return (regnum >= mips_regnum (gdbarch)->fp0
 	  && regnum <= mips_regnum (gdbarch)->fp_implementation_revision);
 }
+
+#ifdef PT_GETCAPREGS
+/* Determine if PT_GETCAPREGS fetches REGNUM.  */
+
+static bool
+getcapregs_supplies (struct gdbarch *gdbarch, int regnum)
+{
+  return ((regnum >= mips_regnum (gdbarch)->cap0
+	   && regnum < mips_regnum (gdbarch)->cap0 + 27)
+	  || regnum == mips_regnum (gdbarch)->cap_pcc
+	  || regnum == mips_regnum (gdbarch)->cap_cause
+	  || regnum == mips_regnum (gdbarch)->cap_cause + 1);
+}
+#endif
 
 /* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
    for all registers.  */
@@ -86,6 +117,22 @@ mips_fbsd_nat_target::fetch_registers (struct regcache *regcache, int regnum)
       mips_fbsd_supply_fpregs (regcache, regnum, &fpregs,
 			       sizeof (f_register_t));
     }
+
+#ifdef PT_GETCAPREGS
+  if (mips_regnum (gdbarch)->cap0 != -1 &&
+      (regnum == -1 || getcapregs_supplies (gdbarch, regnum)))
+    {
+      void *capregs;
+
+      gdb_assert (capreg_size != 0);
+      capregs = alloca (capreg_size * MIPS_FBSD_NUM_CAPREGS);
+      if (ptrace (PT_GETCAPREGS, get_ptrace_pid (inferior_ptid),
+		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
+	perror_with_name (_("Couldn't get capability registers"));
+
+      mips_fbsd_supply_capregs (regcache, regnum, capregs, capreg_size);
+    }
+#endif
 }
 
 /* Store register REGNUM back into the inferior.  If REGNUM is -1, do
@@ -124,6 +171,48 @@ mips_fbsd_nat_target::store_registers (struct regcache *regcache, int regnum)
       if (ptrace (PT_SETFPREGS, pid, (PTRACE_TYPE_ARG3) &fpregs, 0) == -1)
 	perror_with_name (_("Couldn't write floating point status"));
     }
+
+#ifdef notyet
+#ifdef PT_GETCAPREGS
+  if (mips_regnum (gdbarch)->cap0 != -1 &&
+      (regnum == -1 || getcapregs_supplies (gdbarch, regnum)))
+    {
+      void *capregs;
+
+      gdb_assert (capreg_size != 0);
+      capregs = alloca (capreg_size * MIPS_FBSD_NUM_CAPREGS);
+      if (ptrace (PT_GETCAPREGS, get_ptrace_pid (inferior_ptid),
+		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
+	perror_with_name (_("Couldn't get capability registers"));
+
+      mips_fbsd_collect_capregs (regcache, regnum, capregs, capreg_size);
+
+      if (ptrace (PT_SETCAPREGS, get_ptrace_pid (inferior_ptid),
+		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
+	perror_with_name (_("Couldn't write capability registers"));
+    }
+#endif
+#endif
+}
+
+/* Implement the to_read_description method.  */
+
+const struct target_desc *
+mips_fbsd_nat_target::read_description ()
+{
+#ifdef PT_GETCAPREGS
+  if (capreg_size == -1) {
+    size_t len = sizeof(capreg_size);
+    if (sysctlbyname("security.cheri.capability_size", &capreg_size, &len,
+		     NULL, 0) != 0)
+      capreg_size = 0;
+  }
+  if (capreg_size * 8 == 256)
+    return tdesc_mips64_cheri256;
+  else if (capreg_size * 8 == 128)
+    return tdesc_mips64_cheri128;
+#endif
+  return NULL;
 }
 
 #ifdef PT_GETQTRACE
