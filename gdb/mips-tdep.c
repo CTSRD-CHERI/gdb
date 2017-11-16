@@ -1612,6 +1612,42 @@ is_octeon_bbit_op (int op, struct gdbarch *gdbarch)
   return 0;
 }
 
+static int
+is_cheri (struct gdbarch *gdbarch)
+{
+  return (mips_regnum (gdbarch)->cap0 != -1
+	  && gdbarch_ptr_bit (gdbarch) >= 128);
+}
+
+static int
+is_cheri_branch_op (unsigned long inst, struct gdbarch *gdbarch)
+{
+  if (!is_cheri (gdbarch))
+    return 0;
+  if (itype_op (inst) == 18)
+    switch (itype_rs (inst))
+      {
+      case 7:		/* CJALR */
+      case 8:		/* CJR */
+      case 9:		/* CBTU */
+      case 10:		/* CBTS */
+	return 1;
+      }
+  return 0;
+}
+
+static CORE_ADDR
+get_cheri_register_signed (const struct regcache *regcache, int regnum)
+{
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
+  CORE_ADDR addr;
+
+  /* XXX: Should probably use gdbarch_integer_to_address. */
+  regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
+  return extract_signed_integer (buf + 8, 8, byte_order);
+}
 
 /* Determine where to set a single step breakpoint while considering
    branch prediction.  */
@@ -1684,6 +1720,31 @@ mips32_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	    pc += 8;        /* After the delay slot.  */
 	}
 
+      else if (is_cheri_branch_op (inst, gdbarch))
+	{
+	  switch (itype_rs (inst))
+	    {
+	    case 7:		/* CJALR */
+	    case 8:		/* CJR */
+	      pc = get_cheri_register_signed (regcache, rtype_rd (inst));
+	      break;
+	    case 9:		/* CBTU */
+	    case 10:		/* CBTS */
+	      {
+		ULONGEST mask;
+
+		mask = regcache_raw_get_signed
+		  (regcache, mips_regnum (gdbarch)->cap_cause + 1);
+		mask &= (1 << itype_rt (inst));
+		if ((itype_rs (inst) == 9 && mask == 0)
+		    || (itype_rs (inst) == 10 && mask != 0))
+		  pc += mips32_relative_offset (inst) + 4;
+		else
+		  pc += 8;
+		break;
+	      }
+	    }
+	}
       else
 	pc += 4;		/* Not a branch, next instruction is easy.  */
     }
@@ -7116,7 +7177,8 @@ mips32_instruction_has_delay_slot (struct gdbarch *gdbarch, ULONGEST inst)
     {
       rs = itype_rs (inst);
       rt = itype_rt (inst);
-      return (is_octeon_bbit_op (op, gdbarch) 
+      return (is_octeon_bbit_op (op, gdbarch)
+	      || is_cheri_branch_op (inst, gdbarch)
 	      || op >> 2 == 5	/* BEQL, BNEL, BLEZL, BGTZL: bits 0101xx  */
 	      || op == 29	/* JALX: bits 011101  */
 	      || (op == 17
