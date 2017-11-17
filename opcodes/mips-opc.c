@@ -556,7 +556,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"ctoptr",   "t,/b,/v",    0x48000012, 0xffe0003f, 0, 0, I1, 0, 0},
 {"cfromptr", "/w,/b,/m",   0x48000013, 0xffe0003f, 0, 0, I1, 0, 0},
 {"csub",     "t,/b,/v",    0x4800000a, 0xffe0003f, 0, 0, I1, 0, 0},
-{"cmove",    "/w,/b",      0x4800003f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cmove",    "/w,/b",      0x480002bf, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cmovz",    "/w,/b,/m",   0x4800001b, 0xffe0003f, 0, 0, I1, 0, 0},
 {"cmovn",    "/w,/b,/m",   0x4800001c, 0xffe0003f, 0, 0, I1, 0, 0},
 
