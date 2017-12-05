@@ -1649,15 +1649,15 @@ is_cheri_branch_op (unsigned long inst, struct gdbarch *gdbarch)
 }
 
 static CORE_ADDR
-get_cheri_register_signed (const struct regcache *regcache, int regnum)
+get_cheri_register_signed (struct regcache *regcache, int regnum)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
+  gdb_byte buf[register_size (gdbarch, mips_regnum (gdbarch)->cap0 + regnum)];
   CORE_ADDR addr;
 
   /* XXX: Should probably use gdbarch_integer_to_address. */
-  regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
+  regcache_raw_read (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
   return extract_signed_integer (buf + 8, 8, byte_order);
 }
 
