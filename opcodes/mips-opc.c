@@ -147,6 +147,7 @@ decode_mips_operand (const char *p)
       switch (p[1])
 	{
 	case 'm': REG (5, 6, GP);
+	case 'n': SINT (11, 0);
 	case 'o': UINT (11, 0);
 	case 'O': INT_ADJ(8, 3, 127, 0, FALSE);
 	case 'P': INT_ADJ(8, 3, 127, 1, FALSE);
@@ -547,7 +548,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"csetdefault", "/b",      0x48000011, 0xffff07ff, 0, 0, I1, 0, 0},
 {"cgetdefault", "/w",      0x48000011, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cincoffset", "/w,/b,/m", 0x48000011, 0xffe0003f, 0, 0, I1, 0, 0},
-{"cincoffsetimm", "/w,/b,/o", 0x4a600000, 0xffe00000, 0, 0, I1, 0, 0},
+{"cincoffsetimm", "/w,/b,/n", 0x4a600000, 0xffe00000, 0, 0, I1, 0, 0},
 {"cbuildcap", "/w,/b,/v",  0x4800001d, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccopytype", "/w,/b,/v",  0x4800001e, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccseal",   "/w,/b,/v",   0x4800001f, 0xffe0003f, 0, 0, I1, 0, 0},
