@@ -8962,15 +8962,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* The hook may have adjusted num_regs, fetch the final value and
      set pc_regnum and sp_regnum now that it has been fixed.  */
   num_regs = gdbarch_num_regs (gdbarch);
-  if (is_cheri (gdbarch))
-    {
-      set_gdbarch_pc_regnum (gdbarch, tdep->regnum->cap_pcc + num_regs);
-      /* XXX: C11/CSP for SP? */
-    }
-  else
-    {
-      set_gdbarch_pc_regnum (gdbarch, regnum->pc + num_regs);
-    }
+  set_gdbarch_pc_regnum (gdbarch, regnum->pc + num_regs);
   set_gdbarch_sp_regnum (gdbarch, MIPS_SP_REGNUM + num_regs);
 
   /* Unwind the frame.  */
@@ -8998,8 +8990,16 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       num_regs = gdbarch_num_regs (gdbarch);
       set_gdbarch_num_pseudo_regs (gdbarch, num_regs);
-      set_gdbarch_pc_regnum (gdbarch, tdep->regnum->pc + num_regs);
-      set_gdbarch_sp_regnum (gdbarch, MIPS_SP_REGNUM + num_regs);
+      if (is_cheri (gdbarch))
+	{
+	  set_gdbarch_pc_regnum (gdbarch, tdep->regnum->cap_pcc + num_regs);
+	  set_gdbarch_sp_regnum (gdbarch, tdep->regnum->cap0 + 11 + num_regs);
+	}
+      else
+	{
+	  set_gdbarch_pc_regnum (gdbarch, tdep->regnum->pc + num_regs);
+	  set_gdbarch_sp_regnum (gdbarch, MIPS_SP_REGNUM + num_regs);
+	}
     }
 
   /* Add ABI-specific aliases for the registers.  */
