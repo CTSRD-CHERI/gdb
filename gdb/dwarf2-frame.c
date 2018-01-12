@@ -460,6 +460,14 @@ bad CFI data; mismatched DW_CFA_restore_state at %s"),
 
 	    case DW_CFA_def_cfa:
 	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &reg);
+
+	      /* XXX: Gross hack for CHERI.  The compiler is currently giving a
+		 default CFA rule that uses SP rather than CSP.  */
+	      if ((gdbarch_ptr_bit (gdbarch) == 128
+		   || gdbarch_ptr_bit (gdbarch) == 256)
+		  && reg == 29)
+		reg = 72 + 11;
+
 	      fs->regs.cfa_reg = reg;
 	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &utmp);
 
