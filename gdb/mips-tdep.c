@@ -3708,6 +3708,269 @@ restart:
   return end_prologue_addr;
 }
 
+static CORE_ADDR
+get_cheri_frame_register_signed (struct frame_info *this_frame, int regnum)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, regnum)];
+  CORE_ADDR addr;
+
+  /* XXX: Should probably use gdbarch_integer_to_address. */
+  get_frame_register (this_frame, regnum, buf);
+  return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+/* Analyze the function prologue from START_PC to LIMIT_PC.  Builds
+   the associated FRAME_CACHE if not null.  
+   Return the address of the first instruction past the prologue.  */
+
+static CORE_ADDR
+mips_cheri_scan_prologue (struct gdbarch *gdbarch,
+			  CORE_ADDR start_pc, CORE_ADDR limit_pc,
+			  struct frame_info *this_frame,
+			  struct mips_frame_cache *this_cache)
+{
+  int prev_non_prologue_insn;
+  int this_non_prologue_insn;
+  int non_prologue_insns;
+  CORE_ADDR frame_addr = 0; /* Value of $c24. Used by compiler for
+			       frame-pointer.  */
+  int prev_delay_slot;
+  CORE_ADDR prev_pc;
+  CORE_ADDR cur_pc;
+  CORE_ADDR sp;
+  long frame_offset;
+  int  cap0 = mips_regnum (gdbarch)->cap0;
+  int  frame_reg = cap0 + 11;
+
+  CORE_ADDR end_prologue_addr;
+  int seen_sp_adjust = 0;
+  int load_immediate_bytes = 0;
+  int in_delay_slot;
+
+  /* Can be called when there's no process, and hence when there's no
+     THIS_FRAME.  */
+  if (this_frame != NULL)
+    sp = get_cheri_frame_register_signed (this_frame, 
+					  gdbarch_num_regs (gdbarch)
+					  + cap0 + 11);
+  else
+    sp = 0;
+
+  if (limit_pc > start_pc + 200)
+    limit_pc = start_pc + 200;
+
+restart:
+  prev_non_prologue_insn = 0;
+  non_prologue_insns = 0;
+  prev_delay_slot = 0;
+  prev_pc = start_pc;
+
+  /* Permit at most one non-prologue non-control-transfer instruction
+     in the middle which may have been reordered by the compiler for
+     optimisation.  */
+  frame_offset = 0;
+  for (cur_pc = start_pc; cur_pc < limit_pc; cur_pc += MIPS_INSN32_SIZE)
+    {
+      unsigned long inst, high_word;
+      long offset;
+      int reg;
+
+      this_non_prologue_insn = 0;
+      in_delay_slot = 0;
+
+      /* Fetch the instruction.  */
+      inst = (unsigned long) mips_fetch_instruction (gdbarch, ISA_MIPS,
+						     cur_pc, NULL);
+
+      /* Save some code by pre-extracting some useful fields.  */
+      high_word = (inst >> 16) & 0xffff;
+      offset = ((inst & 0xffff) ^ 0x8000) - 0x8000;
+      reg = high_word & 0x1f;
+
+      if ((inst & 0xfffff800) == 0x4a6b5e80) /* cincoffsetimm $c11,$c11,i */
+	{
+	  offset = ((inst & 0x7ff) ^ 0x400) - 0x400;
+	  if (offset < 0)		/* Negative stack adjustment?  */
+            frame_offset -= offset;
+	  else
+	    /* Exit loop if a positive stack adjustment is found, which
+	       usually means that the stack cleanup code in the function
+	       epilogue is reached.  */
+	    break;
+          seen_sp_adjust = 1;
+	}
+      else if ((inst & 0xfc1ff800) == 0xf80b0000) /* csc reg,$0,offset($c11) */
+	{
+	  reg = (inst >> 21) & 0x1f;
+	  offset = ((inst & 0x7ff) ^ 0x400) - 0x400;
+	  offset *= 16;
+	  set_reg_offset (gdbarch, this_cache, cap0 + reg, sp + offset);
+	}
+      else if ((inst & 0xfc1ff807) == 0xe80b0003) /* csd reg,$0,offset($c11) */
+	{
+	  reg = (inst >> 21) & 0x1f;
+	  offset = ((inst & 0x7ff) ^ 0x400) - 0x400;
+	  offset *= 8;
+	  set_reg_offset (gdbarch, this_cache, reg, sp + offset);
+	}
+#if 0
+      // TODO: Need to handle alloca()
+      else if (high_word == 0x27be)	/* addiu $30,$sp,size */
+	{
+	  /* Old gcc frame, r30 is virtual frame pointer.  */
+	  if (offset != frame_offset)
+	    frame_addr = sp + offset;
+	  else if (this_frame && frame_reg == MIPS_SP_REGNUM)
+	    {
+	      unsigned alloca_adjust;
+
+	      frame_reg = 30;
+	      frame_addr = get_frame_register_signed
+		(this_frame, gdbarch_num_regs (gdbarch) + 30);
+	      frame_offset = 0;
+
+	      alloca_adjust = (unsigned) (frame_addr - (sp + offset));
+	      if (alloca_adjust > 0)
+		{
+                  /* FP > SP + frame_size.  This may be because of
+                     an alloca or somethings similar.  Fix sp to
+                     "pre-alloca" value, and try again.  */
+		  sp += alloca_adjust;
+                  /* Need to reset the status of all registers.  Otherwise,
+                     we will hit a guard that prevents the new address
+                     for each register to be recomputed during the second
+                     pass.  */
+                  reset_saved_regs (gdbarch, this_cache);
+		  goto restart;
+		}
+	    }
+	}
+#endif
+#if 0
+      /* cmove $c24,$c11.  Can be emitted as cincoffset $c24, $c11, $0.  */
+      else if (inst == 0x48185abf || inst == 0x48185811)
+	{
+	  /* New frame, virtual frame pointer is at c24 + frame_size.  */
+	  // TODO:
+	  if (this_frame && frame_reg == MIPS_SP_REGNUM)
+	    {
+	      unsigned alloca_adjust;
+
+	      frame_reg = 30;
+	      frame_addr = get_frame_register_signed
+		(this_frame, gdbarch_num_regs (gdbarch) + 30);
+
+	      alloca_adjust = (unsigned) (frame_addr - sp);
+	      if (alloca_adjust > 0)
+	        {
+                  /* FP > SP + frame_size.  This may be because of
+                     an alloca or somethings similar.  Fix sp to
+                     "pre-alloca" value, and try again.  */
+	          sp = frame_addr;
+                  /* Need to reset the status of all registers.  Otherwise,
+                     we will hit a guard that prevents the new address
+                     for each register to be recomputed during the second
+                     pass.  */
+                  reset_saved_regs (gdbarch, this_cache);
+	          goto restart;
+	        }
+	    }
+	}
+#endif
+#if 0
+      // TODO?
+      else if ((high_word & 0xFFE0) == 0xE7A0 /* swc1 freg,n($sp) */
+               || (high_word & 0xF3E0) == 0xA3C0 /* sx reg,n($s8) */
+               || (inst & 0xFF9F07FF) == 0x00800021 /* move reg,$a0-$a3 */
+               || high_word == 0x3c1c /* lui $gp,n */
+               || high_word == 0x279c /* addiu $gp,$gp,n */
+               || inst == 0x0399e021 /* addu $gp,$gp,$t9 */
+               || inst == 0x033ce021 /* addu $gp,$t9,$gp */
+              )
+	{
+	  /* These instructions are part of the prologue, but we don't
+	     need to do anything special to handle them.  */
+	}
+#endif
+#if 0
+      /* The instructions below load $at or $t0 with an immediate
+         value in preparation for a stack adjustment via
+         subu $sp,$sp,[$at,$t0].  These instructions could also
+         initialize a local variable, so we accept them only before
+         a stack adjustment instruction was seen.  */
+      else if (!seen_sp_adjust
+	       && !prev_delay_slot
+	       && (high_word == 0x3c01 /* lui $at,n */
+		   || high_word == 0x3c08 /* lui $t0,n */
+		   || high_word == 0x3421 /* ori $at,$at,n */
+		   || high_word == 0x3508 /* ori $t0,$t0,n */
+		   || high_word == 0x3401 /* ori $at,$zero,n */
+		   || high_word == 0x3408 /* ori $t0,$zero,n */
+		  ))
+	{
+	  load_immediate_bytes += MIPS_INSN32_SIZE;		/* FIXME!  */
+	}
+#endif
+      /* Check for branches and jumps.  The instruction in the delay
+         slot can be a part of the prologue, so move forward once more.  */
+      else if (mips32_instruction_has_delay_slot (gdbarch, inst))
+	{
+	  in_delay_slot = 1;
+	}
+      /* This instruction is not an instruction typically found
+         in a prologue, so we must have reached the end of the
+         prologue.  */
+      else
+	{
+	  this_non_prologue_insn = 1;
+	}
+
+      non_prologue_insns += this_non_prologue_insn;
+
+      /* A jump or branch, or enough non-prologue insns seen?  If so,
+         then we must have reached the end of the prologue by now.  */
+      if (prev_delay_slot || non_prologue_insns > 1)
+	break;
+
+      prev_non_prologue_insn = this_non_prologue_insn;
+      prev_delay_slot = in_delay_slot;
+      prev_pc = cur_pc;
+    }
+
+  if (this_cache != NULL)
+    {
+      this_cache->base = 
+	(get_cheri_frame_register_signed (this_frame,
+					  gdbarch_num_regs (gdbarch)
+					  + frame_reg)
+         + frame_offset);
+      /* FIXME: brobecker/2004-09-15: We should be able to get rid of
+         this assignment below, eventually.  But it's still needed
+         for now.  */
+      this_cache->saved_regs[gdbarch_num_regs (gdbarch)
+			     + mips_regnum (gdbarch)->cap_pcc]
+        = this_cache->saved_regs[gdbarch_num_regs (gdbarch)
+				 + cap0 + 17];
+    }
+
+  /* Set end_prologue_addr to the address of the instruction immediately
+     after the last one we scanned.  Unless the last one looked like a
+     non-prologue instruction (and we looked ahead), in which case use
+     its address instead.  */
+  end_prologue_addr
+    = prev_non_prologue_insn || prev_delay_slot ? prev_pc : cur_pc;
+     
+  /* In a frameless function, we might have incorrectly
+     skipped some load immediate instructions.  Undo the skipping
+     if the load immediate was not followed by a stack adjustment.  */
+  if (load_immediate_bytes && !seen_sp_adjust)
+    end_prologue_addr -= load_immediate_bytes;
+
+  return end_prologue_addr;
+}
+
 /* Heuristic unwinder for procedures using 32-bit instructions (covers
    both 32-bit and 64-bit MIPS ISAs).  Procedures using 16-bit
    instructions (a.k.a. MIPS16) are handled by the mips_insn16
@@ -3728,7 +3991,7 @@ mips_insn32_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   /* Analyze the function prologue.  */
   {
-    const CORE_ADDR pc = get_frame_address_in_block (this_frame);
+    const CORE_ADDR pc = get_frame_pc (this_frame);
     CORE_ADDR start_addr;
 
     find_pc_partial_function (pc, NULL, &start_addr, NULL);
@@ -3739,13 +4002,20 @@ mips_insn32_frame_cache (struct frame_info *this_frame, void **this_cache)
     if (start_addr == 0)
       return cache;
 
+    if (is_cheri (gdbarch))
+      mips_cheri_scan_prologue (gdbarch, start_addr, pc, this_frame,
+				(struct mips_frame_cache *) *this_cache);
+    else
     mips32_scan_prologue (gdbarch, start_addr, pc, this_frame,
 			  (struct mips_frame_cache *) *this_cache);
   }
   
   /* gdbarch_sp_regnum contains the value and not the address.  */
   trad_frame_set_value (cache->saved_regs,
-			gdbarch_num_regs (gdbarch) + MIPS_SP_REGNUM,
+			gdbarch_num_regs (gdbarch)
+			+ (is_cheri(gdbarch)
+			   ? mips_regnum (gdbarch)->cap0 + 11
+			   : MIPS_SP_REGNUM),
 			cache->base);
 
   return (struct mips_frame_cache *) (*this_cache);
@@ -4282,6 +4552,20 @@ mips_about_to_return (struct gdbarch *gdbarch, CORE_ADDR pc)
   return (insn & ~hint) == 0x3e00008;			/* jr(.hb) $ra */
 }
 
+/* Test whether the PC points to the return instruction at the
+   end of a CHERI function.  */
+
+static int
+mips_cheri_about_to_return (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  ULONGEST insn;
+
+  gdb_assert(mips_pc_is_mips (pc) && is_cheri (gdbarch));
+
+  insn = mips_fetch_instruction (gdbarch, ISA_MIPS, pc, NULL);
+  return (insn == 0x48111fff				/* cjr $c17 */
+	  || insn == 0x49008800);			/* cjr $c17 (old) */
+}
 
 /* This fencepost looks highly suspicious to me.  Removing it also
    seems suspicious as it could affect remote debugging across serial
@@ -4448,6 +4732,12 @@ heuristic-fence-post' command.\n",
 	  break;
       }
     else if (mips_about_to_return (gdbarch, start_pc))
+      {
+	/* Skip return and its delay slot.  */
+	start_pc += 2 * MIPS_INSN32_SIZE;
+	break;
+      }
+    else if (is_cheri (gdbarch) && mips_cheri_about_to_return (gdbarch, start_pc))
       {
 	/* Skip return and its delay slot.  */
 	start_pc += 2 * MIPS_INSN32_SIZE;
@@ -6755,6 +7045,8 @@ mips_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
     return mips16_scan_prologue (gdbarch, pc, limit_pc, NULL, NULL);
   else if (mips_pc_is_micromips (gdbarch, pc))
     return micromips_scan_prologue (gdbarch, pc, limit_pc, NULL, NULL);
+  else if (is_cheri (gdbarch))
+    return mips_cheri_scan_prologue (gdbarch, pc, limit_pc, NULL, NULL);
   else
     return mips32_scan_prologue (gdbarch, pc, limit_pc, NULL, NULL);
 }
