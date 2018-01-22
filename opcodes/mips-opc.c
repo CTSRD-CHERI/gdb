@@ -154,7 +154,7 @@ decode_mips_operand (const char *p)
 	case 'Q': INT_ADJ(8, 3, 127, 2, FALSE);
 	case 'R': INT_ADJ(8, 3, 127, 3, FALSE);
 	case 'b': REG (5, 11, CAP);
-	case 's': INT_ADJ(11, 0, 2047, 4, FALSE);
+	case 's': INT_ADJ(11, 0, 1023, 4, FALSE);
 	case 'v': REG (5, 6, CAP);
 	case 'w': REG (5, 16, CAP);
 	case 'x': REG (5, 21, CAP);
