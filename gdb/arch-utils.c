@@ -595,7 +595,6 @@ set_gdbarch_from_file (bfd *abfd)
 
   gdbarch_info_init (&info);
   info.abfd = abfd;
-  info.target_desc = target_current_description ();
   gdbarch = gdbarch_find_by_info (info);
 
   if (gdbarch == NULL)
