@@ -116,6 +116,8 @@ struct gdbarch_tdep
   int register_size_valid_p;
   int register_size;
 
+  struct type *capreg_type;
+
   /* Return the expected next PC if FRAME is stopped at a syscall
      instruction.  */
   CORE_ADDR (*syscall_next_pc) (struct frame_info *frame);
