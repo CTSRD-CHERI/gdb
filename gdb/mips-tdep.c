@@ -1628,6 +1628,8 @@ is_octeon_bbit_op (int op, struct gdbarch *gdbarch)
   return 0;
 }
 
+/* Return 1 if GDBARCH is using CHERI capabilities for pointers.  */
+
 static int
 is_cheri (struct gdbarch *gdbarch)
 {
