@@ -280,6 +280,11 @@ frame_unwind_got_address (struct frame_info *frame, int regnum,
   struct value *reg_val;
 
   reg_val = value_zero (register_type (gdbarch, regnum), not_lval);
+  if (TYPE_CODE (register_type (gdbarch, regnum)) == TYPE_CODE_STRUCT
+      && gdbarch_ptr_bit (gdbarch) >= 128)
+    gdbarch_address_to_pointer (gdbarch, register_type(gdbarch, regnum),
+				value_contents_writeable (reg_val), addr);
+  else
   pack_long (value_contents_writeable (reg_val),
 	     register_type (gdbarch, regnum), addr);
   return reg_val;
