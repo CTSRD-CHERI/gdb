@@ -109,6 +109,7 @@ static const char *const mips_abi_strings[] = {
   "o64",
   "eabi32",
   "eabi64",
+  "cheriabi",
   NULL
 };
 
@@ -300,6 +301,7 @@ mips_abi_regsize (struct gdbarch *gdbarch)
     case MIPS_ABI_N64:
     case MIPS_ABI_O64:
     case MIPS_ABI_EABI64:
+    case MIPS_ABI_CHERIABI:
       return 8;
     case MIPS_ABI_UNKNOWN:
     case MIPS_ABI_LAST:
@@ -8868,6 +8870,9 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     case E_MIPS_ABI_EABI64:
       found_abi = MIPS_ABI_EABI64;
       break;
+    case E_MIPS_ABI_CHERIABI:
+      found_abi = MIPS_ABI_CHERIABI;
+      break;
     default:
       if ((elf_flags & EF_MIPS_ABI2))
 	found_abi = MIPS_ABI_N32;
@@ -9168,13 +9173,17 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_long_double_format (gdbarch, floatformats_ibm_long_double);
       break;
     case MIPS_ABI_N64:
+    case MIPS_ABI_CHERIABI:
       set_gdbarch_push_dummy_call (gdbarch, mips_n32n64_push_dummy_call);
       set_gdbarch_return_value (gdbarch, mips_n32n64_return_value);
       tdep->mips_last_arg_regnum = MIPS_A0_REGNUM + 8 - 1;
       tdep->mips_last_fp_arg_regnum = tdep->regnum->fp0 + 12 + 8 - 1;
       tdep->default_mask_address_p = 0;
       set_gdbarch_long_bit (gdbarch, 64);
-      set_gdbarch_ptr_bit (gdbarch, 64);
+      if (mips_abi == MIPS_ABI_CHERIABI)
+        set_gdbarch_ptr_bit(gdbarch, capreg_size);
+      else
+        set_gdbarch_ptr_bit (gdbarch, 64);
       set_gdbarch_long_long_bit (gdbarch, 64);
       set_gdbarch_long_double_bit (gdbarch, 128);
       set_gdbarch_long_double_format (gdbarch, floatformats_ibm_long_double);
@@ -9622,7 +9631,8 @@ This option can be set to one of:\n\
   n32\n\
   n64\n\
   eabi32\n\
-  eabi64"),
+  eabi64\n\
+  cheriabi"),
 			mips_abi_update,
 			show_mips_abi,
 			&setmipscmdlist, &showmipscmdlist);
