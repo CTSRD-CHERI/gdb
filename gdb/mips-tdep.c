@@ -1721,7 +1721,11 @@ mips32_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	       && (itype_rt (inst) & 2) == 0)
 	/* BC1ANY4F, BC1ANY4T: 010001 01010 xxx0x */
 	pc = mips32_bc1_pc (gdbarch, regcache, inst, pc + 4, 4);
-      else if (op == 29)
+      /*
+       * XXXAR: On CHERI the JALX opcode is used for clcbi (load cap big
+       * immediate) so instruction is pc + 4
+       */
+      else if (op == 29 && !is_cheri (gdbarch))
 	/* JALX: 011101 */
 	/* The new PC will be alternate mode.  */
 	{
@@ -2126,6 +2130,7 @@ micromips_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	  break;
 
 	case 0x3c: /* JALX: bits 111100 */
+            gdb_assert (!is_cheri (gdbarch) && "JALX not supported on CHERI");
 	    pc = ((pc | 0xfffffff) ^ 0xfffffff) | (b0s26_imm (insn) << 2);
 	  break;
 	}
@@ -7512,7 +7517,8 @@ mips32_instruction_has_delay_slot (struct gdbarch *gdbarch, ULONGEST inst)
       return (is_octeon_bbit_op (op, gdbarch)
 	      || is_cheri_branch_op (inst, gdbarch)
 	      || op >> 2 == 5	/* BEQL, BNEL, BLEZL, BGTZL: bits 0101xx  */
-	      || op == 29	/* JALX: bits 011101  */
+	      /* XXXAR: CHERI uses the jalx opcode for clcbi */
+	      || (op == 29 && !is_cheri (gdbarch))	/* JALX: bits 011101  */
 	      || (op == 17
 		  && (rs == 8
 				/* BC1F, BC1FL, BC1T, BC1TL: 010001 01000  */
