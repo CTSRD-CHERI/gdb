@@ -757,6 +757,33 @@ mips_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
   int rawnum = cookednum % gdbarch_num_regs (gdbarch);
   gdb_assert (cookednum >= gdbarch_num_regs (gdbarch)
 	      && cookednum < 2 * gdbarch_num_regs (gdbarch));
+  /*
+   * For hybrid binaries in a sandbox we also need to consider $pcc.base when
+   * computing the program counter: https://github.com/CTSRD-CHERI/gdb/issues/1
+   */
+  int cap_pcc = gdbarch_tdep (gdbarch)->regnum->cap_pcc;
+  if (rawnum == gdbarch_tdep (gdbarch)->regnum->pc && cap_pcc >= 0)
+  {
+      /*
+       * XXXAR: Hack to read the $pcc cursor when pc is requested: read bytes
+       * 8-16 to get the cursor for both CHERI128 and CHERI256.
+       */
+      int cap_size = register_size (gdbarch, cap_pcc);
+      gdb_assert (register_size (gdbarch, cookednum) == 8);
+      gdb_assert (cap_size == 32 || cap_size == 16);
+      int cursor_offset = 8;
+#if 0
+      gdb_byte buf2[32];
+      memset(&buf2, 0, sizeof(buf2));
+      regcache_raw_read (regcache, cap_pcc, buf2);
+      for (int i = 0; i < sizeof(buf2) / sizeof(long); i++) {
+        uint64_t value = be64toh(((long*)buf2)[i]);
+        printf("pcc[%d] = 0x%016x / %ld\n", i, value, value);
+      }
+#endif
+      return regcache_raw_read_part (regcache, cap_pcc, cursor_offset, 8, buf);
+  }
+
   if (register_size (gdbarch, rawnum) == register_size (gdbarch, cookednum))
     return regcache_raw_read (regcache, rawnum, buf);
   else if (register_size (gdbarch, rawnum) >
