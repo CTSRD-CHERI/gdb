@@ -220,6 +220,23 @@ mips_fbsd_nat_target::read_description ()
 
 static  struct cmd_list_element *qtrace_cmdlist = NULL;
 
+/*
+ * Toggling the user-only qtrace is slightly hacky since we are doing it in the
+ * gdb process and not the debugged one. However, nothing else except the
+ * qtrace tool uses these magic nops so this should be safe.
+ */
+static void
+cmd_qtrace_enable_user_only(char *args, int from_tty)
+{
+  __asm__ __volatile__("ori $0, $0, 0xdeaf");
+}
+
+static void
+cmd_qtrace_disable_user_only (char *args, int from_tty)
+{
+  __asm__ __volatile__("ori $0, $0, 0xfaed");
+}
+
 static void
 cmd_qtrace_start (char *args, int from_tty)
 {
@@ -231,9 +248,24 @@ cmd_qtrace_start (char *args, int from_tty)
 static void
 cmd_qtrace_stop (char *args, int from_tty)
 {
+  cmd_qtrace_disable_user_only(args, from_tty);
   if (ptrace (PT_SETQTRACE, get_ptrace_pid (inferior_ptid), NULL, 0)
       == -1)
     perror_with_name (_("Couldn't disable qtrace"));
+}
+
+static void
+cmd_qtrace_start_user_only(char *args, int from_tty)
+{
+  cmd_qtrace_enable_user_only(args, from_tty);
+  cmd_qtrace_start(args, from_tty);
+}
+
+static void
+cmd_qtrace_start_full(char *args, int from_tty)
+{
+  cmd_qtrace_disable_user_only(args, from_tty);
+  cmd_qtrace_start(args, from_tty);
 }
 
 static void
@@ -245,6 +277,14 @@ add_qtrace_commands (void)
 
   add_cmd ("stop", class_obscure, cmd_qtrace_stop, _("Stop tracing."),
 	   &qtrace_cmdlist);
+  add_cmd ("start-full", class_obscure, cmd_qtrace_start_full, _("Start tracing."),
+	   &qtrace_cmdlist);
+  add_cmd ("start-user", class_obscure, cmd_qtrace_start_user_only, _("Start user-mode only tracing."),
+	   &qtrace_cmdlist);
+  add_cmd ("enable-user-only", class_obscure, cmd_qtrace_enable_user_only,
+	   _("Turn on user-mode only qtrace."), &qtrace_cmdlist);
+  add_cmd ("disable-user-only", class_obscure, cmd_qtrace_disable_user_only,
+	   _("Turn off user-mode only qtrace."), &qtrace_cmdlist);
 }
 #endif
 
