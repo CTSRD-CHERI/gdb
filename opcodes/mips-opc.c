@@ -153,6 +153,7 @@ decode_mips_operand (const char *p)
 	case 'R': INT_ADJ(8, 3, 127, 3, FALSE);
 	case 'b': REG (5, 11, CAP);
 	case 's': INT_ADJ(11, 0, 1023, 4, FALSE);
+	case 'S': INT_ADJ(16, 0, 32767, 4, FALSE);
 	case 'v': REG (5, 6, CAP);
 	case 'w': REG (5, 16, CAP);
 	case 'x': REG (5, 21, CAP);
@@ -475,8 +476,8 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"candperm", "/w,/b,/m",            0x48800000, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccleartag", "/w,/b",     0x48800005, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cincoffset", "/w,/b,/m",   0x49a00000, 0xffe0003f, 0, 0, I1, 0, 0},
-{"csetdefault", "/b",	0x49a00000, 0xffff07ff, 0, 0, I1},
-{"cgetdefault", "/w",	0x49a00000, 0xffe0ffff, 0, 0, I1},
+{"csetdefault", "/b",	0x49a00000, 0xffff07ff, 0, 0, I1, 0, 0},
+{"cgetdefault", "/w",	0x49a00000, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cmove",    "/w,/b",       0x49a00000, 0xffe007ff, 0, 0, I1, 0, 0},
 {"csetoffset", "/w,/b,/m",   0x49a00001, 0xffe0003f, 0, 0, I1, 0, 0},
 {"csetbounds", "/w,/b,/m",   0x48200000, 0xffe0003f, 0, 0, I1, 0, 0},
@@ -587,6 +588,11 @@ const struct mips_opcode mips_builtin_opcodes[] =
 /* Memory Access (B.1.9) */
 {"csc",      "/x,d,/s(/w)", 0xf8000000, 0xfc000000, 0, 0, I1, 0, 0},
 {"clc",      "/x,d,/s(/w)", 0xd8000000, 0xfc000000, 0, 0, I1, 0, 0},
+/* XXXAR: experimental large-immediate clc */
+{"clcbi",   "/x,/S(/w)",    0x74000000, 0xfc000000, 0, 0, I1, 0, 0},
+/* XXXAR: experimental large-immediate csc (not used yet)*/
+{"cscbi",   "/x,/S(/w)",    0x78000000, 0xfc000000, 0, 0, I1, 0, 0},
+
 {"cscr",     "/x,d(/w)",    0xf8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
 {"clcr",     "/x,d(/w)",    0xd8000000, 0xfc0007ff, 0, 0, I1, 0, 0},
 {"csci",     "/x,/s(/w)",   0xf8000000, 0xfc00f800, 0, 0, I1, 0, 0},
