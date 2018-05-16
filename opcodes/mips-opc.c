@@ -485,6 +485,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cgettag",  "t,/b",        0x48000005, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cgetsealed", "t,/b",      0x48000006, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cgetoffset", "t,/b",      0x49a00002, 0xffe007ff, 0, 0, I1, 0, 0},
+/* cgetpcc and cgetpccsetoffset are in B.2.1 */
 
 /* Old Capability-Modification (B.1.2) */
 {"cseal",     "/w,/b,/v",   0x48400000, 0xffe0003f, 0, 0, I1, 0, 0},
@@ -492,11 +493,13 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"candperm", "/w,/b,/m",            0x48800000, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccleartag", "/w,/b",     0x48800005, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cincoffset", "/w,/b,/m",   0x49a00000, 0xffe0003f, 0, 0, I1, 0, 0},
+/* cincoffsetimm is in B.2.2 */
 {"csetdefault", "/b",	0x49a00000, 0xffff07ff, 0, 0, I1, 0, 0},
 {"cgetdefault", "/w",	0x49a00000, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cmove",    "/w,/b",       0x49a00000, 0xffe007ff, 0, 0, I1, 0, 0},
 {"csetoffset", "/w,/b,/m",   0x49a00001, 0xffe0003f, 0, 0, I1, 0, 0},
 {"csetbounds", "/w,/b,/m",   0x48200000, 0xffe0003f, 0, 0, I1, 0, 0},
+/* csetboundsimm is in B.2.2 */
 
 /* Old Pointer-Arithmetic (B.1.3) */
 {"ctoptr",   "t,/b,/v",     0x49800000, 0xffe0003f, 0, 0, I1, 0, 0},
@@ -517,6 +520,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"csetcause", "/m",          0x48800004, 0xfffff83f, 0, 0, I1, 0, 0},
 
 /* Old Control-Flow (B.1.6) */
+/* cbtu, cbts, cbez, and cbnz are in B.2.6 */
 {"cjr",       "/b",         0x49000000, 0xffff07ff, UBD, 0, I1, 0, 0},
 {"cjalr",     "/b,/w",      0x48e00000, 0xffe007ff, UBD, 0, I1, 0, 0},
 {"ccall",     "/w,/b",      0x48a00000, 0xffe007ff, 0, 0, I1, 0, 0},
@@ -536,6 +540,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cgetoffset", "t,/b",     0x480001bf, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cgetpcc", "/w",          0x480007ff, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cgetpccsetoffset", "/w,d", 0x480001ff, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetaddr", "t,/b",       0x480003ff, 0xffe007ff, 0, 0, I1, 0, 0},
 
 /* Capability-Modification (B.2.2) */
 {"cseal",    "/w,/b,/v",   0x4800000b, 0xffe0003f, 0, 0, I1, 0, 0},
@@ -591,7 +596,9 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cchecktype", "/w,/b",    0x4800027f, 0xffe007ff, 0, 0, I1, 0, 0},
 {"ctestsubset", "t,/b,/v", 0x48000020, 0xffe0003f, 0, 0, I1, 0, 0},
 
-
+/* Special-Purpose Register access Instructions (B.2.8) */
+{"creadhwr", "/w,h",       0x4800037f, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cwritehwr", "/w,h",      0x480003bf, 0xffe007ff, 0, 0, I1, 0, 0},
 
 /* Fast Register-Clearing (B.1.8 / B.2.9) */
 {"clearlo",  "i",          0x49e00000, 0xffff0000, 0, 0, I1, 0, 0},
