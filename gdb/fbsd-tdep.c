@@ -66,6 +66,7 @@ enum
     FREEBSD_SIGUSR2 = 31,
     FREEBSD_SIGTHR = 32,
     FREEBSD_SIGLIBRT = 33,
+    FREEBSD_SIGPROT = 34,
     FREEBSD_SIGRTMIN = 65,
     FREEBSD_SIGRTMAX = 126,
   };
@@ -1289,6 +1290,9 @@ fbsd_gdb_signal_from_target (struct gdbarch *gdbarch, int signal)
 
     case FREEBSD_SIGLIBRT:
       return GDB_SIGNAL_LIBRT;
+
+    case FREEBSD_SIGPROT:
+      return GDB_SIGNAL_PROT;
     }
 
   if (signal >= FREEBSD_SIGRTMIN && signal <= FREEBSD_SIGRTMAX)
@@ -1410,6 +1414,9 @@ fbsd_gdb_signal_to_target (struct gdbarch *gdbarch,
 
     case GDB_SIGNAL_LIBRT:
       return FREEBSD_SIGLIBRT;
+
+    case GDB_SIGNAL_PROT:
+      return FREEBSD_SIGPROT;
     }
 
   if (signal >= GDB_SIGNAL_REALTIME_65
