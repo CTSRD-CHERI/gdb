@@ -477,6 +477,12 @@ const struct mips_opcode mips_builtin_opcodes[] =
 
    XXX: These need a custom INSN_ bit.  */
 
+/* Various aliases */
+{"cgetnull", "/w",         0x48000013, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"cfromddc", "/w,/m",      0x48000013, 0xffe0f83f, 0, 0, I1, 0, 0},
+{"cgetepcc", "/w,h",       0x4800fb7f, 0xffe0ffff, 0, 0, I1, 0, 0},
+{"csetepcc", "/w,h",       0x4800fbbf, 0xffe0ffff, 0, 0, I1, 0, 0},
+
 /* Old Capability-Inspection (B.1.1) */
 {"cgetperm", "t,/b",       0x48000000, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cgettype", "t,/b",       0x48000001, 0xffe007ff, 0, 0, I1, 0, 0},
