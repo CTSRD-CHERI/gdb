@@ -492,11 +492,11 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cunseal",   "/w,/b,/v",   0x48600000, 0xffe0003f, 0, 0, I1, 0, 0},
 {"candperm", "/w,/b,/m",            0x48800000, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccleartag", "/w,/b",     0x48800005, 0xffe007ff, 0, 0, I1, 0, 0},
-{"cincoffset", "/w,/b,/m",   0x49a00000, 0xffe0003f, 0, 0, I1, 0, 0},
-/* cincoffsetimm is in B.2.2 */
 {"csetdefault", "/b",	0x49a00000, 0xffff07ff, 0, 0, I1, 0, 0},
 {"cgetdefault", "/w",	0x49a00000, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cmove",    "/w,/b",       0x49a00000, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cincoffset", "/w,/b,/m",   0x49a00000, 0xffe0003f, 0, 0, I1, 0, 0},
+/* cincoffsetimm is in B.2.2 */
 {"csetoffset", "/w,/b,/m",   0x49a00001, 0xffe0003f, 0, 0, I1, 0, 0},
 {"csetbounds", "/w,/b,/m",   0x48200000, 0xffe0003f, 0, 0, I1, 0, 0},
 /* csetboundsimm is in B.2.2 */
@@ -588,8 +588,8 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cbnz",     "/w,p",       0x4a400000, 0xffe00000, CBD, 0, I1, 0, 0},
 {"cjr",      "/w",         0x48001fff, 0xffe0ffff, UBD, 0, I1, 0, 0},
 {"cjalr",    "/b,/w",      0x4800033f, 0xffe007ff, UBD, 0, I1, 0, 0},
-{"ccall",    "/w,/b,/o",   0x48a00000, 0xffe00000, 0, 0, I1, 0, 0},
 {"creturn",  "",           0x48a007ff, 0xffffffff, 0, 0, I1, 0, 0},
+{"ccall",    "/w,/b,/o",   0x48a00000, 0xffe00000, 0, 0, I1, 0, 0},
 
 /* Assertion (B.2.7) */
 {"ccheckperm", "/w,/d",    0x4800023f, 0xffe007ff, 0, 0, I1, 0, 0},
