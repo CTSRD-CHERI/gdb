@@ -1628,10 +1628,18 @@ is_octeon_bbit_op (int op, struct gdbarch *gdbarch)
   return 0;
 }
 
-/* Return 1 if GDBARCH is using CHERI capabilities for pointers.  */
+/* Return 1 if GDBARCH is using the CHERI ISA (e.g. branch instructions). */
 
 static int
 is_cheri (struct gdbarch *gdbarch)
+{
+  return (mips_regnum (gdbarch)->cap0 != -1);
+}
+
+/* Return 1 if GDBARCH is using the CHERI pure capability C ABI.  */
+
+static int
+is_cheriabi (struct gdbarch *gdbarch)
 {
   return (mips_regnum (gdbarch)->cap0 != -1
 	  && gdbarch_ptr_bit (gdbarch) >= 128);
@@ -4036,7 +4044,7 @@ mips_insn32_frame_cache (struct frame_info *this_frame, void **this_cache)
   /* gdbarch_sp_regnum contains the value and not the address.  */
   trad_frame_set_value (cache->saved_regs,
 			gdbarch_num_regs (gdbarch)
-			+ (is_cheri(gdbarch)
+			+ (is_cheri (gdbarch)
 			   ? mips_regnum (gdbarch)->cap0 + 11
 			   : MIPS_SP_REGNUM),
 			cache->base);
@@ -9329,7 +9337,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* The hook may have adjusted num_regs, fetch the final value and
      set pc_regnum and sp_regnum now that it has been fixed.  */
   num_regs = gdbarch_num_regs (gdbarch);
-  if (is_cheri (gdbarch))
+  if (is_cheriabi (gdbarch))
     {
       set_gdbarch_pc_regnum (gdbarch, tdep->regnum->cap_pcc + num_regs);
       set_gdbarch_sp_regnum (gdbarch, tdep->regnum->cap0 + 11 + num_regs);
@@ -9365,7 +9373,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       num_regs = gdbarch_num_regs (gdbarch);
       set_gdbarch_num_pseudo_regs (gdbarch, num_regs);
-      if (is_cheri (gdbarch))
+      if (is_cheriabi (gdbarch))
 	{
 	  set_gdbarch_pc_regnum (gdbarch, tdep->regnum->cap_pcc + num_regs);
 	  set_gdbarch_sp_regnum (gdbarch, tdep->regnum->cap0 + 11 + num_regs);
