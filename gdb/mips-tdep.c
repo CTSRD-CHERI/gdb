@@ -262,7 +262,7 @@ mips_cheri_register_p (struct gdbarch *gdbarch, int regnum)
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
   int cap0 = mips_regnum (gdbarch)->cap0;
 
-  return (cap0 != -1 && rawnum >= cap0 && rawnum < cap0 + 32);
+  return (cap0 != -1 && rawnum >= cap0 && rawnum <= cap0 + 32);
 }
 
 #define MIPS_EABI(gdbarch) (gdbarch_tdep (gdbarch)->mips_abi \
@@ -604,6 +604,16 @@ static const char *mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
   "fsr", "fir",
 };
 
+/* CHERI Capabilities.  */
+
+static const char *mips_cheri_reg_names[35] = {
+  "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7",
+  "c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15",
+  "c16", "c17", "c18", "c19", "c20", "c21", "c22", "c23",
+  "c24", "c25", "c26", "c27", "c28", "c29", "c30", "c31",
+  "pcc", "cap_cause", "cap_valid",
+};
+
 /* Names of tx39 registers.  */
 
 static const char *mips_tx39_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
@@ -669,6 +679,7 @@ mips_register_name (struct gdbarch *gdbarch, int regno)
   /* The MIPS integer registers are always mapped from 0 to 31.  The
      names of the registers (which reflects the conventions regarding
      register use) vary depending on the ABI.  */
+  int cap0 = mips_regnum (gdbarch)->cap0;
   if (0 <= rawnum && rawnum < 32)
     {
       if (abi == MIPS_ABI_N32 || abi == MIPS_ABI_N64)
@@ -678,6 +689,8 @@ mips_register_name (struct gdbarch *gdbarch, int regno)
     }
   else if (tdesc_has_registers (gdbarch_target_desc (gdbarch)))
     return tdesc_register_name (gdbarch, rawnum);
+  else if (cap0 != -1 && rawnum >= cap0 && rawnum < cap0 + 35)
+    return mips_cheri_reg_names[rawnum - cap0];
   else if (32 <= rawnum && rawnum < gdbarch_num_regs (gdbarch))
     {
       gdb_assert (rawnum - 32 < NUM_MIPS_PROCESSOR_REGS);
