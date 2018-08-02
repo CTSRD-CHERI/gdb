@@ -678,7 +678,8 @@ mips_register_name (struct gdbarch *gdbarch, int regno)
     }
   else if (tdesc_has_registers (gdbarch_target_desc (gdbarch)))
     return tdesc_register_name (gdbarch, rawnum);
-  else if (cap0 != -1 && rawnum >= cap0 && rawnum < cap0 + 35)
+  else if (cap0 != -1 && rawnum >= cap0
+	   && rawnum - cap0 < ARRAY_SIZE (mips_cheri_reg_names))
     return mips_cheri_reg_names[rawnum - cap0];
   else if (32 <= rawnum && rawnum < gdbarch_num_regs (gdbarch))
     {
