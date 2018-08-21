@@ -427,6 +427,12 @@ typedef void (gdbarch_print_vector_info_ftype) (struct gdbarch *gdbarch, struct 
 extern void gdbarch_print_vector_info (struct gdbarch *gdbarch, struct ui_file *file, struct frame_info *frame, const char *args);
 extern void set_gdbarch_print_vector_info (struct gdbarch *gdbarch, gdbarch_print_vector_info_ftype *print_vector_info);
 
+extern int gdbarch_print_pointer_attributes_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_print_pointer_attributes_ftype) (struct gdbarch *gdbarch, struct type *type, const gdb_byte *valaddr, CORE_ADDR address, int embedded_offset, struct ui_file *stream);
+extern void gdbarch_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type, const gdb_byte *valaddr, CORE_ADDR address, int embedded_offset, struct ui_file *stream);
+extern void set_gdbarch_print_pointer_attributes (struct gdbarch *gdbarch, gdbarch_print_pointer_attributes_ftype *print_pointer_attributes);
+
 /* MAP a GDB RAW register number onto a simulator register number.  See
    also include/...-sim.h. */
 

@@ -495,6 +495,7 @@ m;int;code_of_frame_writable;struct frame_info *frame;frame;;default_code_of_fra
 m;void;print_registers_info;struct ui_file *file, struct frame_info *frame, int regnum, int all;file, frame, regnum, all;;default_print_registers_info;;0
 m;void;print_float_info;struct ui_file *file, struct frame_info *frame, const char *args;file, frame, args;;default_print_float_info;;0
 M;void;print_vector_info;struct ui_file *file, struct frame_info *frame, const char *args;file, frame, args
+M;void;print_pointer_attributes;struct type *type, const gdb_byte *valaddr, CORE_ADDR address, int embedded_offset, struct ui_file *stream;type, valaddr, address, embedded_offset, stream
 # MAP a GDB RAW register number onto a simulator register number.  See
 # also include/...-sim.h.
 m;int;register_sim_regno;int reg_nr;reg_nr;;legacy_register_sim_regno;;0

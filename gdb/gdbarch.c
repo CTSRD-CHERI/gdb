@@ -220,6 +220,7 @@ struct gdbarch
   gdbarch_print_registers_info_ftype *print_registers_info;
   gdbarch_print_float_info_ftype *print_float_info;
   gdbarch_print_vector_info_ftype *print_vector_info;
+  gdbarch_print_pointer_attributes_ftype *print_pointer_attributes;
   gdbarch_register_sim_regno_ftype *register_sim_regno;
   gdbarch_cannot_fetch_register_ftype *cannot_fetch_register;
   gdbarch_cannot_store_register_ftype *cannot_store_register;
@@ -579,6 +580,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of print_registers_info, invalid_p == 0 */
   /* Skip verify of print_float_info, invalid_p == 0 */
   /* Skip verify of print_vector_info, has predicate.  */
+  /* Skip verify of print_pointer_attributes, has predicate.  */
   /* Skip verify of register_sim_regno, invalid_p == 0 */
   /* Skip verify of cannot_fetch_register, invalid_p == 0 */
   /* Skip verify of cannot_store_register, invalid_p == 0 */
@@ -1215,6 +1217,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: print_insn = <%s>\n",
                       host_address_to_string (gdbarch->print_insn));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_print_pointer_attributes_p() = %d\n",
+                      gdbarch_print_pointer_attributes_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: print_pointer_attributes = <%s>\n",
+                      host_address_to_string (gdbarch->print_pointer_attributes));
   fprintf_unfiltered (file,
                       "gdbarch_dump: print_registers_info = <%s>\n",
                       host_address_to_string (gdbarch->print_registers_info));
@@ -2486,6 +2494,30 @@ set_gdbarch_print_vector_info (struct gdbarch *gdbarch,
                                gdbarch_print_vector_info_ftype print_vector_info)
 {
   gdbarch->print_vector_info = print_vector_info;
+}
+
+int
+gdbarch_print_pointer_attributes_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->print_pointer_attributes != NULL;
+}
+
+void
+gdbarch_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type, const gdb_byte *valaddr, CORE_ADDR address, int embedded_offset, struct ui_file *stream)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->print_pointer_attributes != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_print_pointer_attributes called\n");
+  gdbarch->print_pointer_attributes (gdbarch, type, valaddr, address, embedded_offset, stream);
+}
+
+void
+set_gdbarch_print_pointer_attributes (struct gdbarch *gdbarch,
+                                      gdbarch_print_pointer_attributes_ftype print_pointer_attributes)
+{
+  gdbarch->print_pointer_attributes = print_pointer_attributes;
 }
 
 int
