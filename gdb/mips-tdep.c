@@ -61,6 +61,8 @@
 #include "features/mips64-cheri128.c"
 #include "features/mips64-cheri256.c"
 
+#include "cheri-compressed-cap/cheri_compressed_cap.h"
+
 static const struct objfile_data *mips_pdr_data;
 
 static struct type *mips_register_type (struct gdbarch *gdbarch, int regnum);
@@ -7094,6 +7096,27 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 			perms & (1 << 3) ? "R" : "",
 			perms & (1 << 4) ? "W" : "",
 			perms & (1 << 2) ? "X" : "",
+			paddress (gdbarch, base),
+			paddress (gdbarch, base + length));
+    }
+  else if (type->length == 16)
+    {
+      struct cap_register cap;
+      uint64_t cursor;
+
+      perms = extract_unsigned_integer (valaddr + embedded_offset, 8,
+					byte_order);
+      if (perms == 0)
+	return;
+      cursor = extract_unsigned_integer (valaddr + embedded_offset + 8, 8,
+					 byte_order);
+      decompress_128cap(perms, cursor, &cap);
+      base = cap.cr_base;
+      length = cap.cr_length;
+      fprintf_filtered (stream, " [%s%s%s,%s-%s]",
+			cap.cr_perms & (1 << 2) ? "R" : "",
+			cap.cr_perms & (1 << 3) ? "W" : "",
+			cap.cr_perms & (1 << 1) ? "X" : "",
 			paddress (gdbarch, base),
 			paddress (gdbarch, base + length));
     }
