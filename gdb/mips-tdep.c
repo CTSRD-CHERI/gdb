@@ -7084,6 +7084,8 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 				       byte_order);
       length = extract_unsigned_integer (valaddr + embedded_offset + 24, 8,
 					 byte_order);
+      if (perms == 0 && base == 0 && length == 0)
+	return;
       length ^= 0xffffffffffffffff;
       fprintf_filtered (stream, " [%s%s%s,%s-%s]",
 			perms & (1 << 3) ? "R" : "",
