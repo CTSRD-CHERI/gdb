@@ -820,18 +820,6 @@ mips_fbsd_cheri_integer_to_address (struct gdbarch *gdbarch,
 }
 
 static CORE_ADDR
-mips_fbsd_cheri_read_pc (struct regcache *regcache)
-{
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  gdb_byte buf[gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT];
-
-  regcache_cooked_read (regcache, gdbarch_num_regs(gdbarch) +
-			mips_regnum (gdbarch)->cap_pcc, buf);
-  return extract_signed_integer (buf + 8, 8, byte_order);
-}
-
-static CORE_ADDR
 mips_fbsd_cheri_unwind_pc (struct gdbarch *gdbarch,
 			   struct frame_info *next_frame)
 {
@@ -972,7 +960,6 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 				    mips_fbsd_cheri_address_to_pointer);
     set_gdbarch_integer_to_address (gdbarch,
 				    mips_fbsd_cheri_integer_to_address);
-    set_gdbarch_read_pc (gdbarch, mips_fbsd_cheri_read_pc);
     set_gdbarch_unwind_pc (gdbarch, mips_fbsd_cheri_unwind_pc);
     set_gdbarch_unwind_sp (gdbarch, mips_fbsd_cheri_unwind_sp);
     set_gdbarch_auxv_parse (gdbarch, mips_fbsd_cheri_auxv_parse);
