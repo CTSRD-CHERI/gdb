@@ -7026,6 +7026,34 @@ mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
     }
 }
 
+static void
+mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
+				     const gdb_byte *valaddr, CORE_ADDR address,
+				     int embedded_offset,
+				     struct ui_file *stream)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR base, length;
+  uint64_t perms;
+
+  if (type->length == 32)
+    {
+      perms = extract_unsigned_integer (valaddr + embedded_offset, 8,
+					byte_order);
+      base = extract_unsigned_integer (valaddr + embedded_offset + 16, 8,
+				       byte_order);
+      length = extract_unsigned_integer (valaddr + embedded_offset + 24, 8,
+					 byte_order);
+      length ^= 0xffffffffffffffff;
+      fprintf_filtered (stream, " [%s%s%s,%s-%s]",
+			perms & (1 << 3) ? "R" : "",
+			perms & (1 << 4) ? "W" : "",
+			perms & (1 << 2) ? "X" : "",
+			paddress (gdbarch, base),
+			paddress (gdbarch, base + length));
+    }
+}
+
 static int
 mips_single_step_through_delay (struct gdbarch *gdbarch,
 				struct frame_info *frame)
@@ -9371,6 +9399,10 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Create type for CHERI capability registers if needed.  */
   if (capreg_size != 0)
     tdep->capreg_type = mips_build_capreg_type (gdbarch, capreg_size);
+
+  if (is_cheri (gdbarch))
+    set_gdbarch_print_pointer_attributes (gdbarch,
+					  mips_cheri_print_pointer_attributes);
 
   /* Hook in OS ABI-specific overrides, if they have been registered.  */
   info.tdep_info = tdesc_data;
