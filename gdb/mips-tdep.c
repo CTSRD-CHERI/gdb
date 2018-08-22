@@ -80,6 +80,12 @@ static int mips16_insn_at_pc_has_delay_slot (struct gdbarch *gdbarch,
 
 static void mips_print_float_info (struct gdbarch *, struct ui_file *,
 				   struct frame_info *, const char *);
+static void mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
+						 struct type *type,
+						 const gdb_byte *valaddr,
+						 CORE_ADDR address,
+						 int embedded_offset,
+						 struct ui_file *stream);
 
 /* A useful bit in the CP0 status register (MIPS_PS_REGNUM).  */
 /* This bit is set if we are emulating 32-bit FPRs on a 64-bit chip.  */
@@ -6744,6 +6750,40 @@ mips_print_fp_register (struct ui_file *file, struct frame_info *frame,
 }
 
 static void
+mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
+			   int regnum)
+{
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  struct value_print_options opts;
+  int optimized, unavailable, realnum;
+  CORE_ADDR address;
+  enum lval_type lval;
+  gdb_byte buf[register_size (gdbarch, regnum)];
+
+  frame_register_unwind (frame, regnum, &optimized, &unavailable, &lval,
+			 &address, &realnum, buf);
+  fprintf_filtered (file, "%4s: ", gdbarch_register_name (gdbarch, regnum));
+  if (optimized || unavailable)
+    {
+      fputs_filtered ("<unavailable>", file);
+      return;
+    }
+
+  address = extract_signed_integer (buf + 8, 8, byte_order);
+  if (regnum % gdbarch_num_regs (gdbarch) == mips_regnum (gdbarch)->cap_pcc)
+    {
+      /* Try to print what function it points to.  */
+      get_formatted_print_options (&opts, 'x');
+      print_function_pointer_address (&opts, gdbarch, address, file);
+    }
+  else
+    fputs_filtered (print_core_address (gdbarch, address), file);
+  mips_cheri_print_pointer_attributes (gdbarch, register_type (gdbarch, regnum),
+				       buf, address, 0, file);
+}
+
+static void
 mips_print_register (struct ui_file *file, struct frame_info *frame,
 		     int regnum)
 {
@@ -6755,6 +6795,12 @@ mips_print_register (struct ui_file *file, struct frame_info *frame,
   if (mips_float_register_p (gdbarch, regnum))
     {
       mips_print_fp_register (file, frame, regnum);
+      return;
+    }
+
+  if (mips_cheri_register_p (gdbarch, regnum))
+    {
+      mips_print_cheri_register (file, frame, regnum);
       return;
     }
 
@@ -6773,9 +6819,6 @@ mips_print_register (struct ui_file *file, struct frame_info *frame,
     fprintf_filtered (file, ": ");
 
   get_formatted_print_options (&opts, 'x');
-  if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
-    value_print (val, file, &opts);
-  else
   val_print_scalar_formatted (value_type (val),
 			      value_embedded_offset (val),
 			      val,
