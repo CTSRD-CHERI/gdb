@@ -150,6 +150,9 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
     {
       /* Try to print what function it points to.  */
       print_function_pointer_address (options, gdbarch, address, stream);
+      if (gdbarch_print_pointer_attributes_p (gdbarch))
+	gdbarch_print_pointer_attributes (gdbarch, type, valaddr, address,
+					  embedded_offset, stream);
       return;
     }
 
@@ -161,6 +164,10 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
       fputs_filtered (paddress (gdbarch, address), stream);
       want_space = 1;
     }
+
+  if (gdbarch_print_pointer_attributes_p (gdbarch))
+    gdbarch_print_pointer_attributes (gdbarch, type, valaddr, address,
+				      embedded_offset, stream);
 
   /* For a pointer to a textual type, also print the string
      pointed to, unless pointer is null.  */
