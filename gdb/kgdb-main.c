@@ -50,7 +50,6 @@ __FBSDID("$FreeBSD: head/gnu/usr.bin/gdb/kgdb/main.c 260027 2013-12-28 23:31:22Z
 #include <cli-out.h>
 #include <main.h>
 #include <objfiles.h>
-#include "observer.h"
 #include <target.h>
 #include <top.h>
 #include <ui-file.h>
