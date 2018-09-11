@@ -7130,9 +7130,9 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 	return;
       length ^= 0xffffffffffffffff;
       fprintf_filtered (stream, " [%s%s%s,%s-%s]",
-			perms & (1 << 3) ? "R" : "",
-			perms & (1 << 4) ? "W" : "",
-			perms & (1 << 2) ? "X" : "",
+			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
+			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
+			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
 			paddress (gdbarch, base),
 			paddress (gdbarch, base + length));
     }
@@ -7151,9 +7151,9 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
       base = cap.cr_base;
       length = cap.cr_length;
       fprintf_filtered (stream, " [%s%s%s,%s-%s]",
-			cap.cr_perms & (1 << 2) ? "R" : "",
-			cap.cr_perms & (1 << 3) ? "W" : "",
-			cap.cr_perms & (1 << 1) ? "X" : "",
+			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
+			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
+			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
 			paddress (gdbarch, base),
 			paddress (gdbarch, base + length));
     }
