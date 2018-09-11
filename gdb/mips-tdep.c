@@ -7129,10 +7129,12 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
       if (perms == 0 && base == 0 && length == 0)
 	return;
       length ^= 0xffffffffffffffff;
-      fprintf_filtered (stream, " [%s%s%s,%s-%s]",
+      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]",
 			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
 			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
 			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
+			cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
+			cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
 			paddress (gdbarch, base),
 			paddress (gdbarch, base + length));
     }
@@ -7150,10 +7152,12 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
       decompress_128cap(perms, cursor, &cap);
       base = cap.cr_base;
       length = cap.cr_length;
-      fprintf_filtered (stream, " [%s%s%s,%s-%s]",
+      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]",
 			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
 			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
 			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
+			cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
+			cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
 			paddress (gdbarch, base),
 			paddress (gdbarch, base + length));
     }
