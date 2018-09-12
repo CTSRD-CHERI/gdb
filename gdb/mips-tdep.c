@@ -7118,52 +7118,45 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 				     struct ui_file *stream)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR base, length;
-  uint64_t perms;
+  struct cap_register cap;
+  memset(&cap, 0, sizeof(cap));
 
   if (type->length == 32)
     {
-      perms = extract_unsigned_integer (valaddr + embedded_offset, 8,
-					byte_order);
-      base = extract_unsigned_integer (valaddr + embedded_offset + 16, 8,
+      inmemory_chericap256 mem;
+      mem.u64s[0] = extract_unsigned_integer (valaddr + embedded_offset, 8,
+					      byte_order);
+      mem.u64s[2] = extract_unsigned_integer (valaddr + embedded_offset + 16, 8,
 				       byte_order);
-      length = extract_unsigned_integer (valaddr + embedded_offset + 24, 8,
+      mem.u64s[3] = extract_unsigned_integer (valaddr + embedded_offset + 24, 8,
 					 byte_order);
-      if (perms == 0 && base == 0 && length == 0)
-	return;
-      length ^= 0xffffffffffffffff;
-      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]",
-			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
-			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
-			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-			cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-			cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-			paddress (gdbarch, base),
-			paddress (gdbarch, base + length));
+      decompress_256cap(mem, &cap);
     }
   else if (type->length == 16)
     {
-      struct cap_register cap;
-      uint64_t cursor;
+      uint64_t cursor, pesbt;
 
-      perms = extract_unsigned_integer (valaddr + embedded_offset, 8,
+      pesbt = extract_unsigned_integer (valaddr + embedded_offset, 8,
 					byte_order);
-      if (perms == 0)
-	return;
       cursor = extract_unsigned_integer (valaddr + embedded_offset + 8, 8,
 					 byte_order);
-      decompress_128cap(perms, cursor, &cap);
-      base = cap.cr_base;
-      length = cap.cr_length;
-      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]",
-			cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
-			cap.cr_perms & CC128_PERM_STORE ? "w" : "",
-			cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-			cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-			cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-			paddress (gdbarch, base),
-			paddress (gdbarch, base + length));
+      decompress_128cap(pesbt, cursor, &cap);
     }
+
+    if (cap.cr_perms == 0 && cap.cr_uperms == 0 && cap.cr_otype == 0)
+	return;
+
+    /* TODO: fetch cap.cr_tag */
+
+    fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+		      cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
+		      cap.cr_perms & CC128_PERM_STORE ? "w" : "",
+		      cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
+		      cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
+		      cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
+		      paddress (gdbarch, cap.cr_base),
+		      paddress (gdbarch, cap.cr_base + cap.cr_length),
+		      cap.cr_sealed ? " (sealed)" : "");
 }
 
 static int
