@@ -1716,10 +1716,12 @@ is_cheri_branch_op (unsigned long inst, struct gdbarch *gdbarch)
 	  break;
 	}
 	break;
-      case 7:		/* CJALR (old) */
-      case 8:		/* CJR (old) */
-      case 9:		/* CBTU */
-      case 10:		/* CBTS */
+      case 0x7:		/* CJALR (old) */
+      case 0x8:		/* CJR (old) */
+      case 0x9:		/* CBTU */
+      case 0xa:		/* CBTS */
+      case 0x11:	/* CBEZ */
+      case 0x12:	/* CBNZ */
 	return 1;
       }
   return 0;
@@ -1736,6 +1738,19 @@ get_cheri_register_signed (struct regcache *regcache, int regnum)
   /* XXX: Should probably use gdbarch_integer_to_address. */
   regcache_raw_read (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
   return extract_signed_integer (buf + 8, 8, byte_order);
+}
+
+static bool
+cheri_cap_is_null (struct regcache *regcache, int regnum)
+{
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  gdb_byte buf[register_size (gdbarch, mips_regnum (gdbarch)->cap0 + regnum)];
+
+  regcache_raw_read (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
+  for (size_t i = 0; i < sizeof buf; i++)
+    if (buf[i] != 0)
+      return false;
+  return true;
 }
 
 /* Determine where to set a single step breakpoint while considering
@@ -1827,20 +1842,31 @@ mips32_next_pc (struct regcache *regcache, CORE_ADDR pc)
 		break;
 	      }
 	      break;
-	    case 7:		/* CJALR (old) */
-	    case 8:		/* CJR (old) */
+	    case 0x7:		/* CJALR (old) */
+	    case 0x8:		/* CJR (old) */
 	      pc = get_cheri_register_signed (regcache, rtype_rd (inst));
 	      break;
-	    case 9:		/* CBTU */
-	    case 10:		/* CBTS */
+	    case 0x9:		/* CBTU */
+	    case 0xa:		/* CBTS */
 	      {
 		ULONGEST mask;
 
 		mask = regcache_raw_get_signed
 		  (regcache, mips_regnum (gdbarch)->cap_cause + 1);
 		mask &= (1 << itype_rt (inst));
-		if ((itype_rs (inst) == 9 && mask == 0)
-		    || (itype_rs (inst) == 10 && mask != 0))
+		if ((itype_rs (inst) == 0x9 && mask == 0)
+		    || (itype_rs (inst) == 0xa && mask != 0))
+		  pc += mips32_relative_offset (inst) + 4;
+		else
+		  pc += 8;
+		break;
+	      }
+	    case 0x11:		/* CBEZ */
+	    case 0x12:		/* CBNZ */
+	      {
+		bool is_null = cheri_cap_is_null (regcache, itype_rt (inst));
+		if ((itype_rs (inst) == 0x11 && is_null)
+		    || (itype_rs (inst) == 0x12 && !is_null))
 		  pc += mips32_relative_offset (inst) + 4;
 		else
 		  pc += 8;
