@@ -7,6 +7,6 @@
 	remote = https://github.com/CTSRD-CHERI/cheri-compressed-cap
 	branch = master
 	commit = 003e29ed2052ba38a26ec84b08baca62bcfa9b5c
-	parent = a2ee8bbd581fe42ba22a091a850752d095ab548f
+	parent = f9e7dea90748266fa5708fa5fd712ccc16e4997a
 	method = merge
 	cmdver = 0.4.0
