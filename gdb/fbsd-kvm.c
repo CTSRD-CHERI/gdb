@@ -192,6 +192,7 @@ fbsd_kernel_osabi_sniffer(bfd *abfd)
 			break;
 		if (osabi != GDB_OSABI_FREEBSD)
 			return (GDB_OSABI_UNKNOWN);
+		break;
 	}
 	default:
 		return (GDB_OSABI_UNKNOWN);
@@ -273,12 +274,10 @@ fbsd_kvm_target_open (const char *args, int from_tty)
 	char kvm_err[_POSIX2_LINE_MAX];
 	struct inferior *inf;
 	struct cleanup *old_chain;
-	struct thread_info *ti;
 	struct kthr *kt;
 	kvm_t *nkvm;
 	char *temp, *kernel, *filename;
 	bool writeable;
-	int ontop;
 
 	if (ops == NULL || ops->supply_pcb == NULL || ops->cpu_pcb_addr == NULL)
 		error ("ABI doesn't support a vmcore target");
@@ -384,7 +383,7 @@ fbsd_kvm_target_open (const char *args, int from_tty)
 	init_thread_list();
 	kt = kgdb_thr_init(ops->cpu_pcb_addr);
 	while (kt != NULL) {
-		ti = add_thread_silent(fbsd_vmcore_ptid(kt->tid));
+		add_thread_silent(fbsd_vmcore_ptid(kt->tid));
 		kt = kgdb_thr_next(kt);
 	}
 	if (curkthr != 0)
