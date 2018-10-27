@@ -547,7 +547,7 @@ s390*-*-linux*)
 
 riscv*-*-freebsd*)
 	# Target: FreeBSD/riscv
-	gdb_target_obs="riscv-fbsd-tdep.o"
+	gdb_target_obs="riscv-fbsd-tdep.o riscv-fbsd-kern.o"
 	;;
 
 riscv*-*-linux*)
