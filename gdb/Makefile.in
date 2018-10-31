@@ -1906,8 +1906,8 @@ ifneq ($(CODESIGN_CERT),)
 endif
 
 kgdb$(EXEEXT): kgdb-main.o $(LIBGDB_OBS) $(ADD_DEPS) $(CDEPS) $(TDEPLIBS)
-	rm -f kgdb$(EXEEXT)
-	$(CC_LD) $(INTERNAL_LDFLAGS) $(WIN32LDAPP) \
+	$(SILENCE) rm -f kgdb$(EXEEXT)
+	$(ECHO_CXXLD) $(CC_LD) $(INTERNAL_LDFLAGS) $(WIN32LDAPP) \
 		-o kgdb$(EXEEXT) kgdb-main.o $(LIBGDB_OBS) \
 		$(TDEPLIBS) $(TUI_LIBRARY) $(CLIBS) $(LOADLIBES)
 
