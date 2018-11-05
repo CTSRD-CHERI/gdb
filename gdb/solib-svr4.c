@@ -804,6 +804,7 @@ elf_locate_base (void)
 	return 0;
       return extract_typed_address (pbuf, ptr_type);
 #else
+      // This is an address for CHERI and not a pointer
       enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
       gdb_byte *pbuf;
       int pbuf_size = gdbarch_addr_bit (target_gdbarch ()) / TARGET_CHAR_BIT;
@@ -823,6 +824,7 @@ elf_locate_base (void)
   if (scan_dyntag (DT_MIPS_RLD_MAP_REL, exec_bfd, &dyn_ptr, &dyn_ptr_addr)
       || scan_dyntag_auxv (DT_MIPS_RLD_MAP_REL, &dyn_ptr, &dyn_ptr_addr))
     {
+#if 0
       struct type *ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
       gdb_byte *pbuf;
       int pbuf_size = TYPE_LENGTH (ptr_type);
@@ -833,6 +835,19 @@ elf_locate_base (void)
       if (target_read_memory (dyn_ptr + dyn_ptr_addr, pbuf, pbuf_size))
 	return 0;
       return extract_typed_address (pbuf, ptr_type);
+#else
+      // This is an address for CHERI and not a pointer
+      enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
+      gdb_byte *pbuf;
+      int pbuf_size = gdbarch_addr_bit (target_gdbarch ()) / TARGET_CHAR_BIT;
+
+      pbuf = (gdb_byte *) alloca (pbuf_size);
+      /* DT_MIPS_RLD_MAP_REL contains an offset from the address of the
+	 DT slot to the address of the dynamic link structure.  */
+      if (target_read_memory (dyn_ptr + dyn_ptr_addr, pbuf, pbuf_size))
+	return 0;
+      return extract_unsigned_integer (pbuf, pbuf_size, byte_order);
+#endif
     }
 
   /* Find DT_DEBUG.  */
