@@ -44,7 +44,7 @@
    registers followed by the PCC and cap_cause.  */
 #define MIPS_FBSD_NUM_CAPREGS	29
 
-static int capreg_size = -1;
+static int capreg_size;
 #endif
 
 /* Determine if PT_GETREGS fetches REGNUM.  */
@@ -111,12 +111,11 @@ mips_fbsd_fetch_inferior_registers (struct target_ops *ops,
     }
 
 #ifdef PT_GETCAPREGS
-  if (mips_regnum (gdbarch)->cap0 != -1 &&
+  if (mips_regnum (gdbarch)->cap0 != -1 && capreg_size != 0 &&
       (regnum == -1 || getcapregs_supplies (gdbarch, regnum)))
     {
       void *capregs;
 
-      gdb_assert (capreg_size != 0);
       capregs = alloca (capreg_size * MIPS_FBSD_NUM_CAPREGS);
       if (ptrace (PT_GETCAPREGS, get_ptrace_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
@@ -167,12 +166,11 @@ mips_fbsd_store_inferior_registers (struct target_ops *ops,
 
 #ifdef notyet
 #ifdef PT_GETCAPREGS
-  if (mips_regnum (gdbarch)->cap0 != -1 &&
+  if (mips_regnum (gdbarch)->cap0 != -1 && capreg_size != 0 &&
       (regnum == -1 || getcapregs_supplies (gdbarch, regnum)))
     {
       void *capregs;
 
-      gdb_assert (capreg_size != 0);
       capregs = alloca (capreg_size * MIPS_FBSD_NUM_CAPREGS);
       if (ptrace (PT_GETCAPREGS, get_ptrace_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
@@ -194,12 +192,6 @@ static const struct target_desc *
 mips_fbsd_read_description (struct target_ops *ops)
 {
 #ifdef PT_GETCAPREGS
-  if (capreg_size == -1) {
-    size_t len = sizeof(capreg_size);
-    if (sysctlbyname("security.cheri.capability_size", &capreg_size, &len,
-		     NULL, 0) != 0)
-      capreg_size = 0;
-  }
   if (capreg_size * 8 == 256)
     return tdesc_mips64_cheri256;
   else if (capreg_size * 8 == 128)
@@ -295,6 +287,13 @@ _initialize_mips_fbsd_nat (void)
   t->to_store_registers = mips_fbsd_store_inferior_registers;
   t->to_read_description = mips_fbsd_read_description;
   fbsd_nat_add_target (t);
+
+#ifdef PT_GETCAPREGS
+  size_t len = sizeof(capreg_size);
+  if (sysctlbyname("security.cheri.capability_size", &capreg_size, &len,
+		   NULL, 0) != 0)
+    capreg_size = 0;
+#endif
 
 #ifdef PT_GETQTRACE
   add_qtrace_commands ();
