@@ -84,12 +84,13 @@ static int mips16_insn_at_pc_has_delay_slot (struct gdbarch *gdbarch,
 
 static void mips_print_float_info (struct gdbarch *, struct ui_file *,
 				   struct frame_info *, const char *);
-static void mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
+static void mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch,
 						 struct type *type,
-						 const gdb_byte *valaddr,
-						 CORE_ADDR address,
-						 int embedded_offset,
-						 struct ui_file *stream);
+						 const gdb_byte *buffer,
+						 struct cap_register *cap);
+static void mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
+						  struct cap_register *cap,
+						  struct ui_file *stream);
 
 /* A useful bit in the CP0 status register (MIPS_PS_REGNUM).  */
 /* This bit is set if we are emulating 32-bit FPRs on a 64-bit chip.  */
@@ -6845,8 +6846,12 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
       return;
     }
 
+  struct cap_register cap;
+  memset(&cap, 0, sizeof(cap));
+  mips_cheri_fetch_pointer_attributes (gdbarch, register_type (gdbarch, regnum),
+				       buf, &cap);
   address = extract_signed_integer (buf + 8, 8, byte_order);
-  if (regnum % gdbarch_num_regs (gdbarch) == mips_regnum (gdbarch)->cap_pcc)
+  if (cap.cr_perms & CC128_PERM_EXECUTE)
     {
       /* Try to print what function it points to.  */
       get_formatted_print_options (&opts, 'x');
@@ -6854,8 +6859,7 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
     }
   else
     fputs_filtered (print_core_address (gdbarch, address), file);
-  mips_cheri_print_pointer_attributes (gdbarch, register_type (gdbarch, regnum),
-				       buf, address, 0, file);
+  mips_cheri_print_pointer_attributes1 (gdbarch, &cap, file);
 }
 
 static void
@@ -7138,51 +7142,63 @@ mips_print_registers_info (struct gdbarch *gdbarch, struct ui_file *file,
 }
 
 static void
-mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
-				     const gdb_byte *valaddr, CORE_ADDR address,
-				     int embedded_offset,
-				     struct ui_file *stream)
+mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
+				     const gdb_byte *buffer,
+				     struct cap_register *cap)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  struct cap_register cap;
-  memset(&cap, 0, sizeof(cap));
 
   if (type->length == 32)
     {
       inmemory_chericap256 mem;
-      mem.u64s[0] = extract_unsigned_integer (valaddr + embedded_offset, 8,
-					      byte_order);
-      mem.u64s[2] = extract_unsigned_integer (valaddr + embedded_offset + 16, 8,
-				       byte_order);
-      mem.u64s[3] = extract_unsigned_integer (valaddr + embedded_offset + 24, 8,
-					 byte_order);
-      decompress_256cap(mem, &cap);
+      mem.u64s[0] = extract_unsigned_integer (buffer, 8, byte_order);
+      mem.u64s[2] = extract_unsigned_integer (buffer + 16, 8, byte_order);
+      mem.u64s[3] = extract_unsigned_integer (buffer + 24, 8, byte_order);
+      decompress_256cap(mem, cap);
     }
   else if (type->length == 16)
     {
       uint64_t cursor, pesbt;
 
-      pesbt = extract_unsigned_integer (valaddr + embedded_offset, 8,
-					byte_order);
-      cursor = extract_unsigned_integer (valaddr + embedded_offset + 8, 8,
-					 byte_order);
-      decompress_128cap(pesbt, cursor, &cap);
+      pesbt = extract_unsigned_integer (buffer, 8, byte_order);
+      cursor = extract_unsigned_integer (buffer + 8, 8, byte_order);
+      decompress_128cap(pesbt, cursor, cap);
     }
 
-    if (cap.cr_perms == 0 && cap.cr_uperms == 0 && cap.cr_otype == 0)
-	return;
+  /* TODO: fetch cap.cr_tag */
+}
 
-    /* TODO: fetch cap.cr_tag */
+static void
+mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
+				      struct cap_register *cap,
+				      struct ui_file *stream)
+{
+  if (cap->cr_perms == 0 && cap->cr_uperms == 0 && cap->cr_otype == 0)
+    return;
 
-    fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
-		      cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
-		      cap.cr_perms & CC128_PERM_STORE ? "w" : "",
-		      cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-		      cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-		      cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-		      paddress (gdbarch, cap.cr_base),
-		      paddress (gdbarch, cap.cr_base + cap.cr_length),
-		      cap.cr_sealed ? " (sealed)" : "");
+  fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+		    cap->cr_perms & CC128_PERM_LOAD ? "r" : "",
+		    cap->cr_perms & CC128_PERM_STORE ? "w" : "",
+		    cap->cr_perms & CC128_PERM_EXECUTE ? "x" : "",
+		    cap->cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
+		    cap->cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
+		    paddress (gdbarch, cap->cr_base),
+		    paddress (gdbarch, cap->cr_base + cap->cr_length),
+		    cap->cr_sealed ? " (sealed)" : "");
+}
+
+static void
+mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
+				     const gdb_byte *valaddr, CORE_ADDR address,
+				     int embedded_offset,
+				     struct ui_file *stream)
+{
+  struct cap_register cap;
+
+  memset(&cap, 0, sizeof(cap));
+  mips_cheri_fetch_pointer_attributes (gdbarch, type, valaddr + embedded_offset,
+				       &cap);
+  mips_cheri_print_pointer_attributes1 (gdbarch, &cap, stream);
 }
 
 static int
