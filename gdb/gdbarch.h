@@ -505,6 +505,18 @@ typedef CORE_ADDR (gdbarch_integer_to_address_ftype) (struct gdbarch *gdbarch, s
 extern CORE_ADDR gdbarch_integer_to_address (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf);
 extern void set_gdbarch_integer_to_address (struct gdbarch *gdbarch, gdbarch_integer_to_address_ftype *integer_to_address);
 
+extern int gdbarch_cast_integer_to_pointer_p (struct gdbarch *gdbarch);
+
+typedef struct value * (gdbarch_cast_integer_to_pointer_ftype) (struct gdbarch *gdbarch, struct type *type, struct value *arg2);
+extern struct value * gdbarch_cast_integer_to_pointer (struct gdbarch *gdbarch, struct type *type, struct value *arg2);
+extern void set_gdbarch_cast_integer_to_pointer (struct gdbarch *gdbarch, gdbarch_cast_integer_to_pointer_ftype *cast_integer_to_pointer);
+
+extern int gdbarch_cast_pointer_to_integer_p (struct gdbarch *gdbarch);
+
+typedef struct value * (gdbarch_cast_pointer_to_integer_ftype) (struct gdbarch *gdbarch, struct type *type, struct value *arg2);
+extern struct value * gdbarch_cast_pointer_to_integer (struct gdbarch *gdbarch, struct type *type, struct value *arg2);
+extern void set_gdbarch_cast_pointer_to_integer (struct gdbarch *gdbarch, gdbarch_cast_pointer_to_integer_ftype *cast_pointer_to_integer);
+
 /* Return the return-value convention that will be used by FUNCTION
    to return a value of type VALTYPE.  FUNCTION may be NULL in which
    case the return convention is computed based only on VALTYPE.

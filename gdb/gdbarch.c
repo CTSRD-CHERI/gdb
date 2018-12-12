@@ -234,6 +234,8 @@ struct gdbarch
   gdbarch_pointer_to_address_ftype *pointer_to_address;
   gdbarch_address_to_pointer_ftype *address_to_pointer;
   gdbarch_integer_to_address_ftype *integer_to_address;
+  gdbarch_cast_integer_to_pointer_ftype *cast_integer_to_pointer;
+  gdbarch_cast_pointer_to_integer_ftype *cast_pointer_to_integer;
   gdbarch_return_value_ftype *return_value;
   gdbarch_return_in_first_hidden_param_p_ftype *return_in_first_hidden_param_p;
   gdbarch_skip_prologue_ftype *skip_prologue;
@@ -592,6 +594,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of pointer_to_address, invalid_p == 0 */
   /* Skip verify of address_to_pointer, invalid_p == 0 */
   /* Skip verify of integer_to_address, has predicate.  */
+  /* Skip verify of cast_integer_to_pointer, has predicate.  */
+  /* Skip verify of cast_pointer_to_integer, has predicate.  */
   /* Skip verify of return_value, has predicate.  */
   /* Skip verify of return_in_first_hidden_param_p, invalid_p == 0 */
   if (gdbarch->skip_prologue == 0)
@@ -837,6 +841,18 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: cannot_store_register = <%s>\n",
                       host_address_to_string (gdbarch->cannot_store_register));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_cast_integer_to_pointer_p() = %d\n",
+                      gdbarch_cast_integer_to_pointer_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: cast_integer_to_pointer = <%s>\n",
+                      host_address_to_string (gdbarch->cast_integer_to_pointer));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_cast_pointer_to_integer_p() = %d\n",
+                      gdbarch_cast_pointer_to_integer_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: cast_pointer_to_integer = <%s>\n",
+                      host_address_to_string (gdbarch->cast_pointer_to_integer));
   fprintf_unfiltered (file,
                       "gdbarch_dump: char_signed = %s\n",
                       plongest (gdbarch->char_signed));
@@ -2750,6 +2766,54 @@ set_gdbarch_integer_to_address (struct gdbarch *gdbarch,
                                 gdbarch_integer_to_address_ftype integer_to_address)
 {
   gdbarch->integer_to_address = integer_to_address;
+}
+
+int
+gdbarch_cast_integer_to_pointer_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->cast_integer_to_pointer != NULL;
+}
+
+struct value *
+gdbarch_cast_integer_to_pointer (struct gdbarch *gdbarch, struct type *type, struct value *arg2)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->cast_integer_to_pointer != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_cast_integer_to_pointer called\n");
+  return gdbarch->cast_integer_to_pointer (gdbarch, type, arg2);
+}
+
+void
+set_gdbarch_cast_integer_to_pointer (struct gdbarch *gdbarch,
+                                     gdbarch_cast_integer_to_pointer_ftype cast_integer_to_pointer)
+{
+  gdbarch->cast_integer_to_pointer = cast_integer_to_pointer;
+}
+
+int
+gdbarch_cast_pointer_to_integer_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->cast_pointer_to_integer != NULL;
+}
+
+struct value *
+gdbarch_cast_pointer_to_integer (struct gdbarch *gdbarch, struct type *type, struct value *arg2)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->cast_pointer_to_integer != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_cast_pointer_to_integer called\n");
+  return gdbarch->cast_pointer_to_integer (gdbarch, type, arg2);
+}
+
+void
+set_gdbarch_cast_pointer_to_integer (struct gdbarch *gdbarch,
+                                     gdbarch_cast_pointer_to_integer_ftype cast_pointer_to_integer)
+{
+  gdbarch->cast_pointer_to_integer = cast_pointer_to_integer;
 }
 
 int

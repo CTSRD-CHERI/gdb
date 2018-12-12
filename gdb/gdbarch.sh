@@ -530,6 +530,8 @@ m:struct value *:value_from_register:struct type *type, int regnum, struct frame
 m:CORE_ADDR:pointer_to_address:struct type *type, const gdb_byte *buf:type, buf::unsigned_pointer_to_address::0
 m:void:address_to_pointer:struct type *type, gdb_byte *buf, CORE_ADDR addr:type, buf, addr::unsigned_address_to_pointer::0
 M:CORE_ADDR:integer_to_address:struct type *type, const gdb_byte *buf:type, buf
+M:struct value *:cast_integer_to_pointer:struct type *type, struct value *arg2:type, arg2
+M:struct value *:cast_pointer_to_integer:struct type *type, struct value *arg2:type, arg2
 
 # Return the return-value convention that will be used by FUNCTION
 # to return a value of type VALTYPE.  FUNCTION may be NULL in which
