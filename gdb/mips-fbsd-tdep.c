@@ -787,6 +787,70 @@ mips_fbsd_cheri_integer_to_address (struct gdbarch *gdbarch,
   return mips_fbsd_cheri_pointer_to_address (gdbarch, type, buf);
 }
 
+static struct value *
+mips_fbsd_cheri_cast_integer_to_pointer (struct gdbarch *gdbarch,
+					 struct type *type, struct value *arg2)
+{
+  if (TYPE_LENGTH (type) > 8)
+    {
+      struct type *type2 = check_typedef (value_type (arg2));
+
+      /* Handle uintcap_t and intcap_t.  */
+      if (TYPE_LENGTH (type) == TYPE_LENGTH (type2))
+	{
+	  struct value *v = value_copy (arg2);
+	  deprecated_set_value_type (v, type);
+	  set_value_enclosing_type (v, type);
+	  set_value_pointed_to_offset (v, 0);
+	  return v;
+	}
+
+      if (TYPE_LENGTH (type2) <= 8)
+	{
+	  /* Construct a capability using the integer value as the cursor.  */
+	  struct value *v = allocate_value (type);
+	  store_signed_integer (value_contents_writeable (v) + 8, 8,
+				gdbarch_byte_order (gdbarch),
+				value_as_long (arg2));
+	  return v;
+	}
+    }
+  return NULL;
+}
+
+static struct value *
+mips_fbsd_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
+					 struct type *type, struct value *arg2)
+{
+  struct type *type2 = check_typedef (value_type (arg2));
+
+  if (TYPE_LENGTH (type2) > 8)
+    {
+      /* Handle uintcap_t and intcap_t.  */
+      if (TYPE_LENGTH (type) == TYPE_LENGTH (type2))
+	{
+	  struct value *v = value_copy (arg2);
+	  deprecated_set_value_type (v, type);
+	  set_value_enclosing_type (v, type);
+	  set_value_pointed_to_offset (v, 0);
+	  return v;
+	}
+
+      if (TYPE_LENGTH (type) <= 8)
+	{
+	  /* Read the cursor and return that as an integer value.
+	     This will always return the address instead of the
+	     offset.  */
+	  LONGEST longest;
+
+	  longest = extract_signed_integer (value_contents (arg2) + 8,
+					    8, gdbarch_byte_order (gdbarch));
+	  return value_from_longest (type, longest);
+	}
+    }
+  return NULL;
+}
+
 static CORE_ADDR
 mips_fbsd_cheri_unwind_pc (struct gdbarch *gdbarch,
 			   struct frame_info *next_frame)
@@ -928,6 +992,10 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 				    mips_fbsd_cheri_address_to_pointer);
     set_gdbarch_integer_to_address (gdbarch,
 				    mips_fbsd_cheri_integer_to_address);
+    set_gdbarch_cast_integer_to_pointer
+      (gdbarch, mips_fbsd_cheri_cast_integer_to_pointer);
+    set_gdbarch_cast_pointer_to_integer
+      (gdbarch, mips_fbsd_cheri_cast_pointer_to_integer);
     set_gdbarch_unwind_pc (gdbarch, mips_fbsd_cheri_unwind_pc);
     set_gdbarch_unwind_sp (gdbarch, mips_fbsd_cheri_unwind_sp);
     set_gdbarch_auxv_parse (gdbarch, mips_fbsd_cheri_auxv_parse);

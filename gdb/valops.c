@@ -484,6 +484,16 @@ value_cast (struct type *type, struct value *arg2)
 	   && (scalar || code2 == TYPE_CODE_PTR
 	       || code2 == TYPE_CODE_MEMBERPTR))
     {
+      /* Select the gdbarch based on the pointer type.  */
+      struct gdbarch *gdbarch = get_type_arch (type2);
+      if (gdbarch_cast_pointer_to_integer_p (gdbarch))
+	{
+	  struct value *v = gdbarch_cast_pointer_to_integer (gdbarch, type,
+							     arg2);
+	  if (v != NULL)
+	    return v;
+	}
+
       LONGEST longest;
 
       /* When we cast pointers to integers, we mustn't use
@@ -505,6 +515,16 @@ value_cast (struct type *type, struct value *arg2)
 				      || code2 == TYPE_CODE_ENUM 
 				      || code2 == TYPE_CODE_RANGE))
     {
+      /* Select the gdbarch based on the pointer type.  */
+      struct gdbarch *gdbarch = get_type_arch (type);
+      if (gdbarch_cast_integer_to_pointer_p (gdbarch))
+	{
+	  struct value *v = gdbarch_cast_integer_to_pointer (gdbarch, type,
+							     arg2);
+	  if (v != NULL)
+	    return v;
+	}
+
       /* TYPE_LENGTH (type) is the length of a pointer, but we really
 	 want the length of an address! -- we are really dealing with
 	 addresses (i.e., gdb representations) not pointers (i.e.,
