@@ -1187,8 +1187,10 @@ fbsd_get_siginfo_type (struct gdbarch *gdbarch)
   append_composite_type_field (siginfo_type, "si_pid", pid_type);
   append_composite_type_field (siginfo_type, "si_uid", uid_type);
   append_composite_type_field (siginfo_type, "si_status", int_type);
-  append_composite_type_field (siginfo_type, "si_addr", void_ptr_type);
-  append_composite_type_field (siginfo_type, "si_value", sigval_type);
+  append_composite_type_field_aligned (siginfo_type, "si_addr", void_ptr_type,
+				       type_align (void_ptr_type));
+  append_composite_type_field_aligned (siginfo_type, "si_value", sigval_type,
+				       type_align (sigval_type));
   append_composite_type_field (siginfo_type, "_reason", reason_type);
 
   fbsd_gdbarch_data->siginfo_type = siginfo_type;
