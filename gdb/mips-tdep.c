@@ -1419,7 +1419,7 @@ static CORE_ADDR
 mips_read_pc (readable_regcache *regcache)
 {
   struct gdbarch *gdbarch = regcache->arch ();
-  int regnum = gdbarch_pc_regnum (get_regcache_arch (regcache));
+  int regnum = gdbarch_pc_regnum (gdbarch);
   LONGEST pc;
 
   if (is_cheri (gdbarch))
@@ -1742,23 +1742,23 @@ is_cheri_branch_op (unsigned long inst, struct gdbarch *gdbarch)
 static CORE_ADDR
 get_cheri_register_signed (struct regcache *regcache, int regnum)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[register_size (gdbarch, mips_regnum (gdbarch)->cap0 + regnum)];
   CORE_ADDR addr;
 
   /* XXX: Should probably use gdbarch_integer_to_address. */
-  regcache_raw_read (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
+  regcache->raw_read (mips_regnum (gdbarch)->cap0 + regnum, buf);
   return extract_signed_integer (buf + 8, 8, byte_order);
 }
 
 static bool
 cheri_cap_is_null (struct regcache *regcache, int regnum)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   gdb_byte buf[register_size (gdbarch, mips_regnum (gdbarch)->cap0 + regnum)];
 
-  regcache_raw_read (regcache, mips_regnum (gdbarch)->cap0 + regnum, buf);
+  regcache->raw_read (mips_regnum (gdbarch)->cap0 + regnum, buf);
   for (size_t i = 0; i < sizeof buf; i++)
     if (buf[i] != 0)
       return false;
