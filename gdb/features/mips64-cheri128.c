@@ -10,11 +10,9 @@ static void
 initialize_tdesc_mips64_cheri128 (void)
 {
   struct target_desc *result = allocate_target_description ();
-  struct tdesc_feature *feature;
-  struct tdesc_type *field_type;
-  struct tdesc_type *type;
-
   set_tdesc_architecture (result, bfd_scan_arch ("mips"));
+
+  struct tdesc_feature *feature;
 
   feature = tdesc_create_feature (result, "org.gnu.gdb.mips.cpu");
   tdesc_create_reg (feature, "r0", 0, 1, NULL, 64, "int");
@@ -95,31 +93,35 @@ initialize_tdesc_mips64_cheri128 (void)
   tdesc_create_reg (feature, "fir", 71, 1, "float", 64, "int");
 
   feature = tdesc_create_feature (result, "org.gnu.gdb.mips.cheri128");
-  type = tdesc_create_flags (feature, "cap128_perms", 8);
-  tdesc_add_bitfield (type, "T", 0, 19);
-  tdesc_add_bitfield (type, "B", 20, 39);
-  tdesc_add_flag (type, 40, "s");
-  tdesc_add_bitfield (type, "e", 41, 46);
-  tdesc_add_flag (type, 50, "G");
-  tdesc_add_flag (type, 51, "X");
-  tdesc_add_flag (type, 52, "R");
-  tdesc_add_flag (type, 53, "W");
-  tdesc_add_flag (type, 54, "RC");
-  tdesc_add_flag (type, 55, "WC");
-  tdesc_add_flag (type, 56, "WLC");
-  tdesc_add_flag (type, 57, "S");
-  tdesc_add_flag (type, 59, "SR");
-  tdesc_add_bitfield (type, "uP", 60, 63);
+  tdesc_type_with_fields *type_with_fields;
+  type_with_fields = tdesc_create_flags (feature, "cap128_perms", 8);
+  tdesc_add_bitfield (type_with_fields, "T", 0, 19);
+  tdesc_add_bitfield (type_with_fields, "B", 20, 39);
+  tdesc_add_flag (type_with_fields, 40, "s");
+  tdesc_add_bitfield (type_with_fields, "e", 41, 46);
+  tdesc_add_flag (type_with_fields, 49, "G");
+  tdesc_add_flag (type_with_fields, 50, "X");
+  tdesc_add_flag (type_with_fields, 51, "R");
+  tdesc_add_flag (type_with_fields, 52, "W");
+  tdesc_add_flag (type_with_fields, 53, "RC");
+  tdesc_add_flag (type_with_fields, 54, "WC");
+  tdesc_add_flag (type_with_fields, 55, "WLC");
+  tdesc_add_flag (type_with_fields, 56, "S");
+  tdesc_add_flag (type_with_fields, 57, "CC");
+  tdesc_add_flag (type_with_fields, 58, "U");
+  tdesc_add_flag (type_with_fields, 59, "R");
+  tdesc_add_bitfield (type_with_fields, "uP", 60, 63);
 
-  type = tdesc_create_struct (feature, "cheri_cap128");
+  type_with_fields = tdesc_create_struct (feature, "cheri_cap128");
+  tdesc_type *field_type;
   field_type = tdesc_named_type (feature, "cap128_perms");
-  tdesc_add_field (type, "attr", field_type);
+  tdesc_add_field (type_with_fields, "attr", field_type);
   field_type = tdesc_named_type (feature, "uint64");
-  tdesc_add_field (type, "cursor", field_type);
+  tdesc_add_field (type_with_fields, "cursor", field_type);
 
-  type = tdesc_create_flags (feature, "cap_cause", 8);
-  tdesc_add_bitfield (type, "reg", 0, 7);
-  tdesc_add_bitfield (type, "exccode", 8, 15);
+  type_with_fields = tdesc_create_flags (feature, "cap_cause", 8);
+  tdesc_add_bitfield (type_with_fields, "reg", 0, 7);
+  tdesc_add_bitfield (type_with_fields, "exccode", 8, 15);
 
   tdesc_create_reg (feature, "c0", 90, 1, NULL, 128, "cheri_cap128");
   tdesc_create_reg (feature, "c1", 91, 1, NULL, 128, "cheri_cap128");
