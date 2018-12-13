@@ -156,7 +156,7 @@ void
 mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
 			  const void *capregs, size_t regsize)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   const gdb_byte *regs = (const gdb_byte *) capregs;
   int cap0, i;
 
@@ -168,22 +168,22 @@ mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
-	regcache_raw_supply (regcache, cap0 + i, regs + i * regsize);
+	regcache->raw_supply (cap0 + i, regs + i * regsize);
       }
 
   if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
     {
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
 		  == regsize);
-      regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_pcc,
-			   regs + 27 * regsize);
+      regcache->raw_supply (mips_regnum (gdbarch)->cap_pcc,
+			    regs + 27 * regsize);
     }
   if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
-    regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_cause,
-			 regs + 28 * regsize);
+    regcache->raw_supply (mips_regnum (gdbarch)->cap_cause,
+			  regs + 28 * regsize);
   if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
-    regcache_raw_supply (regcache, mips_regnum (gdbarch)->cap_cause + 1,
-			 regs + 28 * regsize + 8);
+    regcache->raw_supply (mips_regnum (gdbarch)->cap_cause + 1,
+			  regs + 28 * regsize + 8);
 }
 
 
@@ -239,7 +239,7 @@ void
 mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
 			   void *capregs, size_t regsize)
 {
-  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  struct gdbarch *gdbarch = regcache->arch ();
   gdb_byte *regs = (gdb_byte *) capregs;
   int cap0, i;
 
@@ -251,22 +251,22 @@ mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
-	regcache_raw_collect (regcache, cap0 + i, regs + i * regsize);
+	regcache->raw_collect (cap0 + i, regs + i * regsize);
       }
 
   if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
     {
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
 		  == regsize);
-      regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_pcc,
-			    regs + 27 * regsize);
+      regcache->raw_collect (mips_regnum (gdbarch)->cap_pcc,
+			     regs + 27 * regsize);
     }
   if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
-    regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_cause,
-			  regs + 28 * regsize);
+    regcache->raw_collect (mips_regnum (gdbarch)->cap_cause,
+			   regs + 28 * regsize);
   if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
-    regcache_raw_collect (regcache, mips_regnum (gdbarch)->cap_cause + 1,
-			  regs + 28 * regsize + 8);
+    regcache->raw_collect (mips_regnum (gdbarch)->cap_cause + 1,
+			   regs + 28 * regsize + 8);
 }
 
 /* Supply register REGNUM from the buffer specified by FPREGS and LEN
@@ -344,7 +344,7 @@ mips_fbsd_supply_capregset (const struct regset *regset,
 			    struct regcache *regcache, int regnum,
 			    const void *capregs, size_t len)
 {
-  size_t capregsize = mips_fbsd_capregsize (get_regcache_arch (regcache));
+  size_t capregsize = mips_fbsd_capregsize (regcache->arch ());
 
   gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
 
@@ -361,7 +361,7 @@ mips_fbsd_collect_capregset (const struct regset *regset,
 			     const struct regcache *regcache,
 			     int regnum, void *capregs, size_t len)
 {
-  size_t capregsize = mips_fbsd_capregsize (get_regcache_arch (regcache));
+  size_t capregsize = mips_fbsd_capregsize (regcache->arch ());
 
   gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
 
