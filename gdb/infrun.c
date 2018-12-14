@@ -7972,6 +7972,10 @@ print_signal_received_reason (struct ui_out *uiout, enum gdb_signal siggnal)
       annotate_signal_string ();
       uiout->field_string ("signal-meaning", gdb_signal_to_string (siggnal));
 
+      struct gdbarch *gdbarch = get_current_arch ();
+      if (gdbarch_report_signal_info_p (gdbarch))
+	gdbarch_report_signal_info (gdbarch, uiout, siggnal);
+
       if (siggnal == GDB_SIGNAL_SEGV)
 	handle_segmentation_fault (uiout);
 

@@ -507,6 +507,8 @@ core_target_open (const char *arg, int from_tty)
 
       printf_filtered (_("Program terminated with signal %s, %s.\n"),
 		       gdb_signal_to_name (sig), gdb_signal_to_string (sig));
+      if (gdbarch_report_signal_info_p (core_gdbarch))
+	gdbarch_report_signal_info (core_gdbarch, NULL, sig);
 
       /* Set the value of the internal variable $_exitsignal,
 	 which holds the signal uncaught by the inferior.  */
