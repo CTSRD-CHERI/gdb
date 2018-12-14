@@ -6818,9 +6818,9 @@ mips_print_fp_register (struct ui_file *file, struct frame_info *frame,
     }
 }
 
-static void
+void
 mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
-			   int regnum)
+			   int regnum, bool name)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -6832,7 +6832,8 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
 
   frame_register_unwind (frame, regnum, &optimized, &unavailable, &lval,
 			 &address, &realnum, buf);
-  fprintf_filtered (file, "%4s: ", gdbarch_register_name (gdbarch, regnum));
+  if (name)
+    fprintf_filtered (file, "%4s: ", gdbarch_register_name (gdbarch, regnum));
   if (optimized || unavailable)
     {
       fputs_filtered ("<unavailable>", file);
@@ -6872,7 +6873,7 @@ mips_print_register (struct ui_file *file, struct frame_info *frame,
 
   if (mips_cheri_register_p (gdbarch, regnum))
     {
-      mips_print_cheri_register (file, frame, regnum);
+      mips_print_cheri_register (file, frame, regnum, true);
       return;
     }
 

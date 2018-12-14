@@ -199,4 +199,8 @@ in_mips_stubs_section (CORE_ADDR pc)
   return pc_in_section (pc, ".MIPS.stubs");
 }
 
+extern void mips_print_cheri_register (struct ui_file *file,
+				       struct frame_info *frame, int regnum,
+				       bool name);
+
 #endif /* MIPS_TDEP_H */
