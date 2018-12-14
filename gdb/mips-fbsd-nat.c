@@ -218,19 +218,19 @@ static  struct cmd_list_element *qtrace_cmdlist = NULL;
  * qtrace tool uses these magic nops so this should be safe.
  */
 static void
-cmd_qtrace_enable_user_only(char *args, int from_tty)
+cmd_qtrace_enable_user_only(const char *args, int from_tty)
 {
   __asm__ __volatile__("ori $0, $0, 0xdeaf");
 }
 
 static void
-cmd_qtrace_disable_user_only (char *args, int from_tty)
+cmd_qtrace_disable_user_only (const char *args, int from_tty)
 {
   __asm__ __volatile__("ori $0, $0, 0xfaed");
 }
 
 static void
-cmd_qtrace_start (char *args, int from_tty)
+cmd_qtrace_start (const char *args, int from_tty)
 {
   if (ptrace (PT_SETQTRACE, get_ptrace_pid (inferior_ptid), NULL, 1)
       == -1)
@@ -238,7 +238,7 @@ cmd_qtrace_start (char *args, int from_tty)
 }
 
 static void
-cmd_qtrace_stop (char *args, int from_tty)
+cmd_qtrace_stop (const char *args, int from_tty)
 {
   cmd_qtrace_disable_user_only(args, from_tty);
   if (ptrace (PT_SETQTRACE, get_ptrace_pid (inferior_ptid), NULL, 0)
@@ -247,14 +247,14 @@ cmd_qtrace_stop (char *args, int from_tty)
 }
 
 static void
-cmd_qtrace_start_user_only(char *args, int from_tty)
+cmd_qtrace_start_user_only(const char *args, int from_tty)
 {
   cmd_qtrace_enable_user_only(args, from_tty);
   cmd_qtrace_start(args, from_tty);
 }
 
 static void
-cmd_qtrace_start_full(char *args, int from_tty)
+cmd_qtrace_start_full(const char *args, int from_tty)
 {
   cmd_qtrace_disable_user_only(args, from_tty);
   cmd_qtrace_start(args, from_tty);
