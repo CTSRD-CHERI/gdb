@@ -1153,6 +1153,7 @@ fbsd_get_siginfo_type (struct gdbarch *gdbarch)
   /* _fault */
   type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
   append_composite_type_field (type, "si_trapno", int_type);
+  append_composite_type_field (type, "si_capreg", int_type);
   append_composite_type_field (reason_type, "_fault", type);
 
   /* _timer */
