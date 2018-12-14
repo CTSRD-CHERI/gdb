@@ -919,6 +919,108 @@ mips_fbsd_cheri_auxv_parse (struct gdbarch *gdbarch, gdb_byte **readptr,
   return 1;
 }
 
+static const char *
+sigprot_cause (int code)
+{
+  switch (code) {
+  case 1: /* PROT_CHERI_BOUNDS  */
+    return _("Capability bounds fault");
+  case 2: /* PROT_CHERI_TAG  */
+    return _("Capability tag fault");
+  case 3: /* PROT_CHERI_SEALED  */
+    return _("Capability sealed fault");
+  case 4: /* PROT_CHERI_TYPE  */
+    return _("Type mismatch fault");
+  case 5: /* PROT_CHERI_PERM  */
+    return _("Capability permission fault");
+  case 6: /* PROT_CHERI_STORETAG  */
+    return _("Tag-store page fault");
+  case 7: /* PROT_CHERI_IMPRECISE  */
+    return _("Imprecise bounds fault");
+  case 8: /* PROT_CHERI_STORELOCAL  */
+    return _("Store-local fault");
+  case 9: /* PROT_CHERI_CCALL  */
+    return _("CCall fault");
+  case 10: /* PROT_CHERI_CRETURN  */
+    return _("CReturn fault");
+  case 11: /* PROT_CHERI_SYSREG  */
+    return _("Capability system register fault");
+  case 61: /* PROT_CHERI_UNSEALED  */
+    return _("CCall unsealed argument fault");
+  case 62: /* PROT_CHERI_OVERFLOW  */
+    return _("Trusted stack oveflow fault");
+  case 63: /* PROT_CHERI_UNDERFLOW  */
+    return _("Trusted stack underflow fault");
+  case 64: /* PROT_CHERI_CCALLREGS  */
+    return _("CCall argument fault");
+  case 65: /* PROT_CHERI_LOCALARG  */
+    return _("CCall local argument fault");
+  case 66: /* PROT_CHERI_LOCALRET  */
+    return _("CReturn local retval fault");
+  default:
+    return NULL;
+  }
+}
+
+static void
+mips_fbsd_cheri_report_signal_info (struct gdbarch *gdbarch,
+				    struct ui_out *uiout,
+				    enum gdb_signal siggnal)
+{
+  if (siggnal != GDB_SIGNAL_PROT)
+    return;
+
+  LONGEST code, capreg;
+
+  TRY
+    {
+      code = parse_and_eval_long ("$_siginfo.si_code");
+      capreg = parse_and_eval_long ("$_siginfo._reason._fault.si_capreg");
+    }
+  CATCH (exception, RETURN_MASK_ALL)
+    {
+      return;
+    }
+  END_CATCH
+
+  const char *meaning = sigprot_cause (code);
+  if (meaning == NULL)
+    return;
+  if (uiout != NULL)
+    {
+      uiout->text ("\n");
+      uiout->field_string ("sigcode-meaning", meaning);
+    }
+  else
+    printf_filtered ("%s", meaning);
+  int cap0 = mips_regnum (gdbarch)->cap0;
+  if (cap0 != -1 && ((capreg >= 0 && capreg <= 31) || capreg == 255))
+    {
+      int regno;
+
+      if (capreg == 255)
+	regno = mips_regnum (gdbarch)->cap_pcc;
+      else
+	regno = cap0 + capreg;
+      regno += gdbarch_num_regs (gdbarch);
+      string_file file;
+      mips_print_cheri_register (&file, get_current_frame (), regno, false);
+
+      if (uiout != NULL)
+	{
+	  uiout->text (" caused by register ");
+	  uiout->field_string ("cap-register",
+			       gdbarch_register_name (gdbarch, regno));
+	  uiout->text (": ");
+	  uiout->field_stream ("bounds", file);
+	}
+      else
+	printf_filtered (" caused by register %s: %s\n",
+			 gdbarch_register_name (gdbarch, regno),
+			 file.c_str ());
+    }
+}
+
 static int
 mips_fbsd_is_cheri(struct bfd *abfd)
 {
@@ -999,6 +1101,8 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
     set_gdbarch_unwind_pc (gdbarch, mips_fbsd_cheri_unwind_pc);
     set_gdbarch_unwind_sp (gdbarch, mips_fbsd_cheri_unwind_sp);
     set_gdbarch_auxv_parse (gdbarch, mips_fbsd_cheri_auxv_parse);
+    set_gdbarch_report_signal_info (gdbarch,
+				    mips_fbsd_cheri_report_signal_info);
     set_solib_svr4_fetch_link_map_offsets
       (gdbarch, cap_size == 128 ?
        mips_fbsd_c128_fetch_link_map_offsets :
