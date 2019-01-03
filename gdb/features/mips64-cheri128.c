@@ -155,9 +155,10 @@ initialize_tdesc_mips64_cheri128 (void)
   tdesc_create_reg (feature, "c29", 119, 1, NULL, 128, "cheri_cap128");
   tdesc_create_reg (feature, "c30", 120, 1, NULL, 128, "cheri_cap128");
   tdesc_create_reg (feature, "c31", 121, 1, NULL, 128, "cheri_cap128");
-  tdesc_create_reg (feature, "pcc", 122, 1, NULL, 128, "cheri_cap128");
-  tdesc_create_reg (feature, "cap_cause", 123, 1, NULL, 64, "cap_cause");
-  tdesc_create_reg (feature, "cap_valid", 124, 1, NULL, 64, "int");
+  tdesc_create_reg (feature, "ddc", 122, 1, NULL, 128, "cheri_cap128");
+  tdesc_create_reg (feature, "pcc", 123, 1, NULL, 128, "cheri_cap128");
+  tdesc_create_reg (feature, "cap_cause", 124, 1, NULL, 64, "cap_cause");
+  tdesc_create_reg (feature, "cap_valid", 125, 1, NULL, 64, "int");
 
   tdesc_mips64_cheri128 = result;
 }

@@ -49,8 +49,8 @@ static mips_fbsd_nat_target the_mips_fbsd_nat_target;
    for FreeBSD/mips to work under either c128 or c256.  */
 
 /* Number of general capability registers in `struct cheri_frame' from
-   <machine/cheri.h>.  The structure contains the first 27 capability
-   registers followed by the PCC and cap_cause.  */
+   <machine/cheri.h>.  The structure contains DDC, C1-C26, PCC, cap_cause,
+   and the bitmask of tags stored in cap_valid.  */
 #define MIPS_FBSD_NUM_CAPREGS	29
 
 static int capreg_size;
@@ -82,6 +82,7 @@ getcapregs_supplies (struct gdbarch *gdbarch, int regnum)
 {
   return ((regnum >= mips_regnum (gdbarch)->cap0
 	   && regnum < mips_regnum (gdbarch)->cap0 + 27)
+	  || regnum == mips_regnum (gdbarch)->cap_ddc
 	  || regnum == mips_regnum (gdbarch)->cap_pcc
 	  || regnum == mips_regnum (gdbarch)->cap_cause
 	  || regnum == mips_regnum (gdbarch)->cap_cause + 1);

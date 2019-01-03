@@ -47,8 +47,8 @@
 #define MIPS_FBSD_NUM_FPREGS	34
 
 /* Number of general capability registers in `struct cheri_frame' from
-   <machine/cheri.h>.  The structure contains the first 27 capability
-   registers followed by the PCC and cap_cause.  */
+   <machine/cheri.h>.  The structure contains DDC, C1-C26, PCC, cap_cause,
+   and the bitmask of tags stored in cap_valid.  */
 #define MIPS_FBSD_NUM_CAPREGS	29
 
 size_t
@@ -164,13 +164,22 @@ mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
   if (cap0 == -1)
     return;
 
-  for (i = 0; i < 27; i++)
+  if (regnum == cap0 || regnum == -1)
+    regcache->raw_supply_zeroed (cap0);
+
+  for (i = 1; i < 27; i++)
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
 	regcache->raw_supply (cap0 + i, regs + i * regsize);
       }
 
+  if (regnum == mips_regnum (gdbarch)->cap_ddc || regnum == -1)
+    {
+      gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_ddc)
+		  == regsize);
+      regcache->raw_supply (mips_regnum (gdbarch)->cap_ddc, regs);
+    }
   if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
     {
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
@@ -247,13 +256,19 @@ mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
   if (cap0 == -1)
     return;
 
-  for (i = 0; i < 27; i++)
+  for (i = 1; i < 27; i++)
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
 	regcache->raw_collect (cap0 + i, regs + i * regsize);
       }
 
+  if (regnum == mips_regnum (gdbarch)->cap_ddc || regnum == -1)
+    {
+      gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_ddc)
+		  == regsize);
+      regcache->raw_collect (mips_regnum (gdbarch)->cap_ddc, regs);
+    }
   if (regnum == mips_regnum (gdbarch)->cap_pcc || regnum == -1)
     {
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
@@ -998,6 +1013,7 @@ mips_fbsd_cheri_report_signal_info (struct gdbarch *gdbarch,
     {
       int regno;
 
+      /* XXX: DDC */
       if (capreg == 255)
 	regno = mips_regnum (gdbarch)->cap_pcc;
       else

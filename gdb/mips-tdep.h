@@ -70,6 +70,7 @@ struct mips_regnum
   int dspacc;		/* SmartMIPS/DSP accumulators.  */
   int dspctl;		/* DSP control.  */
   int cap0;		/* CHERI capabilities.  */
+  int cap_ddc;
   int cap_pcc;
   int cap_cause;
 };

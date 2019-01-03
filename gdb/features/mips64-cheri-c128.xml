@@ -68,6 +68,7 @@
   <reg name="c30" bitsize="128" type="cheri_cap128"/>
   <reg name="c31" bitsize="128" type="cheri_cap128"/>
 
+  <reg name="ddc" bitsize="128" type="cheri_cap128"/>
   <reg name="pcc" bitsize="128" type="cheri_cap128"/>
 
   <flags id="cap_cause" size="8">

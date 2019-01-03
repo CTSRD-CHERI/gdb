@@ -273,7 +273,9 @@ mips_cheri_register_p (struct gdbarch *gdbarch, int regnum)
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
   int cap0 = mips_regnum (gdbarch)->cap0;
 
-  return (cap0 != -1 && rawnum >= cap0 && rawnum <= cap0 + 32);
+  return (cap0 != -1 && ((rawnum >= cap0 && rawnum < cap0 + 32)
+			 || rawnum == mips_regnum (gdbarch)->cap_ddc
+			 || rawnum == mips_regnum (gdbarch)->cap_pcc));
 }
 
 #define MIPS_EABI(gdbarch) (gdbarch_tdep (gdbarch)->mips_abi \
@@ -617,12 +619,12 @@ static const char *mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
 
 /* CHERI Capabilities.  */
 
-static const char *mips_cheri_reg_names[35] = {
+static const char *mips_cheri_reg_names[36] = {
   "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7",
   "c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15",
   "c16", "c17", "c18", "c19", "c20", "c21", "c22", "c23",
   "c24", "c25", "c26", "c27", "c28", "c29", "c30", "c31",
-  "pcc", "cap_cause", "cap_valid",
+  "ddc", "pcc", "cap_cause", "cap_valid",
 };
 
 /* Names of tx39 registers.  */
@@ -1863,9 +1865,16 @@ mips32_next_pc (struct regcache *regcache, CORE_ADDR pc)
 	      {
 		ULONGEST mask;
 
-		mask = regcache_raw_get_signed
-		  (regcache, mips_regnum (gdbarch)->cap_cause + 1);
-		mask &= (1 << itype_rt (inst));
+		/* For cnull ($c0), the tag is always clear.  Bit 0 of
+		   cap_valid is DDC's tag rather than cnull's.  */
+		if (itype_rt (inst) == 0)
+		  mask = 0;
+		else
+		  {
+		    mask = regcache_raw_get_signed
+		      (regcache, mips_regnum (gdbarch)->cap_cause + 1);
+		    mask &= (1 << itype_rt (inst));
+		  }
 		if ((itype_rs (inst) == 0x9 && mask == 0)
 		    || (itype_rs (inst) == 0xa && mask != 0))
 		  pc += mips32_relative_offset (inst) + 4;
@@ -9145,6 +9154,8 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	      valid_p &= tdesc_numbered_register (feature, tdesc_data,
 						  cap0 + i++, "c31");
 	      valid_p &= tdesc_numbered_register (feature, tdesc_data,
+						  cap0 + i++, "ddc");
+	      valid_p &= tdesc_numbered_register (feature, tdesc_data,
 						  cap0 + i++, "pcc");
 	      valid_p &= tdesc_numbered_register (feature, tdesc_data,
 						  cap0 + i++, "cap_cause");
@@ -9158,8 +9169,9 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 		}
 
 	      mips_regnum.cap0 = cap0;
-	      mips_regnum.cap_pcc = cap0 + 32;
-	      mips_regnum.cap_cause = cap0 + 33;
+	      mips_regnum.cap_ddc = cap0 + 32;
+	      mips_regnum.cap_pcc = cap0 + 33;
+	      mips_regnum.cap_cause = cap0 + 34;
 
 	      num_regs = mips_regnum.cap_cause + 2;
 	    }
@@ -9189,8 +9201,9 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	  cap0 = num_regs;
 
 	  mips_regnum.cap0 = cap0;
-	  mips_regnum.cap_pcc = cap0 + 32;
-	  mips_regnum.cap_cause = cap0 + 33;
+	  mips_regnum.cap_ddc = cap0 + 32;
+	  mips_regnum.cap_pcc = cap0 + 33;
+	  mips_regnum.cap_cause = cap0 + 34;
 
 	  num_regs = mips_regnum.cap_cause + 2;
 	}
@@ -9601,7 +9614,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   if (tdep->regnum->cap0 != -1)
     {
-      user_reg_add (gdbarch, "ddc", value_of_mips_cap_reg,
+      user_reg_add (gdbarch, "cnull", value_of_mips_cap_reg,
 		    (void *)(intptr_t)(tdep->regnum->cap0 + 0));
       user_reg_add (gdbarch, "stc", value_of_mips_cap_reg,
 		    (void *)(intptr_t)(tdep->regnum->cap0 + 11));
