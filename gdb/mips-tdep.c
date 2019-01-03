@@ -273,9 +273,8 @@ mips_cheri_register_p (struct gdbarch *gdbarch, int regnum)
   int rawnum = regnum % gdbarch_num_regs (gdbarch);
   int cap0 = mips_regnum (gdbarch)->cap0;
 
-  return (cap0 != -1 && ((rawnum >= cap0 && rawnum < cap0 + 32)
-			 || rawnum == mips_regnum (gdbarch)->cap_ddc
-			 || rawnum == mips_regnum (gdbarch)->cap_pcc));
+  return (cap0 != -1
+	  && register_type (gdbarch, regnum) == register_type (gdbarch, cap0));
 }
 
 #define MIPS_EABI(gdbarch) (gdbarch_tdep (gdbarch)->mips_abi \
