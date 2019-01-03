@@ -9630,16 +9630,6 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 		    (void *)(intptr_t)(tdep->regnum->cap0 + 26));
       user_reg_add (gdbarch, "cgp", value_of_mips_cap_reg,
 		    (void *)(intptr_t)(tdep->regnum->cap0 + 26));
-      user_reg_add (gdbarch, "kr1c", value_of_mips_cap_reg,
-		    (void *)(intptr_t)(tdep->regnum->cap0 + 27));
-      user_reg_add (gdbarch, "kr2c", value_of_mips_cap_reg,
-		    (void *)(intptr_t)(tdep->regnum->cap0 + 28));
-      user_reg_add (gdbarch, "kcc", value_of_mips_cap_reg,
-		    (void *)(intptr_t)(tdep->regnum->cap0 + 29));
-      user_reg_add (gdbarch, "kdc", value_of_mips_cap_reg,
-		    (void *)(intptr_t)(tdep->regnum->cap0 + 30));
-      user_reg_add (gdbarch, "epcc", value_of_mips_cap_reg,
-		    (void *)(intptr_t)(tdep->regnum->cap0 + 31));
     }
 
   return gdbarch;
