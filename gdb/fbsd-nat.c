@@ -685,9 +685,11 @@ fbsd_convert_siginfo32 (siginfo_t *si, struct siginfo32 *si32)
   for (int i = 0; i < 7; i++)
     si32->_reason.__spare__.__spare2__[i] = si->_reason.__spare__.__spare2__[i];
   switch (si->si_signo) {
+#ifdef SIGPROT
   case SIGPROT:
     si32->si_capreg = si->si_capreg;
     /* FALLTHROUGH */
+#endif
   case SIGILL:
   case SIGFPE:
   case SIGSEGV:
