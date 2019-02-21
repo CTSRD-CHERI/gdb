@@ -7190,7 +7190,7 @@ mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
 		    cap->cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
 		    paddress (gdbarch, cap->cr_base),
 		    paddress (gdbarch, cap->cr_base + cap->cr_length),
-		    cap->cr_sealed ? " (sealed)" : "");
+		    cc128_is_cap_sealed(cap) ? " (sealed)" : "");
 }
 
 static void
