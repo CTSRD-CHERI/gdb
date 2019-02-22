@@ -61,6 +61,7 @@
 #include "features/mips64-cheri128.c"
 #include "features/mips64-cheri256.c"
 
+#define CC128_OLD_FORMAT
 #include "cheri-compressed-cap/cheri_compressed_cap.h"
 
 static const struct objfile_data *mips_pdr_data;
