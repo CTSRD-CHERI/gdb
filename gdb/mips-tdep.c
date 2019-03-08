@@ -1464,10 +1464,11 @@ mips_unwind_pc (struct gdbarch *gdbarch, struct frame_info *next_frame)
 	    cursor = extract_unsigned_integer (buf + 8, 8,
 					       gdbarch_byte_order (gdbarch));
 	    decompress_128cap(perms, cursor, &cap);
-	    base = cap.cr_base;
+	    base = cap.base();
 	    break;
 	  }
 	case 32:
+	  /* TODO: just load all bytes and let cheri-compressed-cap decode? */
 	  base = extract_signed_integer (buf + 16, 8,
 					 gdbarch_byte_order (gdbarch));
 	  break;
@@ -6853,7 +6854,7 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
   memset(&cap, 0, sizeof(cap));
   mips_cheri_fetch_pointer_attributes (gdbarch, register_type (gdbarch, regnum),
 				       buf, &cap);
-  address = extract_signed_integer (buf + 8, 8, byte_order);
+  address = cap.address();
   if (cap.cr_perms & CC128_PERM_EXECUTE)
     {
       /* Try to print what function it points to.  */
@@ -7159,6 +7160,7 @@ mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
     {
       inmemory_chericap256 mem;
       mem.u64s[0] = extract_unsigned_integer (buffer, 8, byte_order);
+      mem.u64s[1] = extract_unsigned_integer (buffer + 8, 8, byte_order);
       mem.u64s[2] = extract_unsigned_integer (buffer + 16, 8, byte_order);
       mem.u64s[3] = extract_unsigned_integer (buffer + 24, 8, byte_order);
       decompress_256cap(mem, cap, /*tagged=*/false);
