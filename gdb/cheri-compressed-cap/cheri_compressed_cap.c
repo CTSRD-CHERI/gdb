@@ -32,11 +32,11 @@
 #include "cheri_compressed_cap.h"
 
 // Just check that everything compiles
-int test(void) {
+uint64_t test(void) {
     uint64_t pesbt = 0x1234567;
     uint64_t cursor = 0x98765431;
     cap_register_t result;
     decompress_128cap(pesbt, cursor, &result);
     uint64_t new_pesbt = compress_128cap(&result);
-    return cc128_is_representable(true, result.cr_base, result.cr_length, result.cr_offset, 0x123) + new_pesbt;
+    return cc128_is_representable(true, result.cr_base, result._cr_length, result.cr_offset, 0x123) + new_pesbt;
 }
