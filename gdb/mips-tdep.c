@@ -7161,7 +7161,7 @@ mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
       mem.u64s[0] = extract_unsigned_integer (buffer, 8, byte_order);
       mem.u64s[2] = extract_unsigned_integer (buffer + 16, 8, byte_order);
       mem.u64s[3] = extract_unsigned_integer (buffer + 24, 8, byte_order);
-      decompress_256cap(mem, cap);
+      decompress_256cap(mem, cap, /*tagged=*/false);
     }
   else if (type->length == 16)
     {
@@ -7189,8 +7189,13 @@ mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
 		    cap->cr_perms & CC128_PERM_EXECUTE ? "x" : "",
 		    cap->cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
 		    cap->cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-		    paddress (gdbarch, cap->cr_base),
-		    paddress (gdbarch, cap->cr_base + cap->cr_length),
+		    paddress (gdbarch, cap->base()),
+		    /*
+		     * Top is a 65-bit number for CHERI128 but we don't care
+		     * about the last byte of the address space so we report
+		     * 0xff... instead of 0x10.....
+		     */
+		    paddress (gdbarch, cap->top64()),
 		    cc128_is_cap_sealed(cap) ? " (sealed)" : "");
 }
 
