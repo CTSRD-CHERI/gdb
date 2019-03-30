@@ -547,6 +547,7 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cgetpcc", "/w",          0x480007ff, 0xffe0ffff, 0, 0, I1, 0, 0},
 {"cgetpccsetoffset", "/w,d", 0x480001ff, 0xffe007ff, 0, 0, I1, 0, 0},
 {"cgetaddr", "t,/b",       0x480003ff, 0xffe007ff, 0, 0, I1, 0, 0},
+{"cgetandaddr", "t,/b,/m", 0x48000023, 0xffe0003f, 0, 0, I1, 0, 0},
 
 /* Capability-Modification (B.2.2) */
 {"cseal",    "/w,/b,/v",   0x4800000b, 0xffe0003f, 0, 0, I1, 0, 0},
@@ -564,6 +565,8 @@ const struct mips_opcode mips_builtin_opcodes[] =
 {"cbuildcap", "/w,/b,/v",  0x4800001d, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccopytype", "/w,/b,/v",  0x4800001e, 0xffe0003f, 0, 0, I1, 0, 0},
 {"ccseal",   "/w,/b,/v",   0x4800001f, 0xffe0003f, 0, 0, I1, 0, 0},
+{"csetaddr",   "/w,/b,/m", 0x48000022, 0xffe0003f, 0, 0, I1, 0, 0},
+{"candaddr",   "/w,/b,/m", 0x48000024, 0xffe0003f, 0, 0, I1, 0, 0},
 
 /* Pointer-Arithmetic (B.2.3) */
 {"ctoptr",   "t,/b,/v",    0x48000012, 0xffe0003f, 0, 0, I1, 0, 0},
