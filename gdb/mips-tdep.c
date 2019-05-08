@@ -4227,6 +4227,7 @@ mips_stub_frame_cache (struct frame_info *this_frame, void **this_cache)
   struct trad_frame_cache *this_trad_cache;
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   int num_regs = gdbarch_num_regs (gdbarch);
+  int ra_reg;
 
   if ((*this_cache) != NULL)
     return (struct trad_frame_cache *) (*this_cache);
@@ -4234,16 +4235,26 @@ mips_stub_frame_cache (struct frame_info *this_frame, void **this_cache)
   (*this_cache) = this_trad_cache;
 
   /* The return address is in the link register.  */
+  if (is_cheriabi (gdbarch))
+    ra_reg = mips_regnum (gdbarch)->cap0 + 17;
+  else
+    ra_reg = MIPS_RA_REGNUM;
   trad_frame_set_reg_realreg (this_trad_cache,
 			      gdbarch_pc_regnum (gdbarch),
-			      num_regs + MIPS_RA_REGNUM);
+			      num_regs + ra_reg);
 
   /* Frame ID, since it's a frameless / stackless function, no stack
      space is allocated and SP on entry is the current SP.  */
   pc = get_frame_pc (this_frame);
   find_pc_partial_function (pc, NULL, &start_addr, NULL);
-  stack_addr = get_frame_register_signed (this_frame,
-					  num_regs + MIPS_SP_REGNUM);
+  if (is_cheriabi (gdbarch))
+    stack_addr
+      = get_cheri_frame_register_signed (this_frame,
+					 num_regs
+					 + mips_regnum (gdbarch)->cap0 + 11);
+  else
+    stack_addr = get_frame_register_signed (this_frame,
+					    num_regs + MIPS_SP_REGNUM);
   trad_frame_set_id (this_trad_cache, frame_id_build (stack_addr, start_addr));
 
   /* Assume that the frame's base is the same as the
