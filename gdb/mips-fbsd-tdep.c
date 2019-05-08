@@ -652,6 +652,20 @@ static const struct tramp_frame mips64_fbsd_sigframe =
 
 /* Shared library support.  */
 
+/* FreeBSD/mips can use an alternate routine in the runtime linker to
+   resolve functions.  */
+
+CORE_ADDR
+mips_fbsd_skip_solib_resolver (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  struct bound_minimal_symbol msym;
+
+  msym = lookup_minimal_symbol("_mips_rtld_bind", NULL, NULL);
+  if (msym.minsym && BMSYMBOL_VALUE_ADDRESS (msym) == pc)
+    return frame_unwind_caller_pc (get_current_frame ());
+  return fbsd_skip_solib_resolver (gdbarch, pc);
+}
+
 /* FreeBSD/mips uses a slightly different `struct link_map' than the
    other FreeBSD platforms as it includes an additional `l_off'
    member.  */
@@ -1096,6 +1110,8 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_cannot_store_register (gdbarch, mips_fbsd_cannot_store_register);
 
   set_gdbarch_core_read_description (gdbarch, mips_fbsd_core_read_description);
+
+  set_gdbarch_skip_solib_resolver (gdbarch, mips_fbsd_skip_solib_resolver);
 
   /* CheriABI */
   if (info.abfd != NULL && mips_fbsd_is_cheri (info.abfd)) {

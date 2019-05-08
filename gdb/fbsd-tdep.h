@@ -22,6 +22,9 @@
 
 extern void fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch);
 
+extern CORE_ADDR fbsd_skip_solib_resolver (struct gdbarch *gdbarch,
+					   CORE_ADDR pc);
+
 /* Helper function to generate mappings flags for a single VM map
    entry in 'info proc mappings'.  The KVE_FLAGS and KVE_PROTECTION
    parameters should contain the values of the corresponding fields in
