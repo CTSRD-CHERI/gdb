@@ -650,6 +650,138 @@ static const struct tramp_frame mips64_fbsd_sigframe =
   mips64_fbsd_sigframe_init
 };
 
+#define N64_UCONTEXT_MC_TLS	(576)
+
+static void
+mips_fbsd_cheri_sigframe_init (const struct tramp_frame *self,
+			       struct frame_info *this_frame,
+			       struct trad_frame_cache *cache,
+			       CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR sp, ucontext_addr, addr;
+  int cap0 = mips_regnum (gdbarch)->cap0;
+  int regnum, capsize;
+  gdb_byte buf[4];
+
+  /* We find the appropriate instance of `ucontext_t' at a
+     fixed offset in the signal frame.  */
+  sp = get_cheri_frame_register_signed (this_frame,
+					cap0 + 11 + gdbarch_num_regs (gdbarch));
+  ucontext_addr = sp + N64_SIGFRAME_UCONTEXT_OFFSET;
+
+  /* Since CHERI is a derivative of N64, the initial layout of
+     ucontext_t follows N64.  */
+
+  /* PC.  */
+  regnum = mips_regnum (gdbarch)->pc;
+  trad_frame_set_reg_addr (cache,
+			   regnum + gdbarch_num_regs (gdbarch),
+			   ucontext_addr + N64_UCONTEXT_PC);
+
+  /* GPRs.  */
+  for (regnum = MIPS_ZERO_REGNUM, addr = ucontext_addr + N64_UCONTEXT_REGS;
+       regnum <= MIPS_RA_REGNUM; regnum++, addr += N64_UCONTEXT_REG_SIZE)
+    trad_frame_set_reg_addr (cache,
+			     regnum + gdbarch_num_regs (gdbarch),
+			     addr);
+
+  regnum = MIPS_PS_REGNUM;
+  trad_frame_set_reg_addr (cache,
+			   regnum + gdbarch_num_regs (gdbarch),
+			   ucontext_addr + N64_UCONTEXT_SR);
+
+  /* HI and LO.  */
+  regnum = mips_regnum (gdbarch)->lo;
+  trad_frame_set_reg_addr (cache,
+			   regnum + gdbarch_num_regs (gdbarch),
+			   ucontext_addr + N64_UCONTEXT_LO);
+  regnum = mips_regnum (gdbarch)->hi;
+  trad_frame_set_reg_addr (cache,
+			   regnum + gdbarch_num_regs (gdbarch),
+			   ucontext_addr + N64_UCONTEXT_HI);
+
+  if (target_read_memory (ucontext_addr + N64_UCONTEXT_FPUSED, buf, 4) == 0
+      && extract_unsigned_integer (buf, 4, byte_order) != 0)
+    {
+      for (regnum = 0, addr = ucontext_addr + N64_UCONTEXT_FPREGS;
+	   regnum < 32; regnum++, addr += N64_UCONTEXT_REG_SIZE)
+	trad_frame_set_reg_addr (cache,
+				 regnum + gdbarch_fp0_regnum (gdbarch),
+				 addr);
+      trad_frame_set_reg_addr (cache, mips_regnum (gdbarch)->fp_control_status,
+			       addr);
+    }
+
+  capsize = register_size (gdbarch, cap0);
+
+  /* Skip past 'mc_fpregs'.  */
+  addr = ucontext_addr + N64_UCONTEXT_FPREGS + 33 * N64_UCONTEXT_REG_SIZE;
+
+  /* Skip 'mc_fpc_eir'.  */
+  addr += N64_UCONTEXT_REG_SIZE;
+
+  /* Skip 'mc_tls'.  Curiously, this is capability sized.  */
+  addr += capsize;
+
+  /* Skip 'cause' and padding before 'mc_cheriframe'.  */
+  addr += capsize;
+
+  /* DDC.  */
+  trad_frame_set_reg_addr(cache,
+			  mips_regnum (gdbarch)->cap_ddc
+			  + gdbarch_num_regs (gdbarch),
+			  addr);
+  addr += capsize;
+
+  /* C1 through C26.  */
+  for (int i = 1; i < 27; i++)
+    {
+      trad_frame_set_reg_addr(cache, cap0 + i + gdbarch_num_regs (gdbarch),
+			      addr);
+      addr += capsize;
+    }
+
+  /* PCC.  */
+  trad_frame_set_reg_addr(cache,
+			  mips_regnum (gdbarch)->cap_pcc
+			  + gdbarch_num_regs (gdbarch),
+			  addr);
+  addr += capsize;
+
+  /* cap_cause.  */
+  trad_frame_set_reg_addr(cache,
+			  mips_regnum (gdbarch)->cap_cause
+			  + gdbarch_num_regs (gdbarch),
+			  addr);
+  addr += N64_UCONTEXT_REG_SIZE;
+
+  /* cap_valid. */
+  trad_frame_set_reg_addr(cache,
+			  mips_regnum (gdbarch)->cap_cause + 1
+			  + gdbarch_num_regs (gdbarch),
+			  addr);
+  addr += N64_UCONTEXT_REG_SIZE;
+  
+  trad_frame_set_id (cache, frame_id_build (sp, func));
+}
+
+static const struct tramp_frame mips_fbsd_cheri_sigframe =
+{
+  SIGTRAMP_FRAME,
+  MIPS_INSN32_SIZE,
+  {
+    { 0x240c0020, -1 },			/* li      t0, 32 */
+    { 0x48035b11, -1 },			/* cincoffset $c3, $c11,t0 */
+    { MIPS_INST_LI_V0_SIGRETURN, -1 },	/* li      v0, SYS_sigreturn */
+    { MIPS_INST_SYSCALL, -1 },		/* syscall */
+    { MIPS_INST_BREAK, -1 },		/* break */
+    { TRAMP_SENTINEL_INSN, -1 }
+  },
+  mips_fbsd_cheri_sigframe_init
+};
+
 /* Shared library support.  */
 
 /* FreeBSD/mips can use an alternate routine in the runtime linker to
@@ -1139,6 +1271,7 @@ mips_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
       (gdbarch, cap_size == 128 ?
        mips_fbsd_c128_fetch_link_map_offsets :
        mips_fbsd_c256_fetch_link_map_offsets);
+    tramp_frame_prepend_unwinder (gdbarch, &mips_fbsd_cheri_sigframe);
     return;
   }
 
