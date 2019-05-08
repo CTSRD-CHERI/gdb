@@ -8581,7 +8581,10 @@ static void
 mips_virtual_frame_pointer (struct gdbarch *gdbarch, 
 			    CORE_ADDR pc, int *reg, LONGEST *offset)
 {
-  *reg = MIPS_SP_REGNUM;
+  if (is_cheriabi (gdbarch))
+    *reg = mips_regnum (gdbarch)->cap0 + 11;
+  else
+    *reg = MIPS_SP_REGNUM;
   *offset = 0;
 }
 
