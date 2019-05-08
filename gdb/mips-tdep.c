@@ -1748,7 +1748,6 @@ get_cheri_register_signed (struct regcache *regcache, int regnum)
   struct gdbarch *gdbarch = regcache->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[register_size (gdbarch, mips_regnum (gdbarch)->cap0 + regnum)];
-  CORE_ADDR addr;
 
   /* XXX: Should probably use gdbarch_integer_to_address. */
   regcache->raw_read (mips_regnum (gdbarch)->cap0 + regnum, buf);
