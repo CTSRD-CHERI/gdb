@@ -835,7 +835,7 @@ fbsd_nat_target::xfer_partial (enum target_object object,
 
 	memcpy (readbuf, ((gdb_byte *) &si_buf) + offset, len);
 	*xfered_len = len;
-	return TARGET_XFER_OK;
+	return len == 0 ? TARGET_XFER_EOF : TARGET_XFER_OK;
       }
 #endif
 #ifdef KERN_PROC_AUXV
