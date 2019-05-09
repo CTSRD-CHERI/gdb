@@ -203,5 +203,7 @@ in_mips_stubs_section (CORE_ADDR pc)
 extern void mips_print_cheri_register (struct ui_file *file,
 				       struct frame_info *frame, int regnum,
 				       bool name);
+extern CORE_ADDR get_cheri_frame_register_signed (struct frame_info *this_frame,
+						  int regnum);
 
 #endif /* MIPS_TDEP_H */
