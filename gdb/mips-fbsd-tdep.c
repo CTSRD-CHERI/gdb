@@ -47,9 +47,10 @@
 #define MIPS_FBSD_NUM_FPREGS	34
 
 /* Number of general capability registers in `struct cheri_frame' from
-   <machine/cheri.h>.  The structure contains DDC, C1-C26, PCC, cap_cause,
+   <machine/cheri.h>.  The structure contains DDC, C1-C26/C31, PCC, cap_cause,
    and the bitmask of tags stored in cap_valid.  */
-#define MIPS_FBSD_NUM_CAPREGS	29
+#define MIPS_FBSD_NUM_CAPREGS_MIN	29
+#define MIPS_FBSD_NUM_CAPREGS_MAX	34
 
 size_t
 mips_fbsd_capregsize (struct gdbarch *gdbarch)
@@ -73,12 +74,17 @@ mips_fbsd_core_read_description (struct gdbarch *gdbarch,
   if (capstate)
     {
       size_t size = bfd_section_size (abfd, capstate);
-      size_t capregbits = size / MIPS_FBSD_NUM_CAPREGS * TARGET_CHAR_BIT;
 
-      if (capregbits == 256)
-	return tdesc_mips64_cheri256;
-      else if (capregbits == 128)
-	return tdesc_mips64_cheri128;
+      /* Capability register notes can be one of two sizes. */
+      switch (size)
+	{
+	case MIPS_FBSD_NUM_CAPREGS_MIN * 256 / TARGET_CHAR_BIT:
+	case MIPS_FBSD_NUM_CAPREGS_MAX * 256 / TARGET_CHAR_BIT:
+	  return tdesc_mips64_cheri256;
+	case MIPS_FBSD_NUM_CAPREGS_MIN * 128 / TARGET_CHAR_BIT:
+	case MIPS_FBSD_NUM_CAPREGS_MAX * 128 / TARGET_CHAR_BIT:
+	  return tdesc_mips64_cheri128;
+	}
     }
   return NULL;
 }
@@ -154,11 +160,11 @@ mips_fbsd_supply_gregs (struct regcache *regcache, int regnum,
 
 void
 mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
-			  const void *capregs, size_t regsize)
+			  const void *capregs, size_t regsize, size_t len)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   const gdb_byte *regs = (const gdb_byte *) capregs;
-  int cap0, i;
+  int cap0, i, ncregs;
 
   cap0 = mips_regnum (gdbarch)->cap0;
   if (cap0 == -1)
@@ -167,7 +173,9 @@ mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
   if (regnum == cap0 || regnum == -1)
     regcache->raw_supply_zeroed (cap0);
 
-  for (i = 1; i < 27; i++)
+  /* Include DDC, don't include PCC or cause/valid.  */
+  ncregs = (len / regsize) - 2;
+  for (i = 1; i < ncregs; i++)
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
@@ -185,14 +193,16 @@ mips_fbsd_supply_capregs (struct regcache *regcache, int regnum,
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
 		  == regsize);
       regcache->raw_supply (mips_regnum (gdbarch)->cap_pcc,
-			    regs + 27 * regsize);
+			    regs + ncregs * regsize);
     }
   if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
     regcache->raw_supply (mips_regnum (gdbarch)->cap_cause,
-			  regs + 28 * regsize);
+			  regs + (ncregs + 1) * regsize);
+
+  /* XXX: Technically we should try to fixup PCC's valid bit. */
   if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
     regcache->raw_supply (mips_regnum (gdbarch)->cap_cause + 1,
-			  regs + 28 * regsize + 8);
+			  regs + (ncregs + 1) * regsize + 8);
 }
 
 
@@ -246,17 +256,19 @@ mips_fbsd_collect_gregs (const struct regcache *regcache, int regnum,
 
 void
 mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
-			   void *capregs, size_t regsize)
+			   void *capregs, size_t regsize, size_t len)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   gdb_byte *regs = (gdb_byte *) capregs;
-  int cap0, i;
+  int cap0, i, ncregs;
 
   cap0 = mips_regnum (gdbarch)->cap0;
   if (cap0 == -1)
     return;
 
-  for (i = 1; i < 27; i++)
+  /* Include DDC, don't include PCC or cause/valid.  */
+  ncregs = (len / regsize) - 2;
+  for (i = 1; i < ncregs; i++)
     if (regnum == cap0 + i || regnum == -1)
       {
 	gdb_assert (register_size (gdbarch, cap0 + i) == regsize);
@@ -274,14 +286,16 @@ mips_fbsd_collect_capregs (const struct regcache *regcache, int regnum,
       gdb_assert (register_size (gdbarch, mips_regnum (gdbarch)->cap_pcc)
 		  == regsize);
       regcache->raw_collect (mips_regnum (gdbarch)->cap_pcc,
-			     regs + 27 * regsize);
+			     regs + ncregs * regsize);
     }
   if (regnum == mips_regnum (gdbarch)->cap_cause || regnum == -1)
     regcache->raw_collect (mips_regnum (gdbarch)->cap_cause,
-			   regs + 28 * regsize);
+			   regs + (ncregs + 1) * regsize);
+
+  /* XXX: Technically we should try to fixup PCC's valid bit. */
   if (regnum == mips_regnum (gdbarch)->cap_cause + 1 || regnum == -1)
     regcache->raw_collect (mips_regnum (gdbarch)->cap_cause + 1,
-			   regs + 28 * regsize + 8);
+			   regs + (ncregs + 1) * regsize + 8);
 }
 
 /* Supply register REGNUM from the buffer specified by FPREGS and LEN
@@ -361,9 +375,9 @@ mips_fbsd_supply_capregset (const struct regset *regset,
 {
   size_t capregsize = mips_fbsd_capregsize (regcache->arch ());
 
-  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
+  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS_MIN * capregsize);
 
-  mips_fbsd_supply_capregs (regcache, regnum, capregs, capregsize);
+  mips_fbsd_supply_capregs (regcache, regnum, capregs, capregsize, len);
 }
 
 /* Collect register REGNUM from the register cache REGCACHE and store
@@ -378,9 +392,9 @@ mips_fbsd_collect_capregset (const struct regset *regset,
 {
   size_t capregsize = mips_fbsd_capregsize (regcache->arch ());
 
-  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS * capregsize);
+  gdb_assert (len >= MIPS_FBSD_NUM_CAPREGS_MIN * capregsize);
 
-  mips_fbsd_collect_capregs (regcache, regnum, capregs, capregsize);
+  mips_fbsd_collect_capregs (regcache, regnum, capregs, capregsize, len);
 }
 
 static int
@@ -390,7 +404,7 @@ mips_fbsd_cannot_store_register (struct gdbarch *gdbarch, int regno)
 	  || regno == mips_regnum (gdbarch)->fp_implementation_revision)
     return (1);
   if (mips_regnum (gdbarch)->cap0 != -1 && regno >= mips_regnum (gdbarch)->cap0
-      && regno < mips_regnum (gdbarch)->cap0 + MIPS_FBSD_NUM_CAPREGS)
+      && regno <= mips_regnum (gdbarch)->cap_pcc)
     return (1);
   return (0);
 }
@@ -416,6 +430,7 @@ static const struct regset mips_fbsd_capregset =
   NULL,
   mips_fbsd_supply_capregset,
   mips_fbsd_collect_capregset,
+  REGSET_VARIABLE_SIZE
 };
 
 /* Iterate over core file register note sections.  */
@@ -435,8 +450,8 @@ mips_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
   if (mips_regnum (gdbarch)->cap0 != -1)
     {
       size_t capregsize = mips_fbsd_capregsize (gdbarch);
-      cb(".reg-cap", MIPS_FBSD_NUM_CAPREGS * capregsize,
-	 MIPS_FBSD_NUM_CAPREGS * capregsize, &mips_fbsd_capregset,
+      cb(".reg-cap", MIPS_FBSD_NUM_CAPREGS_MIN * capregsize,
+	 MIPS_FBSD_NUM_CAPREGS_MAX * capregsize, &mips_fbsd_capregset,
 	 "capability", cb_data);
     }
 }

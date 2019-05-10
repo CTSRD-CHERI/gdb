@@ -49,9 +49,12 @@ static mips_fbsd_nat_target the_mips_fbsd_nat_target;
    for FreeBSD/mips to work under either c128 or c256.  */
 
 /* Number of general capability registers in `struct cheri_frame' from
-   <machine/cheri.h>.  The structure contains DDC, C1-C26, PCC, cap_cause,
-   and the bitmask of tags stored in cap_valid.  */
-#define MIPS_FBSD_NUM_CAPREGS	29
+   <machine/cheri.h>.  The structure contains DDC, C1-C26/C31, PCC,
+   cap_cause, and the bitmask of tags stored in cap_valid.  */
+#ifndef NUMCHERISAVEREGS
+#define	NUMCHERISAVEREGS	29
+#endif
+#define MIPS_FBSD_NUM_CAPREGS	NUMCHERISAVEREGS
 
 static int capreg_size;
 #endif
@@ -81,7 +84,7 @@ static bool
 getcapregs_supplies (struct gdbarch *gdbarch, int regnum)
 {
   return ((regnum >= mips_regnum (gdbarch)->cap0
-	   && regnum < mips_regnum (gdbarch)->cap0 + 27)
+	   && regnum < mips_regnum (gdbarch)->cap0 + NUMCHERISAVEREGS - 2)
 	  || regnum == mips_regnum (gdbarch)->cap_ddc
 	  || regnum == mips_regnum (gdbarch)->cap_pcc
 	  || regnum == mips_regnum (gdbarch)->cap_cause
@@ -130,7 +133,8 @@ mips_fbsd_nat_target::fetch_registers (struct regcache *regcache, int regnum)
 		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
 	perror_with_name (_("Couldn't get capability registers"));
 
-      mips_fbsd_supply_capregs (regcache, regnum, capregs, capreg_size);
+      mips_fbsd_supply_capregs (regcache, regnum, capregs, capreg_size,
+				capreg_size * MIPS_FBSD_NUM_CAPREGS);
     }
 #endif
 }
@@ -184,7 +188,8 @@ mips_fbsd_nat_target::store_registers (struct regcache *regcache, int regnum)
 		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
 	perror_with_name (_("Couldn't get capability registers"));
 
-      mips_fbsd_collect_capregs (regcache, regnum, capregs, capreg_size);
+      mips_fbsd_collect_capregs (regcache, regnum, capregs, capreg_size,
+				 capreg_size * MIPS_FBSD_NUM_CAPREGS);
 
       if (ptrace (PT_SETCAPREGS, get_ptrace_pid (inferior_ptid),
 		  (PTRACE_TYPE_ARG3) capregs, 0) == -1)
