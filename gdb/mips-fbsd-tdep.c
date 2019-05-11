@@ -450,9 +450,13 @@ mips_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
   if (mips_regnum (gdbarch)->cap0 != -1)
     {
       size_t capregsize = mips_fbsd_capregsize (gdbarch);
-      cb(".reg-cap", MIPS_FBSD_NUM_CAPREGS_MIN * capregsize,
-	 MIPS_FBSD_NUM_CAPREGS_MAX * capregsize, &mips_fbsd_capregset,
-	 "capability", cb_data);
+      bool c28_valid
+	= (regcache->get_register_status (mips_regnum (gdbarch)->cap0 + 28)
+	   == REG_VALID);
+      size_t collect_size = c28_valid ? MIPS_FBSD_NUM_CAPREGS_MAX * capregsize
+	: MIPS_FBSD_NUM_CAPREGS_MIN * capregsize;
+      cb(".reg-cap", MIPS_FBSD_NUM_CAPREGS_MIN * capregsize, collect_size,
+	 &mips_fbsd_capregset, "capability", cb_data);
     }
 }
 
