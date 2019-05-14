@@ -451,7 +451,8 @@ mips_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
     {
       size_t capregsize = mips_fbsd_capregsize (gdbarch);
       bool c28_valid
-	= (regcache->get_register_status (mips_regnum (gdbarch)->cap0 + 28)
+        = (regcache != NULL
+	   && regcache->get_register_status (mips_regnum (gdbarch)->cap0 + 28)
 	   == REG_VALID);
       size_t collect_size = c28_valid ? MIPS_FBSD_NUM_CAPREGS_MAX * capregsize
 	: MIPS_FBSD_NUM_CAPREGS_MIN * capregsize;
