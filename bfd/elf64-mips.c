@@ -4876,6 +4876,6 @@ const struct elf_size_info mips_elf64_size_info =
 #undef	elf64_bed
 #define elf64_bed				elf64_fbsd_tradbed
 
-#undef elf64_mips_write_core_note
+#undef elf_backend_write_core_note
 
 #include "elf64-target.h"
