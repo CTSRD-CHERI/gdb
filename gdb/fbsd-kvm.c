@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: head/gnu/usr.bin/gdb/kgdb/trgt.c 260601 2014-01-13 19:08:25Z
 #include "inferior.h"
 #include "objfiles.h"
 #include "osabi.h"
+#include "process-stratum-target.h"
 #include "solib.h"
 #include "target.h"
 #include "value.h"
@@ -219,11 +220,10 @@ If no filename is specified, /dev/mem is used to examine the running kernel.\n\
 target vmcore [-w] [filename]")
 };
 
-class fbsd_kvm_target final : public target_ops
+class fbsd_kvm_target final : public process_stratum_target
 {
 public:
-  fbsd_kvm_target ()
-  { this->to_stratum = process_stratum; }
+  fbsd_kvm_target () = default;
 
   const target_info &info () const override
   { return fbsd_kvm_target_info; }
@@ -244,9 +244,11 @@ public:
   const char *pid_to_str (ptid_t) override;
   const char *extra_thread_info (thread_info *) override;
 
-  bool has_memory () override { return true; }
-  bool has_stack () override { return true; }
-  bool has_registers () override { return true; }
+  bool has_all_memory () override { return false; }
+  bool has_memory () override;
+  bool has_stack () override;
+  bool has_registers () override;
+  bool has_execution (ptid_t) override { return false; }
 };
 
 /* Target ops for libkvm interface.  */
@@ -431,6 +433,24 @@ fbsd_kvm_target::extra_thread_info(thread_info *ti)
 {
 
 	return (kgdb_thr_extra_thread_info(ti->ptid.tid()));
+}
+
+bool
+fbsd_kvm_target::has_memory ()
+{
+  return (kvm != NULL);
+}
+
+bool
+fbsd_kvm_target::has_stack ()
+{
+  return (kvm != NULL);
+}
+
+bool
+fbsd_kvm_target::has_registers ()
+{
+  return (kvm != NULL);
 }
 
 void
