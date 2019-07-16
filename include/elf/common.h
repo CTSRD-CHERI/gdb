@@ -863,6 +863,8 @@
 /* Values for FreeBSD .note.ABI-tag notes.  Note name is "FreeBSD".  */
 
 #define NT_FREEBSD_ABI_TAG	1
+#define	NT_FREEBSD_CHERI_ABI_TAG 0x10000001
+#define	NT_FREEBSD_USE_CHERIABI_TAG 0x10000002
 
 /* These three macros disassemble and assemble a symbol table st_info field,
    which contains the symbol binding and symbol type.  The STB_ and STT_
