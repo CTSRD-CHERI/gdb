@@ -230,7 +230,8 @@ $(outdir)/%.dat: %.xml number-regs.xsl sort-regs.xsl gdbserver-regs.xsl
 	  $(XSLTPROC) gdbserver-regs.xsl - >> $(outdir)/$*.tmp
 	sh ../../move-if-change $(outdir)/$*.tmp $(outdir)/$*.dat
 
-FEATURE_XMLFILES = aarch64-core.xml \
+FEATURE_XMLFILES = aarch64-cheri.xml \
+	aarch64-core.xml \
 	aarch64-fpu.xml \
 	i386/32bit-core.xml \
 	i386/32bit-sse.xml \

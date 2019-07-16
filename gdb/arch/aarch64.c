@@ -19,6 +19,7 @@
 #include "aarch64.h"
 #include <stdlib.h>
 
+#include "../features/aarch64-cheri.c"
 #include "../features/aarch64-core.c"
 #include "../features/aarch64-fpu.c"
 #include "../features/aarch64-sve.c"
@@ -26,7 +27,7 @@
 /* See arch/aarch64.h.  */
 
 target_desc *
-aarch64_create_target_description (uint64_t vq)
+aarch64_create_target_description (uint64_t vq, bool cheri)
 {
   target_desc *tdesc = allocate_target_description ();
 
@@ -42,6 +43,9 @@ aarch64_create_target_description (uint64_t vq)
     regnum = create_feature_aarch64_fpu (tdesc, regnum);
   else
     regnum = create_feature_aarch64_sve (tdesc, regnum, vq);
+
+  if (cheri)
+    regnum = create_feature_aarch64_cheri (tdesc, regnum);
 
   return tdesc;
 }

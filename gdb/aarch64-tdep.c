@@ -69,7 +69,7 @@
 #define HA_MAX_NUM_FLDS		4
 
 /* All possible aarch64 target descriptors.  */
-struct target_desc *tdesc_aarch64_list[AARCH64_MAX_SVE_VQ + 1];
+struct target_desc *tdesc_aarch64_list[AARCH64_MAX_SVE_VQ + 1][2];
 
 /* The standard register names, and all the valid aliases for them.  */
 static const struct
@@ -173,6 +173,24 @@ static const char *const aarch64_sve_register_names[] =
   "p8", "p9", "p10", "p11",
   "p12", "p13", "p14", "p15",
   "ffr", "vg"
+};
+
+/* The CHERI 'C' registers.  */
+static const char *const aarch64_cheri_register_names[] =
+{
+  /* These registers must appear in consecutive RAW register number
+     order and they must begin with AARCH64_C0_REGNUM! */
+  "c0", "c1", "c2", "c3",
+  "c4", "c5", "c6", "c7",
+  "c8", "c9", "c10", "c11",
+  "c12", "c13", "c14", "c15",
+  "c16", "c17", "c18", "c19",
+  "c20", "c21", "c22", "c23",
+  "c24", "c25", "c26", "c27",
+  "c28", "c29", "c30", "csp",
+  "pcc", "ddc", "ctpidr", "ctpidrro",
+  "cid", "rcsp", "rddc", "rctipdr",
+  "tag_map"
 };
 
 /* AArch64 prologue cache structure.  */
@@ -1885,6 +1903,9 @@ aarch64_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   if (reg >= AARCH64_DWARF_SVE_Z0 && reg <= AARCH64_DWARF_SVE_Z0 + 15)
     return AARCH64_SVE_Z0_REGNUM + reg - AARCH64_DWARF_SVE_Z0;
 
+  if (reg >= AARCH64_DWARF_C0 && reg <= AARCH64_DWARF_C0 + 31)
+    return AARCH64_C0_REGNUM + reg - AARCH64_DWARF_C0;
+
   return -1;
 }
 
@@ -2918,18 +2939,18 @@ aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
    (It is not possible to set VQ to zero on an SVE system).  */
 
 const target_desc *
-aarch64_read_description (uint64_t vq)
+aarch64_read_description (uint64_t vq, bool cheri)
 {
   if (vq > AARCH64_MAX_SVE_VQ)
     error (_("VQ is %" PRIu64 ", maximum supported value is %d"), vq,
 	   AARCH64_MAX_SVE_VQ);
 
-  struct target_desc *tdesc = tdesc_aarch64_list[vq];
+  struct target_desc *tdesc = tdesc_aarch64_list[vq][cheri];
 
   if (tdesc == NULL)
     {
-      tdesc = aarch64_create_target_description (vq);
-      tdesc_aarch64_list[vq] = tdesc;
+      tdesc = aarch64_create_target_description (vq, cheri);
+      tdesc_aarch64_list[vq][cheri] = tdesc;
     }
 
   return tdesc;
@@ -2989,17 +3010,19 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct tdesc_feature *feature_core;
   const struct tdesc_feature *feature_fpu;
   const struct tdesc_feature *feature_sve;
+  const struct tdesc_feature *feature_cheri;
   int num_regs = 0;
   int num_pseudo_regs = 0;
 
   /* Ensure we always have a target description.  */
   if (!tdesc_has_registers (tdesc))
-    tdesc = aarch64_read_description (0);
+    tdesc = aarch64_read_description (0, false);
   gdb_assert (tdesc);
 
   feature_core = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.core");
   feature_fpu = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.fpu");
   feature_sve = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.sve");
+  feature_cheri = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.cheri");
 
   if (feature_core == NULL)
     return NULL;
@@ -3052,6 +3075,23 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       num_pseudo_regs += 32;	/* add the Sn scalar register pseudos */
       num_pseudo_regs += 32;	/* add the Hn scalar register pseudos */
       num_pseudo_regs += 32;	/* add the Bn scalar register pseudos */
+    }
+
+  /* Add the CHERI registers.  */
+  if (feature_cheri != NULL)
+    {
+      /* Validate the description provides the mandatory CHERI
+	 registers and allocate their numbers.  */
+      for (i = 0; i < ARRAY_SIZE (aarch64_cheri_register_names); i++)
+	{
+	  if (aarch64_cheri_register_names[i] == NULL)
+	    continue;
+	  valid_p &= tdesc_numbered_register (feature_cheri, tdesc_data,
+					      AARCH64_C0_REGNUM + i,
+					      aarch64_cheri_register_names[i]);
+	}
+
+      num_regs = AARCH64_TAG_MAP_REGNUM + 1;
     }
 
   if (!valid_p)
@@ -3228,7 +3268,7 @@ When on, AArch64 specific debugging is enabled."),
   selftests::register_test ("aarch64-process-record",
 			    selftests::aarch64_process_record_test);
   selftests::record_xml_tdesc ("aarch64.xml",
-			       aarch64_create_target_description (0));
+			       aarch64_create_target_description (0, false));
 #endif
 }
 

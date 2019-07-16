@@ -36,6 +36,7 @@ struct regset;
 #define AARCH64_DWARF_SVE_FFR  47
 #define AARCH64_DWARF_SVE_P0   48
 #define AARCH64_DWARF_SVE_Z0   96
+#define AARCH64_DWARF_C0  128
 
 /* Size of integer registers.  */
 #define X_REGISTER_SIZE  8
@@ -89,7 +90,7 @@ struct gdbarch_tdep
   }
 };
 
-const target_desc *aarch64_read_description (uint64_t vq);
+const target_desc *aarch64_read_description (uint64_t vq, bool cheri);
 
 extern int aarch64_process_record (struct gdbarch *gdbarch,
                                struct regcache *regcache, CORE_ADDR addr);

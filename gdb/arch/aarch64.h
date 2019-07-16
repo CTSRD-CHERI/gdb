@@ -26,7 +26,7 @@
    the presence of SVE and the Vector Quotient - the number of 128bit chunks in
    an SVE Z register.  */
 
-target_desc *aarch64_create_target_description (uint64_t vq);
+target_desc *aarch64_create_target_description (uint64_t vq, bool cheri);
 
 /* Register numbers of various important registers.
    Note that on SVE, the Z registers reuse the V register numbers and the V
@@ -50,11 +50,25 @@ enum aarch64_regnum
 							   register.  */
   AARCH64_SVE_FFR_REGNUM,	/* SVE First Fault Register.  */
   AARCH64_SVE_VG_REGNUM,	/* SVE Vector Granule.  */
+  AARCH64_C0_REGNUM,		/* First capability register.  */
+  AARCH64_CFP_REGNUM = AARCH64_C0_REGNUM + 29,
+  AARCH64_CLR_REGNUM = AARCH64_C0_REGNUM + 30,
+  AARCH64_CSP_REGNUM,
+  AARCH64_PCC_REGNUM,
+  AARCH64_DDC_REGNUM,
+  AARCH64_CTPIDR_REGNUM,
+  AARCH64_CTPIDRRO_REGNUM,
+  AARCH64_CID_REGNUM,
+  AARCH64_RCSP_REGNUM,
+  AARCH64_RDDC_REGNUM,
+  AARCH64_RCTPIDR_REGNUM,
+  AARCH64_TAG_MAP_REGNUM,
 
   /* Other useful registers.  */
   AARCH64_LAST_X_ARG_REGNUM = AARCH64_X0_REGNUM + 7,
   AARCH64_STRUCT_RETURN_REGNUM = AARCH64_X0_REGNUM + 8,
-  AARCH64_LAST_V_ARG_REGNUM = AARCH64_V0_REGNUM + 7
+  AARCH64_LAST_V_ARG_REGNUM = AARCH64_V0_REGNUM + 7,
+  AARCH64_LAST_C_ARG_REGNUM = AARCH64_C0_REGNUM + 7,
 };
 
 /* Pseudo register base numbers.  */
