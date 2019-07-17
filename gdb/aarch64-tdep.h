@@ -46,6 +46,7 @@ struct regset;
 #define D_REGISTER_SIZE  8
 #define V_REGISTER_SIZE 16
 #define Q_REGISTER_SIZE 16
+#define C_REGISTER_SIZE 16
 
 /* Total number of general (X) registers.  */
 #define AARCH64_X_REGISTER_COUNT 32
@@ -88,6 +89,8 @@ struct gdbarch_tdep
   {
     return vq != 0;
   }
+
+  bool has_cheri;
 };
 
 const target_desc *aarch64_read_description (uint64_t vq, bool cheri);

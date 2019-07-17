@@ -3127,6 +3127,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->jb_pc = -1;		/* Longjump support not enabled by default.  */
   tdep->jb_elt_size = 8;
   tdep->vq = aarch64_get_tdesc_vq (tdesc);
+  tdep->has_cheri = (feature_cheri != NULL);
 
   set_gdbarch_push_dummy_call (gdbarch, aarch64_push_dummy_call);
   set_gdbarch_frame_align (gdbarch, aarch64_frame_align);
