@@ -49,6 +49,22 @@ static const struct regcache_map_entry aarch64_fbsd_fpregmap[] =
     { 0 }
   };
 
+static const struct regcache_map_entry aarch64_fbsd_capregmap[] =
+  {
+    { 31, AARCH64_C0_REGNUM, 16 }, /* c0 ... c30 */
+    { 1, AARCH64_CSP_REGNUM, 16 },
+    { 1, AARCH64_PCC_REGNUM, 16 },
+    { 1, AARCH64_DDC_REGNUM, 16 },
+    { 1, AARCH64_CTPIDR_REGNUM, 16 },
+    { 1, AARCH64_CTPIDRRO_REGNUM, 16 },
+    { 1, AARCH64_CID_REGNUM, 16 },
+    { 1, AARCH64_RCSP_REGNUM, 16 },
+    { 1, AARCH64_RDDC_REGNUM, 16 },
+    { 1, AARCH64_RCTPIDR_REGNUM, 16 },
+    { 1, AARCH64_TAG_MAP_REGNUM, 8 },
+    { 1, REGCACHE_MAP_SKIP, 8 },
+  };
+
 /* In a signal frame, sp points to a 'struct sigframe' which is
    defined as:
 
@@ -134,6 +150,12 @@ const struct regset aarch64_fbsd_fpregset =
     regcache_supply_regset, regcache_collect_regset
   };
 
+const struct regset aarch64_fbsd_capregset =
+  {
+    aarch64_fbsd_capregmap,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
 /* Implement the "regset_from_core_section" gdbarch method.  */
 
 static void
@@ -146,6 +168,25 @@ aarch64_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
       &aarch64_fbsd_gregset, NULL, cb_data);
   cb (".reg2", AARCH64_FBSD_SIZEOF_FPREGSET, AARCH64_FBSD_SIZEOF_FPREGSET,
       &aarch64_fbsd_fpregset, NULL, cb_data);
+  if (gdbarch_tdep (gdbarch)->has_cheri)
+    cb (".reg-cap", AARCH64_FBSD_SIZEOF_CAPREGSET,
+	AARCH64_FBSD_SIZEOF_CAPREGSET, &aarch64_fbsd_capregset, NULL,
+	cb_data);
+}
+
+/* Implement the "core_read_description" gdbarch method.  */
+
+static const struct target_desc *
+aarch64_fbsd_core_read_description (struct gdbarch *gdbarch,
+				    struct target_ops *target,
+				    bfd *abfd)
+{
+  asection *capstate = bfd_get_section_by_name (abfd, ".reg-cap");
+
+  if (capstate == NULL)
+    return NULL;
+
+  return aarch64_read_description (0, true);
 }
 
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
@@ -168,6 +209,9 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, aarch64_fbsd_iterate_over_regset_sections);
+
+  set_gdbarch_core_read_description (gdbarch,
+				     aarch64_fbsd_core_read_description);
 }
 
 void
