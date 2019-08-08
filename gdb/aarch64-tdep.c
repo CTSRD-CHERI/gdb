@@ -1049,6 +1049,28 @@ aarch64_unwind_sp (struct gdbarch *gdbarch, struct frame_info *this_frame)
   return frame_unwind_register_unsigned (this_frame, AARCH64_SP_REGNUM);
 }
 
+static CORE_ADDR
+aarch64_cheriabi_unwind_pc (struct gdbarch *gdbarch,
+			    struct frame_info *next_frame)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, AARCH64_PCC_REGNUM)];
+
+  frame_unwind_register (next_frame, AARCH64_PCC_REGNUM, buf);
+  return extract_signed_integer (buf, 8, byte_order);
+}
+
+static CORE_ADDR
+aarch64_cheriabi_unwind_sp (struct gdbarch *gdbarch,
+			    struct frame_info *next_frame)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, AARCH64_CSP_REGNUM)];
+
+  frame_unwind_register (next_frame, AARCH64_CSP_REGNUM, buf);
+  return extract_signed_integer (buf, 8, byte_order);
+}
+
 /* Return the value of the REGNUM register in the previous frame of
    *THIS_FRAME.  */
 
@@ -3315,6 +3337,14 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   info.target_desc = tdesc;
   info.tdesc_data = tdesc_data;
   gdbarch_init_osabi (info, gdbarch);
+
+  if (tdep->has_cheri && gdbarch_ptr_bit (gdbarch) == 128)
+    {
+      set_gdbarch_sp_regnum (gdbarch, AARCH64_CSP_REGNUM);
+      set_gdbarch_pc_regnum (gdbarch, AARCH64_PCC_REGNUM);
+      set_gdbarch_unwind_sp (gdbarch, aarch64_cheriabi_unwind_sp);
+      set_gdbarch_unwind_pc (gdbarch, aarch64_cheriabi_unwind_pc);
+    }
 
   dwarf2_frame_set_init_reg (gdbarch, aarch64_dwarf2_frame_init_reg);
 
