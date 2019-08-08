@@ -1050,6 +1050,17 @@ aarch64_unwind_sp (struct gdbarch *gdbarch, struct frame_info *this_frame)
 }
 
 static CORE_ADDR
+aarch64_cheriabi_read_pc (readable_regcache *regcache)
+{
+  struct gdbarch *gdbarch = regcache->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, AARCH64_PCC_REGNUM)];
+
+  regcache->cooked_read (AARCH64_PCC_REGNUM, buf);
+  return extract_signed_integer (buf, 8, byte_order);
+}
+
+static CORE_ADDR
 aarch64_cheriabi_unwind_pc (struct gdbarch *gdbarch,
 			    struct frame_info *next_frame)
 {
@@ -3342,6 +3353,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     {
       set_gdbarch_sp_regnum (gdbarch, AARCH64_CSP_REGNUM);
       set_gdbarch_pc_regnum (gdbarch, AARCH64_PCC_REGNUM);
+      set_gdbarch_read_pc (gdbarch, aarch64_cheriabi_read_pc);
       set_gdbarch_unwind_sp (gdbarch, aarch64_cheriabi_unwind_sp);
       set_gdbarch_unwind_pc (gdbarch, aarch64_cheriabi_unwind_pc);
     }
