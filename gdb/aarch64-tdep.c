@@ -2990,6 +2990,108 @@ aarch64_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, restore_reggroup);
 }
 
+static CORE_ADDR
+aarch64_cheri_pointer_to_address (struct gdbarch *gdbarch, struct type *type,
+				  const gdb_byte *buf)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  if (type->length <= 8)
+    return signed_pointer_to_address (gdbarch, type, buf);
+  else
+    return extract_signed_integer (buf, 8, byte_order);
+}
+
+/* XXX: This does not generate a valid capability.  However, a
+   round-trip that converts an address to a pointer back to an address
+   will work with this implementation. */
+
+static void
+aarch64_cheri_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
+				  gdb_byte *buf, CORE_ADDR addr)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  if (type->length <= 8)
+    address_to_signed_pointer (gdbarch, type, buf, addr);
+  else
+    {
+      memset (buf, 0, type->length);
+      store_signed_integer (buf, 8, byte_order, addr);
+    }
+}
+
+static CORE_ADDR
+aarch64_cheri_integer_to_address (struct gdbarch *gdbarch,
+				  struct type *type, const gdb_byte *buf)
+{
+  return aarch64_cheri_pointer_to_address (gdbarch, type, buf);
+}
+
+static struct value *
+aarch64_cheri_cast_integer_to_pointer (struct gdbarch *gdbarch,
+				       struct type *type, struct value *arg2)
+{
+  if (TYPE_LENGTH (type) > 8)
+    {
+      struct type *type2 = check_typedef (value_type (arg2));
+
+      /* Handle uintcap_t and intcap_t.  */
+      if (TYPE_LENGTH (type) == TYPE_LENGTH (type2))
+	{
+	  struct value *v = value_copy (arg2);
+	  deprecated_set_value_type (v, type);
+	  set_value_enclosing_type (v, type);
+	  set_value_pointed_to_offset (v, 0);
+	  return v;
+	}
+
+      if (TYPE_LENGTH (type2) <= 8)
+	{
+	  /* Construct a capability using the integer value as the cursor.  */
+	  struct value *v = allocate_value (type);
+	  store_signed_integer (value_contents_writeable (v), 8,
+				gdbarch_byte_order (gdbarch),
+				value_as_long (arg2));
+	  return v;
+	}
+    }
+  return NULL;
+}
+
+static struct value *
+aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
+				       struct type *type, struct value *arg2)
+{
+  struct type *type2 = check_typedef (value_type (arg2));
+
+  if (TYPE_LENGTH (type2) > 8)
+    {
+      /* Handle uintcap_t and intcap_t.  */
+      if (TYPE_LENGTH (type) == TYPE_LENGTH (type2))
+	{
+	  struct value *v = value_copy (arg2);
+	  deprecated_set_value_type (v, type);
+	  set_value_enclosing_type (v, type);
+	  set_value_pointed_to_offset (v, 0);
+	  return v;
+	}
+
+      if (TYPE_LENGTH (type) <= 8)
+	{
+	  /* Read the cursor and return that as an integer value.
+	     This will always return the address instead of the
+	     offset.  */
+	  LONGEST longest;
+
+	  longest = extract_signed_integer (value_contents (arg2) + 8,
+					    8, gdbarch_byte_order (gdbarch));
+	  return value_from_longest (type, longest);
+	}
+    }
+  return NULL;
+}
+
 /* Initialize the current architecture based on INFO.  If possible,
    re-use an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
@@ -3193,6 +3295,21 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Register architecture.  */
   aarch64_add_reggroups (gdbarch);
+
+  /* Settings for CHERI processors.  */
+  if (tdep->has_cheri)
+    {
+      set_gdbarch_pointer_to_address (gdbarch,
+				      aarch64_cheri_pointer_to_address);
+      set_gdbarch_address_to_pointer (gdbarch,
+				      aarch64_cheri_address_to_pointer);
+      set_gdbarch_integer_to_address (gdbarch,
+				      aarch64_cheri_integer_to_address);
+      set_gdbarch_cast_integer_to_pointer
+	(gdbarch, aarch64_cheri_cast_integer_to_pointer);
+      set_gdbarch_cast_pointer_to_integer
+	(gdbarch, aarch64_cheri_cast_pointer_to_integer);
+    }
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   info.target_desc = tdesc;
