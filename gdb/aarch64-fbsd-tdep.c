@@ -221,7 +221,7 @@ aarch64_fbsd_cheriabi (bfd *abfd)
       unsigned int notesize = 12;
       notesize += (namesize + 3) & ~3;
       notesize += (descsize + 3) & ~3;
-      if (p + notesize >= buf + sectsize)
+      if (p + notesize > buf + sectsize)
 	break;
 
       if (namesize == strlen ("FreeBSD") + 1
