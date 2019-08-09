@@ -1127,7 +1127,12 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
       reg->how = DWARF2_FRAME_REG_FN;
       reg->loc.fn = aarch64_dwarf2_prev_register;
       break;
+    case AARCH64_PCC_REGNUM:
+      reg->how = DWARF2_FRAME_REG_SAVED_REG;
+      reg->loc.reg = AARCH64_CLR_REGNUM;
+      break;
     case AARCH64_SP_REGNUM:
+    case AARCH64_CSP_REGNUM:
       reg->how = DWARF2_FRAME_REG_CFA;
       break;
     }
