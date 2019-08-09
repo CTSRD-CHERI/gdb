@@ -191,50 +191,6 @@ aarch64_fbsd_core_read_description (struct gdbarch *gdbarch,
   return aarch64_read_description (0, true);
 }
 
-/* Check for CheriABI by looking for a NT_FREEBSD_USE_CHERIABI_TAG
-   note.  */
-
-static bool
-aarch64_fbsd_cheriabi (bfd *abfd)
-{
-  asection *note_tags = bfd_get_section_by_name (abfd, ".note.tag");
-  char buf[1024], *p;
-
-  if (note_tags == NULL)
-    return false;
-
-  unsigned int sectsize = bfd_section_size (abfd, note_tags);
-  if (sectsize > sizeof (buf))
-    sectsize = sizeof (buf);
-
-  if (!bfd_get_section_contents (abfd, note_tags, buf, 0, sectsize))
-    return false;
-
-  unsigned int align = 1U << note_tags->alignment_power;
-  p = buf;
-  while (p + 12 < buf + sectsize)
-    {
-      unsigned int namesize = bfd_h_get_32 (abfd, p);
-      unsigned int descsize = bfd_h_get_32 (abfd, p + 4);
-      unsigned int notetype = bfd_h_get_32 (abfd, p + 8);
-
-      unsigned int notesize = 12;
-      notesize += (namesize + 3) & ~3;
-      notesize += (descsize + 3) & ~3;
-      if (p + notesize > buf + sectsize)
-	break;
-
-      if (namesize == strlen ("FreeBSD") + 1
-	  && strcmp (p + 12, "FreeBSD") == 0
-	  && notetype == NT_FREEBSD_USE_CHERIABI_TAG)
-	return true;
-
-      notesize += align;
-      notesize &= ~align;
-      p += notesize;
-    }
-  return false;
-}
 
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
 
@@ -259,12 +215,6 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   set_gdbarch_core_read_description (gdbarch,
 				     aarch64_fbsd_core_read_description);
-
-  if (info.abfd != NULL && aarch64_fbsd_cheriabi (info.abfd))
-    {
-      set_gdbarch_ptr_bit (gdbarch, 128);
-      set_gdbarch_dwarf2_addr_size (gdbarch, 8);
-    }
 }
 
 void

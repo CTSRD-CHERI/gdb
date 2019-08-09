@@ -3125,6 +3125,53 @@ aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
   return NULL;
 }
 
+/* Determine if a bfd is using CheriABI.  Currently this is only
+   supported for FreeBSD binaries.  This has to be done here rather
+   than in the FreeBSD/aarch64 osabi hook so that the target
+   description uses capability registers.  */
+
+static bool
+aarch64_bfd_has_cheriabi (bfd *abfd)
+{
+  asection *note_tags = bfd_get_section_by_name (abfd, ".note.tag");
+  char buf[1024], *p;
+
+  if (note_tags == NULL)
+    return false;
+
+  unsigned int sectsize = bfd_section_size (abfd, note_tags);
+  if (sectsize > sizeof (buf))
+    sectsize = sizeof (buf);
+
+  if (!bfd_get_section_contents (abfd, note_tags, buf, 0, sectsize))
+    return false;
+
+  unsigned int align = 1U << note_tags->alignment_power;
+  p = buf;
+  while (p + 12 < buf + sectsize)
+    {
+      unsigned int namesize = bfd_h_get_32 (abfd, p);
+      unsigned int descsize = bfd_h_get_32 (abfd, p + 4);
+      unsigned int notetype = bfd_h_get_32 (abfd, p + 8);
+
+      unsigned int notesize = 12;
+      notesize += (namesize + 3) & ~3;
+      notesize += (descsize + 3) & ~3;
+      if (p + notesize > buf + sectsize)
+	break;
+
+      if (namesize == strlen ("FreeBSD") + 1
+	  && strcmp (p + 12, "FreeBSD") == 0
+	  && notetype == NT_FREEBSD_USE_CHERIABI_TAG)
+	return true;
+
+      notesize += align;
+      notesize &= ~align;
+      p += notesize;
+    }
+  return false;
+}
+
 /* Initialize the current architecture based on INFO.  If possible,
    re-use an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
@@ -3148,10 +3195,14 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct tdesc_feature *feature_cheri;
   int num_regs = 0;
   int num_pseudo_regs = 0;
+  bool is_cheriabi;
+
+  is_cheriabi = info.abfd != NULL ? aarch64_bfd_has_cheriabi (info.abfd)
+    : false;
 
   /* Ensure we always have a target description.  */
   if (!tdesc_has_registers (tdesc))
-    tdesc = aarch64_read_description (0, false);
+    tdesc = aarch64_read_description (0, is_cheriabi);
   gdb_assert (tdesc);
 
   feature_core = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.core");
@@ -3342,21 +3393,23 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	(gdbarch, aarch64_cheri_cast_integer_to_pointer);
       set_gdbarch_cast_pointer_to_integer
 	(gdbarch, aarch64_cheri_cast_pointer_to_integer);
+
+      if (is_cheriabi)
+	{
+	  set_gdbarch_ptr_bit (gdbarch, 128);
+	  set_gdbarch_dwarf2_addr_size (gdbarch, 8);
+	  set_gdbarch_sp_regnum (gdbarch, AARCH64_CSP_REGNUM);
+	  set_gdbarch_pc_regnum (gdbarch, AARCH64_PCC_REGNUM);
+	  set_gdbarch_read_pc (gdbarch, aarch64_cheriabi_read_pc);
+	  set_gdbarch_unwind_sp (gdbarch, aarch64_cheriabi_unwind_sp);
+	  set_gdbarch_unwind_pc (gdbarch, aarch64_cheriabi_unwind_pc);
+	}
     }
 
   /* Hook in the ABI-specific overrides, if they have been registered.  */
   info.target_desc = tdesc;
   info.tdesc_data = tdesc_data;
   gdbarch_init_osabi (info, gdbarch);
-
-  if (tdep->has_cheri && gdbarch_ptr_bit (gdbarch) == 128)
-    {
-      set_gdbarch_sp_regnum (gdbarch, AARCH64_CSP_REGNUM);
-      set_gdbarch_pc_regnum (gdbarch, AARCH64_PCC_REGNUM);
-      set_gdbarch_read_pc (gdbarch, aarch64_cheriabi_read_pc);
-      set_gdbarch_unwind_sp (gdbarch, aarch64_cheriabi_unwind_sp);
-      set_gdbarch_unwind_pc (gdbarch, aarch64_cheriabi_unwind_pc);
-    }
 
   dwarf2_frame_set_init_reg (gdbarch, aarch64_dwarf2_frame_init_reg);
 
