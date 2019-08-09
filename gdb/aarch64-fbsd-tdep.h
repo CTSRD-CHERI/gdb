@@ -39,5 +39,7 @@
 
 extern const struct regset aarch64_fbsd_gregset;
 extern const struct regset aarch64_fbsd_fpregset;
+extern const struct regset aarch64_fbsd_capregset;
+extern const struct regcache_map_entry aarch64_fbsd_capregmap[];
 
 #endif /* AARCH64_FBSD_TDEP_H */

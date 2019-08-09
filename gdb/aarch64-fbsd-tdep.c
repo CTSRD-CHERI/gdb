@@ -51,7 +51,7 @@ static const struct regcache_map_entry aarch64_fbsd_fpregmap[] =
     { 0 }
   };
 
-static const struct regcache_map_entry aarch64_fbsd_capregmap[] =
+const struct regcache_map_entry aarch64_fbsd_capregmap[] =
   {
     { 31, AARCH64_C0_REGNUM, 16 }, /* c0 ... c30 */
     { 1, AARCH64_CSP_REGNUM, 16 },
