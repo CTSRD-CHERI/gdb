@@ -3023,6 +3023,98 @@ aarch64_add_reggroups (struct gdbarch *gdbarch)
   reggroup_add (gdbarch, restore_reggroup);
 }
 
+struct cap_register
+{
+  uint64_t base;
+  uint64_t address;
+  uint64_t limit;
+  uint32_t otype;
+  uint32_t perms;
+  bool sealed;
+  bool valid;
+};
+
+/* Permission bits.  */
+#define	CAP_PERM_LOAD		(1 << 17)
+#define	CAP_PERM_STORE		(1 << 16)
+#define	CAP_PERM_EXECUTE       	(1 << 15)
+#define	CAP_PERM_LOADCAP       	(1 << 14)
+#define	CAP_PERM_STORECAP      	(1 << 13)
+#define	CAP_PERM_STORELOCALCAP	(1 << 12)
+#define	CAP_PERM_SEAL		(1 << 11)
+#define	CAP_PERM_UNSEAL		(1 << 10)
+#define	CAP_PERM_SYSTEM		(1 << 9)
+#define	CAP_PERM_BRANCH_UNSEAL	(1 << 8)
+#define	CAP_PERM_COMPARTMENT_ID	(1 << 7)
+#define	CAP_PERM_MUTABLE_LOAD	(1 << 6)
+#define	CAP_PERM_EXECUTIVE     	(1 << 1)
+#define	CAP_PERM_GLOBAL		(1 << 0)
+
+static void
+aarch64_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch,
+					const gdb_byte *buffer,
+					struct cap_register *cap)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  uint64_t words[2];
+
+  memset(cap, 0, sizeof(*cap));
+  words[0] = extract_unsigned_integer (buffer, 8, byte_order);
+  words[1] = extract_unsigned_integer (buffer + 8, 8, byte_order);
+  if (words[1] == 0)
+    return;
+  cap->valid = true;
+
+  /* Bits 110:127 => 46:63 in second word.  */
+  cap->perms = words[1] >> 46;
+
+  /* Bits 109:95 => 45:31 in second word.  */
+  cap->otype = (words[1] >> 31) & 0x7fff;
+  cap->sealed = cap->otype != 0;
+
+  cap->address = words[0];
+
+  /* TODO: Compute bounds.  */
+  cap->base = 0;
+  cap->limit = 0xffffffffffffffff;
+}
+
+static void
+aarch64_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
+					 struct cap_register *cap,
+					 struct ui_file *stream)
+{
+  if (!cap->valid)
+    return;
+
+  fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+		    cap->perms & CAP_PERM_LOAD ? "r" : "",
+		    cap->perms & CAP_PERM_STORE ? "w" : "",
+		    cap->perms & CAP_PERM_EXECUTE ? "x" : "",
+		    cap->perms & CAP_PERM_LOADCAP ? "R" : "",
+		    cap->perms & CAP_PERM_STORECAP ? "W" : "",
+		    paddress (gdbarch, cap->base),
+		    paddress (gdbarch, cap->limit),
+		    cap->sealed ? " (sealed)" : "");
+}
+
+static void
+aarch64_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
+					struct type *type,
+					const gdb_byte *valaddr,
+					CORE_ADDR address,
+					int embedded_offset,
+					struct ui_file *stream)
+{
+  if (type->length != 16)
+    return;
+
+  struct cap_register cap;
+  aarch64_cheri_fetch_pointer_attributes (gdbarch, valaddr + embedded_offset,
+					  &cap);
+  aarch64_cheri_print_pointer_attributes1 (gdbarch, &cap, stream);
+}
+
 static CORE_ADDR
 aarch64_cheri_pointer_to_address (struct gdbarch *gdbarch, struct type *type,
 				  const gdb_byte *buf)
@@ -3383,6 +3475,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Settings for CHERI processors.  */
   if (tdep->has_cheri)
     {
+      set_gdbarch_print_pointer_attributes
+	(gdbarch, aarch64_cheri_print_pointer_attributes);
       set_gdbarch_pointer_to_address (gdbarch,
 				      aarch64_cheri_pointer_to_address);
       set_gdbarch_address_to_pointer (gdbarch,
