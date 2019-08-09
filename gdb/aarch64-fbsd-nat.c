@@ -23,6 +23,9 @@
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <machine/reg.h>
+#ifdef PT_GETCAPREGS
+#include <sys/sysctl.h>
+#endif
 
 #include "fbsd-nat.h"
 #include "aarch64-tdep.h"
@@ -33,9 +36,16 @@ struct aarch64_fbsd_nat_target final : public fbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
+#ifdef PT_GETCAPREGS
+  const struct target_desc *read_description () override;
+#endif
 };
 
 static aarch64_fbsd_nat_target the_aarch64_fbsd_nat_target;
+
+#ifdef PT_GETCAPREGS
+static bool cap_present;
+#endif
 
 /* Determine if PT_GETREGS fetches REGNUM.  */
 
@@ -52,6 +62,16 @@ getfpregs_supplies (struct gdbarch *gdbarch, int regnum)
 {
   return (regnum >= AARCH64_V0_REGNUM && regnum <= AARCH64_FPCR_REGNUM);
 }
+
+#ifdef PT_GETCAPREGS
+/* Determine if PT_GETCAPREGS fetches REGNUM.  */
+
+static bool
+getcapregs_supplies (int regnum)
+{
+  return regcache_map_entry_supplies (aarch64_fbsd_capregmap, regnum);
+}
+#endif
 
 /* Fetch register REGNUM from the inferior.  If REGNUM is -1, do this
    for all registers.  */
@@ -84,6 +104,19 @@ aarch64_fbsd_nat_target::fetch_registers (struct regcache *regcache,
       regcache->supply_regset (&aarch64_fbsd_fpregset, regnum, &fpregs,
 			       sizeof (fpregs));
     }
+
+#ifdef PT_GETCAPREGS
+  if (regnum == -1 || getcapregs_supplies (regnum))
+    {
+      struct capreg capregs;
+
+      if (ptrace (PT_GETCAPREGS, pid, (PTRACE_TYPE_ARG3) &capregs, 0) == -1)
+	perror_with_name (_("Couldn't get capability registers"));
+
+      regcache->supply_regset (&aarch64_fbsd_capregset, regnum, &capregs,
+			       sizeof (capregs));
+    }
+#endif
 }
 
 /* Store register REGNUM back into the inferior.  If REGNUM is -1, do
@@ -123,10 +156,46 @@ aarch64_fbsd_nat_target::store_registers (struct regcache *regcache,
       if (ptrace (PT_SETFPREGS, pid, (PTRACE_TYPE_ARG3) &fpregs, 0) == -1)
 	perror_with_name (_("Couldn't write floating point status"));
     }
+
+#ifdef notyet
+#ifdef PT_GETCAPREGS
+  if (regnum == -1 || getcapregs_supplies (regnum))
+    {
+      struct capreg capregs;
+
+      if (ptrace (PT_GETCAPREGS, pid, (PTRACE_TYPE_ARG3) &capregs, 0) == -1)
+	perror_with_name (_("Couldn't get capability registers"));
+
+      regcache->collect_regset (&aarch64_fbsd_capregset, regnum, &capregs,
+				sizeof (capregs));
+
+      if (ptrace (PT_SETCAPREGS, pid, (PTRACE_TYPE_ARG3) &capregs, 0) == -1)
+	perror_with_name (_("Couldn't write capability registers"));
+    }
+#endif
+#endif
 }
+
+#ifdef PT_GETCAPREGS
+/* Implement the to_read_description method.  */
+
+const struct target_desc *
+aarch64_fbsd_nat_target::read_description ()
+{
+  return aarch64_read_description (0, cap_present);
+}
+#endif
 
 void
 _initialize_aarch64_fbsd_nat (void)
 {
   add_inf_child_target (&the_aarch64_fbsd_nat_target);
+
+#ifdef PT_GETCAPREGS
+  int capreg_size;
+  size_t len = sizeof(capreg_size);
+  if (sysctlbyname("security.cheri.capability_size", &capreg_size, &len,
+		   NULL, 0) == 0)
+    cap_present = true;
+#endif
 }
