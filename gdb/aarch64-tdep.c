@@ -193,6 +193,17 @@ static const char *const aarch64_cheri_register_names[] =
   "tag_map"
 };
 
+/* CHERI 'C' register aliases.  */
+static const struct
+{
+  const char *const name;
+  int regnum;
+} aarch64_cheri_register_aliases[] =
+{
+  {"cfp", AARCH64_CFP_REGNUM},
+  {"clr", AARCH64_CLR_REGNUM}
+};
+
 /* AArch64 prologue cache structure.  */
 struct aarch64_prologue_cache
 {
@@ -3529,6 +3540,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     user_reg_add (gdbarch, aarch64_register_aliases[i].name,
 		  value_of_aarch64_user_reg,
 		  &aarch64_register_aliases[i].regnum);
+  if (tdep->has_cheri)
+    for (i = 0; i < ARRAY_SIZE (aarch64_cheri_register_aliases); i++)
+      user_reg_add (gdbarch, aarch64_cheri_register_aliases[i].name,
+		    value_of_aarch64_user_reg,
+		    &aarch64_cheri_register_aliases[i].regnum);
 
   register_aarch64_ravenscar_ops (gdbarch);
 
