@@ -3402,6 +3402,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        best_arch != NULL;
        best_arch = gdbarch_list_lookup_by_info (best_arch->next, &info))
     {
+      if (gdbarch_tdep (arches->gdbarch)->vq != aarch64_get_tdesc_vq (tdesc))
+	continue;
+      if (gdbarch_tdep (arches->gdbarch)->has_cheri != (feature_cheri != NULL))
+	continue;
+
       /* Found a match.  */
       break;
     }
