@@ -236,6 +236,25 @@ struct aarch64_prologue_cache
   struct trad_frame_saved_reg *saved_regs;
 };
 
+static bool
+is_cheriabi(struct gdbarch *gdbarch)
+{
+  return gdbarch_ptr_bit (gdbarch) == 128;
+}
+
+CORE_ADDR
+get_cheri_frame_register_unsigned (struct frame_info *this_frame, int regnum)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, regnum)];
+  CORE_ADDR addr;
+
+  /* XXX: Should probably use gdbarch_integer_to_address. */
+  get_frame_register (this_frame, regnum, buf);
+  return extract_unsigned_integer (buf + 8, 8, byte_order);
+}
+
 static void
 show_aarch64_debug (struct ui_file *file, int from_tty,
                     struct cmd_list_element *c, const char *value)
@@ -740,6 +759,20 @@ aarch64_scan_prologue (struct frame_info *this_frame,
       prologue_end = std::min (prologue_end, prev_pc);
       aarch64_analyze_prologue (gdbarch, prologue_start, prologue_end, cache);
     }
+  else if (is_cheriabi (gdbarch))
+    {
+      CORE_ADDR frame_loc;
+
+      frame_loc = get_cheri_frame_register_unsigned (this_frame,
+						     AARCH64_CFP_REGNUM);
+      if (frame_loc == 0)
+	return;
+
+      cache->framereg = AARCH64_CFP_REGNUM;
+      cache->framesize = 32;
+      cache->saved_regs[AARCH64_CFP_REGNUM].addr = 0;
+      cache->saved_regs[AARCH64_CLR_REGNUM].addr = 16;
+    }
   else
     {
       CORE_ADDR frame_loc;
@@ -771,7 +804,11 @@ aarch64_make_prologue_cache_1 (struct frame_info *this_frame,
   if (cache->framereg == -1)
     return;
 
-  unwound_fp = get_frame_register_unsigned (this_frame, cache->framereg);
+  if (register_size (get_frame_arch (this_frame), cache->framereg) == 16)
+    unwound_fp = get_cheri_frame_register_unsigned (this_frame,
+						    cache->framereg);
+  else
+    unwound_fp = get_frame_register_unsigned (this_frame, cache->framereg);
   if (unwound_fp == 0)
     return;
 
