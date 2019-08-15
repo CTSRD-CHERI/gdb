@@ -65,6 +65,7 @@ const struct regcache_map_entry aarch64_fbsd_capregmap[] =
     { 1, AARCH64_RCTPIDR_REGNUM, 16 },
     { 1, AARCH64_TAG_MAP_REGNUM, 8 },
     { 1, REGCACHE_MAP_SKIP, 8 },
+    { 0 }
   };
 
 /* In a signal frame, sp points to a 'struct sigframe' which is
@@ -138,6 +139,99 @@ static const struct tramp_frame aarch64_fbsd_sigframe =
   aarch64_fbsd_sigframe_init
 };
 
+/* The CheriABI sigframe replaces struct gpregs at offset 0 of
+   mcontext_t with a struct capregs.  This holds capability-sized
+   registers for all GPRs, even ones that are not expanded to
+   capabilities.  To aid with this, two extra register maps are
+   defined below.  The first one populates the X registers from
+   mc_capregs.  The second populates the C registers.  */
+
+#define AARCH64C_SIGFRAME_UCONTEXT_OFFSET	112
+#define AARCH64C_UCONTEXT_MCONTEXT_OFFSET	16
+#define	AARCH64C_MCONTEXT_SPSR_OFFSET		4
+#define	AARCH64C_MCONTEXT_CAPREGS_OFFSET	16
+#define	AARCH64C_MCONTEXT_FPREGS_OFFSET		560
+#define	AARCH64C_MCONTEXT_FLAGS_OFFSET		0
+#define AARCH64C_MCONTEXT_FLAG_FP_VALID		0x1
+
+static const struct regcache_map_entry aarch64_fbsd_cheriabi_gregmap[] =
+  {
+    { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
+    { 1, AARCH64_LR_REGNUM, 16 },
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 0 }
+  };
+
+const struct regcache_map_entry aarch64_fbsd_cheriabi_capregmap[] =
+  {
+    { 31, AARCH64_C0_REGNUM, 16 }, /* c0 ... c30 */
+    { 1, AARCH64_CLR_REGNUM, 16 },
+    { 1, AARCH64_CSP_REGNUM, 16 },
+    { 1, AARCH64_PCC_REGNUM, 16 },
+    { 1, AARCH64_DDC_REGNUM, 16 },
+    { 0 }
+  };
+
+/* Implement the "init" method of struct tramp_frame.  */
+
+static void
+aarch64_fbsd_cheriabi_sigframe_init (const struct tramp_frame *self,
+				     struct frame_info *this_frame,
+				     struct trad_frame_cache *this_cache,
+				     CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR sp = get_cheri_frame_register_unsigned (this_frame,
+						    AARCH64_CSP_REGNUM);
+  CORE_ADDR mcontext_addr
+    = (sp
+       + AARCH64C_SIGFRAME_UCONTEXT_OFFSET
+       + AARCH64C_UCONTEXT_MCONTEXT_OFFSET);
+  gdb_byte buf[4];
+
+  /* SPSR.  */
+  trad_frame_set_reg_addr (this_cache, AARCH64_CPSR_REGNUM,
+			   mcontext_addr + AARCH64C_MCONTEXT_SPSR_OFFSET);
+
+  /* X registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_cheriabi_gregmap,
+			     mcontext_addr + AARCH64C_MCONTEXT_CAPREGS_OFFSET,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_cheriabi_gregmap));
+
+  /* C registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_cheriabi_capregmap,
+			     mcontext_addr + AARCH64C_MCONTEXT_CAPREGS_OFFSET,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_cheriabi_capregmap));
+
+  if (target_read_memory (mcontext_addr + AARCH64C_MCONTEXT_FLAGS_OFFSET, buf,
+			  4) == 0
+      && (extract_unsigned_integer (buf, 4, byte_order)
+	  & AARCH64C_MCONTEXT_FLAG_FP_VALID))
+    trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_fpregmap,
+			       mcontext_addr + AARCH64C_MCONTEXT_FPREGS_OFFSET,
+			       regcache_map_entry_size (aarch64_fbsd_fpregmap));
+
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static const struct tramp_frame aarch64_fbsd_cheriabi_sigframe =
+{
+  SIGTRAMP_FRAME,
+  4,
+  {
+    {0x860053e0, ULONGEST_MAX},		/* mov  c0, csp  */
+    {0x8401c000, ULONGEST_MAX},		/* add  c0, c0, #SF_C_UC  */
+    {0xd2803428, ULONGEST_MAX},		/* mov  x8, #SYS_sigreturn  */
+    {0xd4000001, ULONGEST_MAX},		/* svc  0x0  */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_cheriabi_sigframe_init
+};
+
 /* Register set definitions.  */
 
 const struct regset aarch64_fbsd_gregset =
@@ -202,10 +296,17 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Generic FreeBSD support.  */
   fbsd_init_abi (info, gdbarch);
 
-  set_solib_svr4_fetch_link_map_offsets (gdbarch,
-					 svr4_lp64_fetch_link_map_offsets);
+  if (gdbarch_ptr_bit(gdbarch) == 128)
+    {
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
+    }
+  else
+    {
+      set_solib_svr4_fetch_link_map_offsets (gdbarch,
+					     svr4_lp64_fetch_link_map_offsets);
 
-  tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_sigframe);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_sigframe);
+    }
 
   /* Enable longjmp.  */
   tdep->jb_pc = 13;

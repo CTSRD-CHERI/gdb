@@ -111,4 +111,7 @@ void aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 int aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
 					  struct displaced_step_closure *closure);
 
+CORE_ADDR get_cheri_frame_register_unsigned (struct frame_info *this_frame,
+					     int regnum);
+
 #endif /* aarch64-tdep.h */
