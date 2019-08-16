@@ -22,6 +22,7 @@ create_feature_aarch64_core (struct target_desc *result, long regnum)
   tdesc_add_flag (type_with_fields, 9, "D");
   tdesc_add_flag (type_with_fields, 20, "IL");
   tdesc_add_flag (type_with_fields, 21, "SS");
+  tdesc_add_flag (type_with_fields, 26, "C64");
   tdesc_add_flag (type_with_fields, 28, "V");
   tdesc_add_flag (type_with_fields, 29, "C");
   tdesc_add_flag (type_with_fields, 30, "Z");
