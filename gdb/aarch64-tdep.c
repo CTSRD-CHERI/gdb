@@ -335,14 +335,14 @@ aarch64_analyze_c64_prologue (struct gdbarch *gdbarch, CORE_ADDR start,
 #define CREG_INDEX(creg) ((creg) - AARCH64_C0_REGNUM + AARCH64_X_REGISTER_COUNT)
 
   if (pv_is_register (regs[CREG_INDEX (AARCH64_CFP_REGNUM)],
-		      AARCH64_CSP_REGNUM))
+		      CREG_INDEX (AARCH64_CSP_REGNUM)))
     {
       /* Frame pointer is fp.  Frame size is constant.  */
       cache->framereg = AARCH64_CFP_REGNUM;
       cache->framesize = -regs[CREG_INDEX (AARCH64_CFP_REGNUM)].k;
     }
   else if (pv_is_register (regs[CREG_INDEX (AARCH64_CSP_REGNUM)],
-			   AARCH64_CSP_REGNUM))
+			   CREG_INDEX (AARCH64_CSP_REGNUM)))
     {
       /* Try the stack pointer.  */
       cache->framesize = -regs[CREG_INDEX (AARCH64_CSP_REGNUM)].k;
@@ -399,6 +399,12 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 			  struct aarch64_prologue_cache *cache,
 			  abstract_instruction_reader& reader)
 {
+  /* C64 functions have a symbol whose start address is odd so that
+     PSTATE.C64 is set when branching to the symbol address.  */
+  if ((start & 3) == 1)
+    return (aarch64_analyze_c64_prologue (gdbarch, start - 1, limit, cache,
+					  reader));
+
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   int i;
   /* Track X registers and D registers in prologue.  */
@@ -407,12 +413,6 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
   for (i = 0; i < AARCH64_X_REGISTER_COUNT + AARCH64_D_REGISTER_COUNT; i++)
     regs[i] = pv_register (i, 0);
   pv_area stack (AARCH64_SP_REGNUM, gdbarch_addr_bit (gdbarch));
-
-  /* C64 functions have a symbol whose start address is odd so that
-     PSTATE.C64 is set when branching to the symbol address.  */
-  if ((start & 3) == 1)
-    return (aarch64_analyze_c64_prologue (gdbarch, start - 1, limit, cache,
-					  reader));
 
   for (; start < limit; start += 4)
     {
