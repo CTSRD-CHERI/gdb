@@ -288,6 +288,107 @@ class instruction_reader : public abstract_instruction_reader
 
 } // namespace
 
+/* Analyze a C64 prologue.  */
+
+static CORE_ADDR
+aarch64_analyze_c64_prologue (struct gdbarch *gdbarch, CORE_ADDR start,
+			      CORE_ADDR limit,
+			      struct aarch64_prologue_cache *cache,
+			      abstract_instruction_reader& reader)
+{
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
+  int i;
+  /* Track X registers, C registers, and D registers in prologue.  */
+  pv_t regs[AARCH64_X_REGISTER_COUNT + AARCH64_C_REGISTER_COUNT
+	    + AARCH64_D_REGISTER_COUNT];
+
+  for (i = 0;
+       i < AARCH64_X_REGISTER_COUNT + AARCH64_C_REGISTER_COUNT
+	 + AARCH64_D_REGISTER_COUNT; i++)
+    regs[i] = pv_register (i, 0);
+  pv_area stack (AARCH64_CSP_REGNUM, gdbarch_addr_bit (gdbarch));
+
+  for (; start < limit; start += 4)
+    {
+      uint32_t insn;
+      aarch64_inst inst;
+
+      insn = reader.read (start, 4, byte_order_for_code);
+
+      if (aarch64_decode_insn (insn, &inst, 1, NULL) != 0)
+	break;
+
+	{
+	  if (aarch64_debug)
+	    {
+	      debug_printf ("aarch64: prologue analysis gave up addr=%s"
+			    " opcode=0x%x\n",
+			    core_addr_to_string_nz (start), insn);
+	    }
+	  break;
+	}
+    }
+
+  if (cache == NULL)
+    return start;
+
+#define CREG_INDEX(creg) ((creg) - AARCH64_C0_REGNUM + AARCH64_X_REGISTER_COUNT)
+
+  if (pv_is_register (regs[CREG_INDEX (AARCH64_CFP_REGNUM)],
+		      AARCH64_CSP_REGNUM))
+    {
+      /* Frame pointer is fp.  Frame size is constant.  */
+      cache->framereg = AARCH64_CFP_REGNUM;
+      cache->framesize = -regs[CREG_INDEX (AARCH64_CFP_REGNUM)].k;
+    }
+  else if (pv_is_register (regs[CREG_INDEX (AARCH64_CSP_REGNUM)],
+			   AARCH64_CSP_REGNUM))
+    {
+      /* Try the stack pointer.  */
+      cache->framesize = -regs[CREG_INDEX (AARCH64_CSP_REGNUM)].k;
+      cache->framereg = AARCH64_CSP_REGNUM;
+    }
+  else
+    {
+      /* We're just out of luck.  We don't know where the frame is.  */
+      cache->framereg = -1;
+      cache->framesize = 0;
+    }
+
+#undef CREG_INDEX
+
+  for (i = 0; i < AARCH64_X_REGISTER_COUNT; i++)
+    {
+      CORE_ADDR offset;
+
+      if (stack.find_reg (gdbarch, i, &offset))
+	cache->saved_regs[i].addr = offset;
+    }
+
+  for (i = 0; i < AARCH64_C_REGISTER_COUNT; i++)
+    {
+      CORE_ADDR offset;
+
+      if (stack.find_reg (gdbarch, i + AARCH64_X_REGISTER_COUNT,
+			  &offset))
+	cache->saved_regs[i + AARCH64_C0_REGNUM].addr = offset;
+    }
+
+  for (i = 0; i < AARCH64_D_REGISTER_COUNT; i++)
+    {
+      int regnum = gdbarch_num_regs (gdbarch);
+      CORE_ADDR offset;
+
+      if (stack.find_reg (gdbarch,
+			  i + AARCH64_X_REGISTER_COUNT
+			  + AARCH64_C_REGISTER_COUNT,
+			  &offset))
+	cache->saved_regs[i + regnum + AARCH64_D0_REGNUM].addr = offset;
+    }
+
+  return start;
+}
+
 /* Analyze a prologue, looking for a recognizable stack frame
    and frame pointer.  Scan until we encounter a store that could
    clobber the stack frame unexpectedly, or an unknown instruction.  */
@@ -306,6 +407,12 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
   for (i = 0; i < AARCH64_X_REGISTER_COUNT + AARCH64_D_REGISTER_COUNT; i++)
     regs[i] = pv_register (i, 0);
   pv_area stack (AARCH64_SP_REGNUM, gdbarch_addr_bit (gdbarch));
+
+  /* C64 functions have a symbol whose start address is odd so that
+     PSTATE.C64 is set when branching to the symbol address.  */
+  if ((start & 3) == 1)
+    return (aarch64_analyze_c64_prologue (gdbarch, start - 1, limit, cache,
+					  reader));
 
   for (; start < limit; start += 4)
     {

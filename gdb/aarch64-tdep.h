@@ -52,6 +52,8 @@ struct regset;
 #define AARCH64_X_REGISTER_COUNT 32
 /* Total number of D registers.  */
 #define AARCH64_D_REGISTER_COUNT 32
+/* Total number of capability (C) registers.  */
+#define AARCH64_C_REGISTER_COUNT 32
 
 /* The maximum number of modified instructions generated for one
    single-stepped instruction.  */
