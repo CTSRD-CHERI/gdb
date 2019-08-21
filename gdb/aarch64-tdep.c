@@ -1022,6 +1022,11 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
       return frame_unwind_got_constant (this_frame, prev_regnum, lr);
     }
 
+  /* Similarly, return CLR for PCC.  */
+  if (prev_regnum == AARCH64_PCC_REGNUM)
+    return frame_unwind_got_register (this_frame, prev_regnum,
+				      AARCH64_CLR_REGNUM);
+
   /* SP is generally not saved to the stack, but this frame is
      identified by the next frame's stack pointer at the time of the
      call.  The value was already reconstructed into PREV_SP.  */
@@ -1040,6 +1045,18 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
   if (prev_regnum == AARCH64_SP_REGNUM)
     return frame_unwind_got_constant (this_frame, prev_regnum,
 				      cache->prev_sp);
+
+  /* Similarly for CSP, but we have to try to fake up a valid cap. */
+  if (prev_regnum == AARCH64_CSP_REGNUM)
+    {
+      struct gdbarch *gdbarch = get_frame_arch (this_frame);
+      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+      gdb_byte buf[16];
+
+      frame_unwind_register (this_frame, AARCH64_CSP_REGNUM, buf);
+      store_unsigned_integer (buf, 8, byte_order, cache->prev_sp);
+      return frame_unwind_got_bytes (this_frame, prev_regnum, buf);
+    }
 
   return trad_frame_get_prev_register (this_frame, cache->saved_regs,
 				       prev_regnum);
