@@ -3673,6 +3673,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       if (is_cheriabi)
 	{
+	  set_gdbarch_addr_bit (gdbarch, 64);
 	  set_gdbarch_ptr_bit (gdbarch, 128);
 	  set_gdbarch_dwarf2_addr_size (gdbarch, 8);
 	  set_gdbarch_sp_regnum (gdbarch, AARCH64_CSP_REGNUM);
