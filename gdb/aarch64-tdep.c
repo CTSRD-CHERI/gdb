@@ -1053,7 +1053,7 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       gdb_byte buf[16];
 
-      frame_unwind_register (this_frame, AARCH64_CSP_REGNUM, buf);
+      get_frame_register (this_frame, AARCH64_CSP_REGNUM, buf);
       store_unsigned_integer (buf, 8, byte_order, cache->prev_sp);
       return frame_unwind_got_bytes (this_frame, prev_regnum, buf);
     }
