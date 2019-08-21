@@ -252,7 +252,7 @@ get_cheri_frame_register_unsigned (struct frame_info *this_frame, int regnum)
 
   /* XXX: Should probably use gdbarch_integer_to_address. */
   get_frame_register (this_frame, regnum, buf);
-  return extract_unsigned_integer (buf + 8, 8, byte_order);
+  return extract_unsigned_integer (buf, 8, byte_order);
 }
 
 static void
