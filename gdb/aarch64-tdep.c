@@ -3264,12 +3264,13 @@ aarch64_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
   if (!cap->valid)
     return;
 
-  fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+  fprintf_filtered (stream, " [%s%s%s%s%s%s,%s-%s]%s",
 		    cap->perms & CAP_PERM_LOAD ? "r" : "",
 		    cap->perms & CAP_PERM_STORE ? "w" : "",
 		    cap->perms & CAP_PERM_EXECUTE ? "x" : "",
 		    cap->perms & CAP_PERM_LOADCAP ? "R" : "",
 		    cap->perms & CAP_PERM_STORECAP ? "W" : "",
+		    cap->perms & CAP_PERM_EXECUTIVE ? "E" : "",
 		    paddress (gdbarch, cap->base),
 		    paddress (gdbarch, cap->limit),
 		    cap->sealed ? " (sealed)" : "");
