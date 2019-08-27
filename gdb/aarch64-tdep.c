@@ -60,6 +60,19 @@
 #include "opcode/aarch64.h"
 #include <algorithm>
 
+/* Macros for setting and testing a bit in a minimal symbol that marks
+   it as a Capability Mode function.  The MSB of the minimal symbol's
+   "info" field is used for this purpose.
+
+   MSYMBOL_SET_SPECIAL	Actually sets the "special" bit.
+   MSYMBOL_IS_SPECIAL   Tests the "special" bit in a minimal symbol.  */
+
+#define MSYMBOL_SET_SPECIAL(msym)				\
+	MSYMBOL_TARGET_FLAG_1 (msym) = 1
+
+#define MSYMBOL_IS_SPECIAL(msym)				\
+	MSYMBOL_TARGET_FLAG_1 (msym)
+
 /* The list of available "set aarch64 ..." and "show aarch64 ..."
    commands.  */
 static struct cmd_list_element *setaarch64cmdlist = NULL;
@@ -223,6 +236,73 @@ static const struct
   {"clr", AARCH64_CLR_REGNUM}
 };
 
+/* Test whether an ELF symbol corresponds to an address in Capability
+   Mode, and set a "special" bit in a minimal symbol to indicate that
+   it does.  */
+
+static void
+aarch64_elf_make_msymbol_special(asymbol *sym, struct minimal_symbol *msym)
+{
+  elf_symbol_type *elfsym = (elf_symbol_type *) sym;
+
+  if ((sym->flags & BSF_FUNCTION) != 0
+      && (MSYMBOL_VALUE_RAW_ADDRESS (msym) & 1) != 0)
+    {
+      MSYMBOL_SET_SPECIAL (msym);
+      SET_MSYMBOL_VALUE_ADDRESS (msym, MSYMBOL_VALUE_RAW_ADDRESS (msym) - 1);
+    }
+}
+
+/* Determine if FRAME is executing in Capability Mode.  */
+
+int
+aarch64_frame_is_capmode (struct frame_info *frame)
+{
+  CORE_ADDR cpsr;
+
+  /* Every AArch64 frame unwinder can unwind the C64 bit of the CPSR,
+     either directly (from a signal frame or dummy frame) or by
+     interpreting the saved [C]LR (from a prologue or DWARF frame).
+     So consult it and trust the unwinders.  */
+  cpsr = get_frame_register_unsigned (frame, AARCH64_CPSR_REGNUM);
+
+  return (cpsr & CPSR_C64) != 0;
+}
+
+/* Determine if the program counter specified in MEMADDR is in a
+   Capability Mode function.  This function should be called for
+   addresses unrelated to any executing frame; otherwise, prefer
+   aarch64_frame_is_capmode.  */
+
+int
+aarch64_pc_is_capmode (CORE_ADDR memaddr)
+{
+  struct bound_minimal_symbol sym;
+  char type;
+
+  /* If bit 0 of the address is set, assume this is a Capability Mode
+     address.  */
+  if (IS_CAPMODE_ADDR (memaddr))
+    return 1;
+
+  /* Capability Mode functions have a "special" bit set in minimal
+     symbols.  */
+  sym = lookup_minimal_symbol_by_pc (memaddr);
+  if (sym.minsym)
+    return (MSYMBOL_IS_SPECIAL (sym.minsym));
+
+  /* If we couldn't find any symbol, but we're talking to a running
+     target, then trust the current value of $cpsr.  This lets
+     "display/i $pc" always show the correct mode (though if there is
+     a symbol table we will not reach here, so it still may not be
+     displayed in the mode it will be executed).  */
+  if (target_has_registers)
+    return aarch64_frame_is_capmode (get_current_frame ());
+
+  /* Otherwise we're out of luck; we assume A64.  */
+  return 0;
+}
+
 /* AArch64 prologue cache structure.  */
 struct aarch64_prologue_cache
 {
@@ -254,12 +334,6 @@ struct aarch64_prologue_cache
   /* Saved register offsets.  */
   struct trad_frame_saved_reg *saved_regs;
 };
-
-static bool
-is_cheriabi(struct gdbarch *gdbarch)
-{
-  return gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64;
-}
 
 CORE_ADDR
 get_cheri_frame_register_unsigned (struct frame_info *this_frame, int regnum)
@@ -418,10 +492,8 @@ aarch64_analyze_prologue (struct gdbarch *gdbarch,
 			  struct aarch64_prologue_cache *cache,
 			  abstract_instruction_reader& reader)
 {
-  /* C64 functions have a symbol whose start address is odd so that
-     PSTATE.C64 is set when branching to the symbol address.  */
-  if ((start & 3) == 1)
-    return (aarch64_analyze_c64_prologue (gdbarch, start - 1, limit, cache,
+  if (aarch64_pc_is_capmode (start))
+    return (aarch64_analyze_c64_prologue (gdbarch, start, limit, cache,
 					  reader));
 
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
@@ -885,7 +957,7 @@ aarch64_scan_prologue (struct frame_info *this_frame,
       prologue_end = std::min (prologue_end, prev_pc);
       aarch64_analyze_prologue (gdbarch, prologue_start, prologue_end, cache);
     }
-  else if (is_cheriabi (gdbarch))
+  else if (aarch64_frame_is_capmode (this_frame))
     {
       CORE_ADDR frame_loc;
 
@@ -1027,6 +1099,8 @@ static struct value *
 aarch64_prologue_prev_register (struct frame_info *this_frame,
 				void **this_cache, int prev_regnum)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct aarch64_prologue_cache *cache
     = aarch64_make_prologue_cache (this_frame, this_cache);
 
@@ -1041,10 +1115,18 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
       return frame_unwind_got_constant (this_frame, prev_regnum, lr);
     }
 
-  /* Similarly, return CLR for PCC.  */
+  /* Similarly, return CLR for PCC, but clear the C64 indicator.  */
   if (prev_regnum == AARCH64_PCC_REGNUM)
-    return frame_unwind_got_register (this_frame, prev_regnum,
-				      AARCH64_CLR_REGNUM);
+    {
+      CORE_ADDR addr;
+      gdb_byte buf[16];
+
+      get_frame_register (this_frame, AARCH64_CLR_REGNUM, buf);
+      addr = extract_unsigned_integer (buf, 8, byte_order);
+      addr &= ~1;
+      store_unsigned_integer (buf, 8, byte_order, addr);
+      return frame_unwind_got_bytes (this_frame, prev_regnum, buf);
+    }
 
   /* SP is generally not saved to the stack, but this frame is
      identified by the next frame's stack pointer at the time of the
@@ -1068,13 +1150,30 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
   /* Similarly for CSP, but we have to try to fake up a valid cap. */
   if (prev_regnum == AARCH64_CSP_REGNUM)
     {
-      struct gdbarch *gdbarch = get_frame_arch (this_frame);
-      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       gdb_byte buf[16];
 
       get_frame_register (this_frame, AARCH64_CSP_REGNUM, buf);
       store_unsigned_integer (buf, 8, byte_order, cache->prev_sp);
       return frame_unwind_got_bytes (this_frame, prev_regnum, buf);
+    }
+
+  /* The CPSR may have been changed by the call instruction and by the
+     called function.  The only bit we can reconstruct is the C64 bit,
+     by checking the low bit of CLR as of the call.  Guess that all
+     other bits are unchanged; the condition flags are presumably
+     lost, but the processor status is likely valid.  */
+  if (prev_regnum == AARCH64_CSP_REGNUM && gdbarch_tdep (gdbarch)->has_cheri)
+    {
+      CORE_ADDR clr, cpsr;
+
+      cpsr = get_frame_register_unsigned (this_frame, prev_regnum);
+      clr = get_cheri_frame_register_unsigned (this_frame,
+					       AARCH64_CLR_REGNUM);
+      if (IS_CAPMODE_ADDR (clr))
+	cpsr |= CPSR_C64;
+      else
+	cpsr &= ~CPSR_C64;
+      return frame_unwind_got_constant (this_frame, prev_regnum, cpsr);
     }
 
   return trad_frame_get_prev_register (this_frame, cache->saved_regs,
@@ -1280,13 +1379,38 @@ static struct value *
 aarch64_dwarf2_prev_register (struct frame_info *this_frame,
 			      void **this_cache, int regnum)
 {
-  CORE_ADDR lr;
+  CORE_ADDR cpsr, lr;
 
   switch (regnum)
     {
     case AARCH64_PC_REGNUM:
       lr = frame_unwind_register_unsigned (this_frame, AARCH64_LR_REGNUM);
       return frame_unwind_got_constant (this_frame, regnum, lr);
+
+    case AARCH64_PCC_REGNUM:
+      {
+	struct gdbarch *gdbarch = get_frame_arch (this_frame);
+	enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+	CORE_ADDR addr;
+	gdb_byte buf[16];
+
+	get_frame_register (this_frame, AARCH64_CLR_REGNUM, buf);
+	addr = extract_unsigned_integer (buf, 8, byte_order);
+	addr &= ~1;
+	store_unsigned_integer (buf, 8, byte_order, addr);
+	return frame_unwind_got_bytes (this_frame, regnum, buf);
+      }
+
+    case AARCH64_CPSR_REGNUM:
+      /* Reconstruct the C64 bit; see aarch64_prologue_prev_register
+	 for details.  */
+      cpsr = get_frame_register_unsigned (this_frame, regnum);
+      lr = get_cheri_frame_register_unsigned (this_frame, AARCH64_CLR_REGNUM);
+      if (IS_CAPMODE_ADDR (lr))
+	cpsr |= CPSR_C64;
+      else
+	cpsr &= ~CPSR_C64;
+      return frame_unwind_got_constant (this_frame, regnum, cpsr);
 
     default:
       internal_error (__FILE__, __LINE__,
@@ -1303,13 +1427,14 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 {
   switch (regnum)
     {
+    case AARCH64_CPSR_REGNUM:
+      if (!gdbarch_tdep (gdbarch)->has_cheri)
+	break;
+      /* FALLTHROUGH */
     case AARCH64_PC_REGNUM:
+    case AARCH64_PCC_REGNUM:
       reg->how = DWARF2_FRAME_REG_FN;
       reg->loc.fn = aarch64_dwarf2_prev_register;
-      break;
-    case AARCH64_PCC_REGNUM:
-      reg->how = DWARF2_FRAME_REG_SAVED_REG;
-      reg->loc.reg = AARCH64_CLR_REGNUM - AARCH64_C0_REGNUM + AARCH64_DWARF_C0;
       break;
     case AARCH64_SP_REGNUM:
     case AARCH64_CSP_REGNUM:
@@ -3752,6 +3877,10 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* Disassembly.  */
   set_gdbarch_print_insn (gdbarch, aarch64_gdb_print_insn);
+
+  /* Minsymbol frobbing.  */
+  set_gdbarch_elf_make_msymbol_special (gdbarch,
+					aarch64_elf_make_msymbol_special);
 
   /* Virtual tables.  */
   set_gdbarch_vbit_in_delta (gdbarch, 1);

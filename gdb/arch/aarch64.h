@@ -111,4 +111,9 @@ enum aarch64_regnum
 /* Maximum supported VQ value.  Increase if required.  */
 #define AARCH64_MAX_SVE_VQ  16
 
+#define CPSR_C64		(1 << 26)
+
+/* Addresses for calling Capability Mode functions have the bit 0 set.  */
+#define IS_CAPMODE_ADDR(addr)	((addr) & 1)
+
 #endif /* ARCH_AARCH64_H */
