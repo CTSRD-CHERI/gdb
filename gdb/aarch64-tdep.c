@@ -60,6 +60,25 @@
 #include "opcode/aarch64.h"
 #include <algorithm>
 
+/* The list of available "set aarch64 ..." and "show aarch64 ..."
+   commands.  */
+static struct cmd_list_element *setaarch64cmdlist = NULL;
+static struct cmd_list_element *showaarch64cmdlist = NULL;
+
+/* The ABI to use.  Keep this in sync with aarch64_abi_kind.  */
+static const char *const aarch64_abi_strings[] =
+{
+  "auto",
+  "a64",
+  "a64c",
+  "c64",
+  NULL
+};
+
+/* A variable that can be configured by the user.  */
+static enum aarch64_abi_kind aarch64_abi_global = AARCH64_ABI_AUTO;
+static const char *aarch64_abi_string = "auto";
+
 #define submask(x) ((1L << ((x) + 1)) - 1)
 #define bit(obj,st) (((obj) >> (st)) & 1)
 #define bits(obj,st,fn) (((obj) >> (st)) & submask ((fn) - (st)))
@@ -239,7 +258,7 @@ struct aarch64_prologue_cache
 static bool
 is_cheriabi(struct gdbarch *gdbarch)
 {
-  return gdbarch_ptr_bit (gdbarch) == 128;
+  return gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64;
 }
 
 CORE_ADDR
@@ -3144,6 +3163,73 @@ aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
   return 1;
 }
 
+static void
+set_aarch64_command (const char *args, int from_tty)
+{
+  printf_unfiltered (_("\
+\"set aarch64\" must be followed by an apporpriate subcommand.\n"));
+  help_list (setaarch64cmdlist, "set aarch64 ", all_commands, gdb_stdout);
+}
+
+static void
+show_aarch64_command (const char *args, int from_tty)
+{
+  cmd_show_list (showaarch64cmdlist, from_tty, "");
+}
+
+static void
+aarch64_update_current_architecture (void)
+{
+  struct gdbarch_info info;
+
+  /* If the current architecture is not AArch64, we have nothing to do.  */
+  if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_aarch64)
+    return;
+
+  /* Update the architecture.  */
+  gdbarch_info_init (&info);
+
+  if (!gdbarch_update_p (info))
+    internal_error (__FILE__, __LINE__, _("could not update architecture"));
+}
+
+static void
+aarch64_set_abi (const char *args, int from_tty,
+	     struct cmd_list_element *c)
+{
+  int aarch64_abi;
+
+  for (aarch64_abi = AARCH64_ABI_AUTO; aarch64_abi != AARCH64_ABI_LAST;
+       aarch64_abi++)
+    if (strcmp (aarch64_abi_string, aarch64_abi_strings[aarch64_abi]) == 0)
+      {
+	aarch64_abi_global = (enum aarch64_abi_kind) aarch64_abi;
+	break;
+      }
+
+  if (aarch64_abi == AARCH64_ABI_LAST)
+    internal_error (__FILE__, __LINE__, _("Invalid ABI accepted: %s."),
+		    aarch64_abi_string);
+
+  aarch64_update_current_architecture ();
+}
+
+static void
+aarch64_show_abi (struct ui_file *file, int from_tty,
+	     struct cmd_list_element *c, const char *value)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (target_gdbarch ());
+
+  if (aarch64_abi_global == AARCH64_ABI_AUTO
+      && gdbarch_bfd_arch_info (target_gdbarch ())->arch == bfd_arch_aarch64)
+    fprintf_filtered (file, _("\
+The current AArch64 ABI is \"auto\" (currently \"%s\").\n"),
+		      aarch64_abi_strings[tdep->abi]);
+  else
+    fprintf_filtered (file, _("The current AArch64 ABI is \"%s\".\n"),
+		      aarch64_abi_string);
+}
+
 /* Get the correct target description for the given VQ value.
    If VQ is zero then it is assumed SVE is not supported.
    (It is not possible to set VQ to zero on an SVE system).  */
@@ -3455,6 +3541,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   struct gdbarch_tdep *tdep;
   struct gdbarch *gdbarch;
   struct gdbarch_list *best_arch;
+  enum aarch64_abi_kind aarch64_abi = aarch64_abi_global;
   struct tdesc_arch_data *tdesc_data = NULL;
   const struct target_desc *tdesc = info.target_desc;
   int i;
@@ -3465,14 +3552,27 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct tdesc_feature *feature_cheri;
   int num_regs = 0;
   int num_pseudo_regs = 0;
-  bool is_cheriabi;
 
-  is_cheriabi = info.abfd != NULL ? aarch64_bfd_has_cheriabi (info.abfd)
-    : false;
+  /* If we have an object to base this architecture on, try to determine
+     its ABI.  */
+
+  if (aarch64_abi == AARCH64_ABI_AUTO && info.abfd != NULL)
+    {
+      if (aarch64_bfd_has_cheriabi (info.abfd))
+	aarch64_abi = AARCH64_ABI_C64;
+    }
+
+  /* Infer A64C from the supplied target description.  */
+  if (aarch64_abi == AARCH64_ABI_AUTO && tdesc_has_registers (tdesc)
+      && tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.cheri") != NULL)
+    aarch64_abi = AARCH64_ABI_A64C;
+
+  if (aarch64_abi == AARCH64_ABI_AUTO)
+    aarch64_abi = AARCH64_ABI_A64;
 
   /* Ensure we always have a target description.  */
   if (!tdesc_has_registers (tdesc))
-    tdesc = aarch64_read_description (0, is_cheriabi);
+    tdesc = aarch64_read_description (0, aarch64_abi != AARCH64_ABI_A64);
   gdb_assert (tdesc);
 
   feature_core = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.core");
@@ -3564,6 +3664,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
        best_arch != NULL;
        best_arch = gdbarch_list_lookup_by_info (best_arch->next, &info))
     {
+      if (gdbarch_tdep (arches->gdbarch)->abi != aarch64_abi)
+	continue;
       if (gdbarch_tdep (arches->gdbarch)->vq != aarch64_get_tdesc_vq (tdesc))
 	continue;
       if (gdbarch_tdep (arches->gdbarch)->has_cheri != (feature_cheri != NULL))
@@ -3582,6 +3684,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   tdep = XCNEW (struct gdbarch_tdep);
   gdbarch = gdbarch_alloc (&info, tdep);
+
+  tdep->abi = aarch64_abi;
 
   /* This should be low enough for everything.  */
   tdep->lowest_pc = 0x20;
@@ -3671,7 +3775,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_cast_pointer_to_integer
 	(gdbarch, aarch64_cheri_cast_pointer_to_integer);
 
-      if (is_cheriabi)
+      if (tdep->abi == AARCH64_ABI_C64)
 	{
 	  set_gdbarch_addr_bit (gdbarch, 64);
 	  set_gdbarch_ptr_bit (gdbarch, 128);
@@ -3748,6 +3852,24 @@ _initialize_aarch64_tdep (void)
 {
   gdbarch_register (bfd_arch_aarch64, aarch64_gdbarch_init,
 		    aarch64_dump_tdep);
+
+  /* Add root prefix command for all "set aarch64"/"show aarch64"
+     commands.  */
+  add_prefix_cmd ("aarch64", no_class, set_aarch64_command,
+		  _("Various AArch64-specific commands."),
+		  &setaarch64cmdlist, "set aarch64 ", 0, &setlist);
+
+  add_prefix_cmd ("aarch64", no_class, show_aarch64_command,
+		  _("Various AArch64-specific commands."),
+		  &showaarch64cmdlist, "show aarch64 ", 0, &showlist);
+
+  /* Add a command to allow the user to force the ABI.  */
+  add_setshow_enum_cmd ("abi", class_support, aarch64_abi_strings,
+			&aarch64_abi_string,
+			_("Set the ABI."),
+			_("Show the ABI."),
+			NULL, aarch64_set_abi, aarch64_show_abi,
+			&setaarch64cmdlist, &showaarch64cmdlist);
 
   /* Debug this file's internals.  */
   add_setshow_boolean_cmd ("aarch64", class_maintenance, &aarch64_debug, _("\

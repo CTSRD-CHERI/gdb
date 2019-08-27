@@ -59,9 +59,23 @@ struct regset;
    single-stepped instruction.  */
 #define DISPLACED_MODIFIED_INSNS 1
 
+/* ABI used by the inferior.  */
+enum aarch64_abi_kind
+{
+  AARCH64_ABI_AUTO,
+  AARCH64_ABI_A64,
+  AARCH64_ABI_A64C,
+  AARCH64_ABI_C64,
+  AARCH64_ABI_LAST
+};
+
 /* Target-dependent structure in gdbarch.  */
 struct gdbarch_tdep
 {
+  /* The ABI for this architecture.  It should never be set to
+     AARCH64_ABI_AUTO.  */
+  enum aarch64_abi_kind abi;
+
   /* Lowest address at which instructions will appear.  */
   CORE_ADDR lowest_pc;
 

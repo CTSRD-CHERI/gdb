@@ -296,7 +296,7 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Generic FreeBSD support.  */
   fbsd_init_abi (info, gdbarch);
 
-  if (gdbarch_ptr_bit(gdbarch) == 128)
+  if (gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64)
     {
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
     }
