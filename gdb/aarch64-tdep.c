@@ -1394,7 +1394,7 @@ aarch64_dwarf2_prev_register (struct frame_info *this_frame,
 	CORE_ADDR addr;
 	gdb_byte buf[16];
 
-	get_frame_register (this_frame, AARCH64_CLR_REGNUM, buf);
+	frame_unwind_register (this_frame, AARCH64_CLR_REGNUM, buf);
 	addr = extract_unsigned_integer (buf, 8, byte_order);
 	addr &= ~1;
 	store_unsigned_integer (buf, 8, byte_order, addr);
@@ -1411,6 +1411,18 @@ aarch64_dwarf2_prev_register (struct frame_info *this_frame,
       else
 	cpsr &= ~CPSR_C64;
       return frame_unwind_got_constant (this_frame, regnum, cpsr);
+
+    case AARCH64_CSP_REGNUM:
+      {
+	struct gdbarch *gdbarch = get_frame_arch (this_frame);
+	enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+	gdb_byte buf[16];
+
+	get_frame_register (this_frame, AARCH64_CSP_REGNUM, buf);
+	store_unsigned_integer (buf, 8, byte_order,
+				dwarf2_frame_cfa (this_frame));
+	return frame_unwind_got_bytes (this_frame, regnum, buf);
+      }
 
     default:
       internal_error (__FILE__, __LINE__,
@@ -1433,11 +1445,11 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
       /* FALLTHROUGH */
     case AARCH64_PC_REGNUM:
     case AARCH64_PCC_REGNUM:
+    case AARCH64_CSP_REGNUM:
       reg->how = DWARF2_FRAME_REG_FN;
       reg->loc.fn = aarch64_dwarf2_prev_register;
       break;
     case AARCH64_SP_REGNUM:
-    case AARCH64_CSP_REGNUM:
       reg->how = DWARF2_FRAME_REG_CFA;
       break;
     }
