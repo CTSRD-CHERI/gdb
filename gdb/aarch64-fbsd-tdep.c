@@ -158,8 +158,9 @@ static const struct regcache_map_entry aarch64_fbsd_cheriabi_gregmap[] =
   {
     { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
     { 1, AARCH64_LR_REGNUM, 16 },
-    { 1, AARCH64_SP_REGNUM, 16 },
-    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, AARCH64_SP_REGNUM, 8 },
+    { 1, REGCACHE_MAP_SKIP, 8 },
+    { 1, AARCH64_PC_REGNUM, 8 },
     { 0 }
   };
 

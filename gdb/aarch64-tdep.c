@@ -335,6 +335,19 @@ struct aarch64_prologue_cache
   struct trad_frame_saved_reg *saved_regs;
 };
 
+static CORE_ADDR
+cheri_frame_register_unsigned (struct frame_info *this_frame, int regnum)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[register_size (gdbarch, regnum)];
+  CORE_ADDR addr;
+
+  /* XXX: Should probably use gdbarch_integer_to_address. */
+  frame_unwind_register (this_frame, regnum, buf);
+  return extract_unsigned_integer (buf, 8, byte_order);
+}
+
 CORE_ADDR
 get_cheri_frame_register_unsigned (struct frame_info *this_frame, int regnum)
 {
@@ -1379,17 +1392,21 @@ static struct value *
 aarch64_dwarf2_prev_register (struct frame_info *this_frame,
 			      void **this_cache, int regnum)
 {
-  CORE_ADDR cpsr, lr;
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  CORE_ADDR cpsr, lr, val;
 
   switch (regnum)
     {
     case AARCH64_PC_REGNUM:
-      lr = frame_unwind_register_unsigned (this_frame, AARCH64_LR_REGNUM);
+      if (gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64)
+	lr = cheri_frame_register_unsigned (this_frame, AARCH64_CLR_REGNUM)
+	  & ~1;
+      else
+	lr = frame_unwind_register_unsigned (this_frame, AARCH64_LR_REGNUM);
       return frame_unwind_got_constant (this_frame, regnum, lr);
 
     case AARCH64_PCC_REGNUM:
       {
-	struct gdbarch *gdbarch = get_frame_arch (this_frame);
 	enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 	CORE_ADDR addr;
 	gdb_byte buf[16];
@@ -1414,7 +1431,6 @@ aarch64_dwarf2_prev_register (struct frame_info *this_frame,
 
     case AARCH64_CSP_REGNUM:
       {
-	struct gdbarch *gdbarch = get_frame_arch (this_frame);
 	enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 	gdb_byte buf[16];
 
@@ -1423,6 +1439,42 @@ aarch64_dwarf2_prev_register (struct frame_info *this_frame,
 				dwarf2_frame_cfa (this_frame));
 	return frame_unwind_got_bytes (this_frame, regnum, buf);
       }
+
+    case AARCH64_X0_REGNUM:
+    case AARCH64_X0_REGNUM + 1:
+    case AARCH64_X0_REGNUM + 2:
+    case AARCH64_X0_REGNUM + 3:
+    case AARCH64_X0_REGNUM + 4:
+    case AARCH64_X0_REGNUM + 5:
+    case AARCH64_X0_REGNUM + 6:
+    case AARCH64_X0_REGNUM + 7:
+    case AARCH64_X0_REGNUM + 8:
+    case AARCH64_X0_REGNUM + 9:
+    case AARCH64_X0_REGNUM + 10:
+    case AARCH64_X0_REGNUM + 11:
+    case AARCH64_X0_REGNUM + 12:
+    case AARCH64_X0_REGNUM + 13:
+    case AARCH64_X0_REGNUM + 14:
+    case AARCH64_X0_REGNUM + 15:
+    case AARCH64_X0_REGNUM + 16:
+    case AARCH64_X0_REGNUM + 17:
+    case AARCH64_X0_REGNUM + 18:
+    case AARCH64_X0_REGNUM + 19:
+    case AARCH64_X0_REGNUM + 20:
+    case AARCH64_X0_REGNUM + 21:
+    case AARCH64_X0_REGNUM + 22:
+    case AARCH64_X0_REGNUM + 23:
+    case AARCH64_X0_REGNUM + 24:
+    case AARCH64_X0_REGNUM + 25:
+    case AARCH64_X0_REGNUM + 26:
+    case AARCH64_X0_REGNUM + 27:
+    case AARCH64_X0_REGNUM + 28:
+    case AARCH64_X0_REGNUM + 29:
+    case AARCH64_LR_REGNUM:
+    case AARCH64_SP_REGNUM:
+      val = cheri_frame_register_unsigned (this_frame, AARCH64_C0_REGNUM +
+					   regnum);
+      return frame_unwind_got_constant (this_frame, regnum, val);
 
     default:
       internal_error (__FILE__, __LINE__,
@@ -1439,6 +1491,37 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 {
   switch (regnum)
     {
+    case AARCH64_X0_REGNUM:
+    case AARCH64_X0_REGNUM + 1:
+    case AARCH64_X0_REGNUM + 2:
+    case AARCH64_X0_REGNUM + 3:
+    case AARCH64_X0_REGNUM + 4:
+    case AARCH64_X0_REGNUM + 5:
+    case AARCH64_X0_REGNUM + 6:
+    case AARCH64_X0_REGNUM + 7:
+    case AARCH64_X0_REGNUM + 8:
+    case AARCH64_X0_REGNUM + 9:
+    case AARCH64_X0_REGNUM + 10:
+    case AARCH64_X0_REGNUM + 11:
+    case AARCH64_X0_REGNUM + 12:
+    case AARCH64_X0_REGNUM + 13:
+    case AARCH64_X0_REGNUM + 14:
+    case AARCH64_X0_REGNUM + 15:
+    case AARCH64_X0_REGNUM + 16:
+    case AARCH64_X0_REGNUM + 17:
+    case AARCH64_X0_REGNUM + 18:
+    case AARCH64_X0_REGNUM + 19:
+    case AARCH64_X0_REGNUM + 20:
+    case AARCH64_X0_REGNUM + 21:
+    case AARCH64_X0_REGNUM + 22:
+    case AARCH64_X0_REGNUM + 23:
+    case AARCH64_X0_REGNUM + 24:
+    case AARCH64_X0_REGNUM + 25:
+    case AARCH64_X0_REGNUM + 26:
+    case AARCH64_X0_REGNUM + 27:
+    case AARCH64_X0_REGNUM + 28:
+    case AARCH64_X0_REGNUM + 29:
+    case AARCH64_LR_REGNUM:
     case AARCH64_CPSR_REGNUM:
       if (!gdbarch_tdep (gdbarch)->has_cheri)
 	break;
@@ -1450,7 +1533,13 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
       reg->loc.fn = aarch64_dwarf2_prev_register;
       break;
     case AARCH64_SP_REGNUM:
-      reg->how = DWARF2_FRAME_REG_CFA;
+      if (gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64)
+	{
+	  reg->how = DWARF2_FRAME_REG_FN;
+	  reg->loc.fn = aarch64_dwarf2_prev_register;
+	}
+      else
+	reg->how = DWARF2_FRAME_REG_CFA;
       break;
     }
 }
