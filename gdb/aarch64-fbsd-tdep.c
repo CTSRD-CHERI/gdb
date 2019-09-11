@@ -299,6 +299,9 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   if (gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64)
     {
+      set_solib_svr4_fetch_link_map_offsets (gdbarch,
+					     svr4_c128_fetch_link_map_offsets);
+
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
     }
   else
