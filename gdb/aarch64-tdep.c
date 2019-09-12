@@ -1175,7 +1175,8 @@ aarch64_prologue_prev_register (struct frame_info *this_frame,
      by checking the low bit of CLR as of the call.  Guess that all
      other bits are unchanged; the condition flags are presumably
      lost, but the processor status is likely valid.  */
-  if (prev_regnum == AARCH64_CSP_REGNUM && gdbarch_tdep (gdbarch)->has_cheri)
+  if (prev_regnum == AARCH64_CPSR_REGNUM
+      && gdbarch_tdep (gdbarch)->has_cheri)
     {
       CORE_ADDR clr, cpsr;
 
