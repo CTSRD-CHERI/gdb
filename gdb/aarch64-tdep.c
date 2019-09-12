@@ -1224,8 +1224,12 @@ aarch64_make_stub_cache (struct frame_info *this_frame, void **this_cache)
 
   TRY
     {
-      cache->prev_sp = get_frame_register_unsigned (this_frame,
-						    AARCH64_SP_REGNUM);
+      if (aarch64_frame_is_capmode (this_frame))
+	cache->prev_sp =
+	  get_cheri_frame_register_unsigned (this_frame, AARCH64_CSP_REGNUM);
+      else
+	cache->prev_sp = get_frame_register_unsigned (this_frame,
+						      AARCH64_SP_REGNUM);
       cache->prev_pc = get_frame_pc (this_frame);
       cache->available_p = 1;
     }
