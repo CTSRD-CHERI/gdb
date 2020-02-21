@@ -171,6 +171,49 @@ static const struct riscv_register_feature riscv_xreg_feature =
  }
 };
 
+static const struct riscv_register_feature riscv_cheri_feature =
+{
+ "org.gnu.gdb.riscv.cheri",
+ {
+   { RISCV_CNULL_REGNUM + 0, { "cnull", "c0" }, true },
+   { RISCV_CNULL_REGNUM + 1, { "cra", "c1" }, true },
+   { RISCV_CNULL_REGNUM + 2, { "csp", "c2" }, true },
+   { RISCV_CNULL_REGNUM + 3, { "cgp", "c3" }, true },
+   { RISCV_CNULL_REGNUM + 4, { "ctp", "c4" }, true },
+   { RISCV_CNULL_REGNUM + 5, { "ct0", "c5" }, true },
+   { RISCV_CNULL_REGNUM + 6, { "ct1", "c6" }, true },
+   { RISCV_CNULL_REGNUM + 7, { "ct2", "c7" }, true },
+   { RISCV_CNULL_REGNUM + 8, { "cfp", "c8", "cs0" }, true },
+   { RISCV_CNULL_REGNUM + 9, { "cs1", "c9" }, true },
+   { RISCV_CNULL_REGNUM + 10, { "ca0", "c10" }, true },
+   { RISCV_CNULL_REGNUM + 11, { "ca1", "c11" }, true },
+   { RISCV_CNULL_REGNUM + 12, { "ca2", "c12" }, true },
+   { RISCV_CNULL_REGNUM + 13, { "ca3", "c13" }, true },
+   { RISCV_CNULL_REGNUM + 14, { "ca4", "c14" }, true },
+   { RISCV_CNULL_REGNUM + 15, { "ca5", "c15" }, true },
+   { RISCV_CNULL_REGNUM + 16, { "ca6", "c16" }, true },
+   { RISCV_CNULL_REGNUM + 17, { "ca7", "c17" }, true },
+   { RISCV_CNULL_REGNUM + 18, { "cs2", "c18" }, true },
+   { RISCV_CNULL_REGNUM + 19, { "cs3", "c19" }, true },
+   { RISCV_CNULL_REGNUM + 20, { "cs4", "c20" }, true },
+   { RISCV_CNULL_REGNUM + 21, { "cs5", "c21" }, true },
+   { RISCV_CNULL_REGNUM + 22, { "cs6", "c22" }, true },
+   { RISCV_CNULL_REGNUM + 23, { "cs7", "c23" }, true },
+   { RISCV_CNULL_REGNUM + 24, { "cs8", "c24" }, true },
+   { RISCV_CNULL_REGNUM + 25, { "cs9", "c25" }, true },
+   { RISCV_CNULL_REGNUM + 26, { "cs10", "c26" }, true },
+   { RISCV_CNULL_REGNUM + 27, { "cs11", "c27" }, true },
+   { RISCV_CNULL_REGNUM + 28, { "ct3", "c28" }, true },
+   { RISCV_CNULL_REGNUM + 29, { "ct4", "c29" }, true },
+   { RISCV_CNULL_REGNUM + 30, { "ct5", "c30" }, true },
+   { RISCV_CNULL_REGNUM + 31, { "ct6", "c31" }, true },
+   { RISCV_CNULL_REGNUM + 32, { "ddc" }, true },
+   { RISCV_CNULL_REGNUM + 33, { "pcc" }, true },
+   { RISCV_CNULL_REGNUM + 34, { "cap_valid" }, true }
+ }
+};
+
+
 /* The f-registers feature set.  */
 
 static const struct riscv_register_feature riscv_freg_feature =
@@ -3053,6 +3096,8 @@ riscv_gdbarch_init (struct gdbarch_info info,
     = tdesc_find_feature (tdesc, riscv_virtual_feature.name);
   const struct tdesc_feature *feature_csr
     = tdesc_find_feature (tdesc, riscv_csr_feature.name);
+  const struct tdesc_feature *feature_cheri
+      = tdesc_find_feature (tdesc, riscv_cheri_feature.name);
 
   if (feature_cpu == NULL)
     return NULL;
@@ -3100,6 +3145,30 @@ riscv_gdbarch_init (struct gdbarch_info info,
           (gdb_stdlog,
            "No FPU in target-description, assume soft-float ABI\n");
     }
+
+  if (feature_cheri != NULL)
+    {
+      valid_p &= riscv_check_tdesc_feature (tdesc_data, feature_cheri,
+                                            &riscv_cheri_feature);
+
+      int bitsize = tdesc_register_bitsize (feature_fpu, "cra");
+      features.clen = (bitsize / 8);
+
+      if (riscv_debug_gdbarch)
+        fprintf_filtered
+          (gdb_stdlog,
+           "From target-description, clen = %d\n", bitsize);
+    }
+  else
+    {
+      features.clen = 0;
+
+      if (riscv_debug_gdbarch)
+        fprintf_filtered
+          (gdb_stdlog,
+           "No CHERI registers in target-description\n");
+    }
+
 
   if (feature_virtual)
     riscv_check_tdesc_feature (tdesc_data, feature_virtual,

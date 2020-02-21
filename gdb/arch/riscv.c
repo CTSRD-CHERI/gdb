@@ -24,6 +24,8 @@
 #include "../features/riscv/64bit-cpu.c"
 #include "../features/riscv/32bit-fpu.c"
 #include "../features/riscv/64bit-fpu.c"
+#include "../features/riscv/32bit-cheri64.c"
+#include "../features/riscv/64bit-cheri128.c"
 
 /* Wrapper used by std::unordered_map to generate hash for feature set.  */
 struct riscv_gdbarch_features_hasher
@@ -86,6 +88,11 @@ riscv_create_target_description (struct riscv_gdbarch_features features)
     regnum = create_feature_riscv_32bit_cpu (tdesc, regnum);
   else if (features.xlen == 8)
     regnum = create_feature_riscv_64bit_cpu (tdesc, regnum);
+
+  if (features.clen == 8)
+    regnum = create_feature_riscv_32bit_cheri64 (tdesc, regnum);
+  else if (features.clen == 16)
+    regnum = create_feature_riscv_64bit_cheri128 (tdesc, regnum);
 
   /* For now we only support creating 32-bit or 64-bit f-registers.  */
   if (features.flen == 4)

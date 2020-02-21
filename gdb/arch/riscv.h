@@ -46,6 +46,11 @@ struct riscv_gdbarch_features
      that there are no f-registers.  No other value is valid.  */
   int flen = 0;
 
+  /* The size of the capability registers in bytes.  This is either 8 (RV32) or
+   16 (RV64).  This can also hold the value 0 to indicate that there are no
+   capability registers.  No other value is valid.  */
+  int clen = 0;
+
   /* Equality operator.  */
   bool operator== (const struct riscv_gdbarch_features &rhs) const
   {
