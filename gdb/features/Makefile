@@ -251,9 +251,11 @@ FEATURE_XMLFILES = aarch64-core.xml \
 	riscv/32bit-cpu.xml \
 	riscv/32bit-csr.xml \
 	riscv/32bit-fpu.xml \
+	riscv/32bit-cheri64.xml \
 	riscv/64bit-cpu.xml \
 	riscv/64bit-csr.xml \
 	riscv/64bit-fpu.xml \
+	riscv/64bit-cheri128.xml \
 	tic6x-c6xp.xml \
 	tic6x-core.xml \
 	tic6x-gp.xml
