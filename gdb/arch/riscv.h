@@ -46,6 +46,12 @@ struct riscv_gdbarch_features
      that there are no f-registers.  No other value is valid.  */
   int flen = 0;
 
+  /* The size of the capability registers in bytes.  This is either 8
+     (RV32) or 16 (RV64).  This can also hold the value 0 to indicate
+     that there are no capability registers.  No other value is
+     valid.  */
+  int clen = 0;
+
   /* The size of the v-registers in bytes.  The value 0 indicates a target
      with no vector registers.  The minimum value for a 'V'-extension compliant
      target should be 16 and 4 for an embedded subset compliant target (with
@@ -68,7 +74,7 @@ struct riscv_gdbarch_features
   /* Equality operator.  */
   bool operator== (const struct riscv_gdbarch_features &rhs) const
   {
-    return (xlen == rhs.xlen && flen == rhs.flen
+    return (xlen == rhs.xlen && flen == rhs.flen && clen == rhs.clen
 	    && embedded == rhs.embedded && vlen == rhs.vlen
 	    && has_fflags_reg == rhs.has_fflags_reg
 	    && has_frm_reg == rhs.has_frm_reg
@@ -90,7 +96,8 @@ struct riscv_gdbarch_features
 		       | (has_fcsr_reg ? 1 : 0) << 13
 		       | (xlen & 0x1f) << 5
 		       | (flen & 0x1f) << 0
-		       | (vlen & 0x3fff) << 14);
+		       | (clen != 0 ? 1 : 0) << 14
+		       | (vlen & 0x3fff) << 15);
     return val;
   }
 };
