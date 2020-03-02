@@ -84,6 +84,18 @@ _Static_assert(FBSD_PCB_REG_GP == PCB_REG_GP, "PCB_REG_GP mismatch");
 _Static_assert(FBSD_PCB_REG_PC == PCB_REG_PC, "PCB_REG_PC mismatch");
 #endif
 
+static size_t
+mipsfbsd_trapframe_size(struct gdbarch *gdbarch)
+{
+  size_t regsize = mips_isa_regsize (gdbarch);
+  size_t size;
+
+  size = TRAPFRAME_WORDS * regsize;
+  if (mips_regnum(gdbarch)->cap0 != -1)
+    size += 34 * register_size(gdbarch, mips_regnum(gdbarch)->cap0);
+  return (size);
+}
+
 static void
 mipsfbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 {
@@ -93,7 +105,7 @@ mipsfbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 
   /* Read the entire pcb_context[] array in one go.  The pcb_context[]
      array is after the pcb_regs member which is a trapframe.  */
-  if (target_read_memory (pcb_addr + TRAPFRAME_WORDS * regsize, buf,
+  if (target_read_memory (pcb_addr + mipsfbsd_trapframe_size (gdbarch), buf,
 			  sizeof(buf)) != 0)
     return;
 
@@ -196,13 +208,60 @@ mipsfbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
 			   addr);
   addr += regsize;
 
-  /* PC.  */
-  regnum = mips_regnum (gdbarch)->pc;
-  trad_frame_set_reg_addr (cache,
-			   regnum + gdbarch_num_regs (gdbarch),
-			   addr);
+  if (mips_regnum(gdbarch)->cap0 != -1)
+    {
+      int cap0 = mips_regnum (gdbarch)->cap0;
+      size_t capsize = register_size (gdbarch, cap0);
+
+      /* Skip over pc, ic, and dummy. */
+      addr += 3 * regsize;
+
+      /* DDC. */
+      regnum = mips_regnum (gdbarch)->cap_ddc;
+      trad_frame_set_reg_addr (cache,
+			       regnum + gdbarch_num_regs (gdbarch),
+			       addr);
+      addr += capsize;
+
+      /* C1-C31. */
+      for (regnum = 1; regnum <= 31; regnum++)
+	{
+	  trad_frame_set_reg_addr (cache,
+				   cap0 + regnum + gdbarch_num_regs (gdbarch),
+				   addr);
+	  addr += capsize;
+	}
+
+      /* PC and PCC. */
+      regnum = mips_regnum (gdbarch)->pc;
+      trad_frame_set_reg_addr (cache,
+			       regnum + gdbarch_num_regs (gdbarch),
+			       addr + 8);
+      regnum = mips_regnum (gdbarch)->cap_pcc;
+      trad_frame_set_reg_addr (cache,
+			       regnum + gdbarch_num_regs (gdbarch),
+			       addr);
+      addr += capsize;
+
+      /* CAPCAUSE. */
+      regnum = mips_regnum (gdbarch)->cap_cause;
+      trad_frame_set_reg_addr (cache,
+			       regnum + gdbarch_num_regs (gdbarch),
+			       addr);
+
+      /* XXX: No capvalid. */
+    }
+  else
+    {
+      /* PC.  */
+      regnum = mips_regnum (gdbarch)->pc;
+      trad_frame_set_reg_addr (cache,
+			       regnum + gdbarch_num_regs (gdbarch),
+			       addr);
+    }
   
-  trad_frame_set_id (cache, frame_id_build (sp + TRAPFRAME_WORDS * regsize,
+  trad_frame_set_id (cache, frame_id_build (sp
+					    + mipsfbsd_trapframe_size (gdbarch),
 					    func));
   return cache;
 }
