@@ -4211,6 +4211,12 @@ decode_RISCV_machine_flags (char *out, unsigned e_flags)
       out = stpcpy (out, ", quad-float ABI");
       break;
     }
+
+  if (e_flags & EF_RISCV_CHERIABI)
+    out = stpcpy (out, ", CheriABI");
+
+  if (e_flags & EF_RISCV_CAPMODE)
+    out = stpcpy (out, ", capmode");
   return out;
 }
 
