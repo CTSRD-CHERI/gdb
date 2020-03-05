@@ -33,6 +33,7 @@
 #include "aarch32-linux-nat.h"
 #include "aarch32-tdep.h"
 #include "arch/arm.h"
+#include "arch/aarch64-cap-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
 #include "nat/aarch64-scalable-linux-ptrace.h"
@@ -548,6 +549,57 @@ store_tlsregs_to_thread (struct regcache *regcache)
     perror_with_name (_("unable to store TLS register"));
 }
 
+/* Fill GDB's register array with the capability register values
+   from the current thread.  */
+
+static void
+fetch_cregs_from_thread (struct regcache *regcache)
+{
+  struct gdbarch *gdbarch = regcache->arch ();
+  gdb_assert (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 64);
+
+  int tid = regcache->ptid ().lwp ();
+
+  struct user_morello_state cregset;
+  struct iovec iovec;
+  iovec.iov_base = &cregset;
+  iovec.iov_len = sizeof (cregset);
+
+  if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_MORELLO, &iovec) < 0)
+    perror_with_name (_("Unable to fetch capability registers."));
+
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  /* Fetch the C registers.  */
+  int regno, i;
+  for (regno = tdep->cap_reg_base, i = 0;
+       regno < tdep->cap_reg_base + AARCH64_C_REGS_NUM;
+       regno++, i++)
+    regcache->raw_supply (regno, &cregset.cregs[i]);
+
+  /* Fetch the other registers.  */
+  regcache->raw_supply (regno++, &cregset.pcc);
+  regcache->raw_supply (regno++, &cregset.csp);
+  regcache->raw_supply (regno++, &cregset.ddc);
+  regcache->raw_supply (regno++, &cregset.ctpidr);
+  regcache->raw_supply (regno++, &cregset.rcsp);
+  regcache->raw_supply (regno++, &cregset.rddc);
+  regcache->raw_supply (regno++, &cregset.rctpidr);
+  regcache->raw_supply (regno++, &cregset.cid);
+  regcache->raw_supply (regno++, &cregset.tag_map);
+  regcache->raw_supply (regno++, &cregset.cctlr);
+}
+
+/* Store to the current thread the valid capability register
+   values in the GDB's register array.  */
+
+static void
+store_cregs_to_thread (const struct regcache *regcache)
+{
+  /* Can't modify capability registers, do nothing.  */
+}
+
 /* The AArch64 version of the "fetch_registers" target_ops method.  Fetch
    REGNO from the target and place the result into REGCACHE.  */
 
@@ -583,7 +635,14 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_sme2 ())
 	fetch_zt_from_thread (regcache);
+
+      if (tdep->has_capability ())
+	fetch_cregs_from_thread (regcache);
     }
+  /* Capability register?  */
+  else if (tdep->has_capability () && regno >= tdep->cap_reg_base
+	   && regno < tdep->cap_reg_base + AARCH64_MORELLO_REGS_NUM)
+    fetch_cregs_from_thread (regcache);
   /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
     fetch_gregs_from_thread (regcache);
@@ -686,10 +745,27 @@ aarch64_store_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_sme2 ())
 	store_zt_to_thread (regcache);
+
+      if (tdep->has_capability ())
+	{
+	  /* Due to the aliasing of X/C registers and due to register merging
+	     by the kernel (see documentation in the kernel), we should force
+	     a read of the C registers whenever the X registers are written
+	     to.  */
+	  fetch_cregs_from_thread (regcache);
+	  store_cregs_to_thread (regcache);
+	}
     }
+  /* Capability register?  */
+  else if (tdep->has_capability () && regno >= tdep->cap_reg_base
+	   && regno < tdep->cap_reg_base + AARCH64_MORELLO_REGS_NUM)
+    store_cregs_to_thread (regcache);
   /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
-    store_gregs_to_thread (regcache);
+    {
+      store_gregs_to_thread (regcache);
+      fetch_cregs_from_thread (regcache);
+    }
   /* SVE register?  */
   else if ((tdep->has_sve () || tdep->has_sme ())
 	   && regno <= AARCH64_SVE_VG_REGNUM)
@@ -907,7 +983,7 @@ aarch64_linux_nat_target::read_description ()
   if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
     features.sme2 = supports_zt_registers (tid);
 
-  features.capacity = hwcap2 & HWCAP2_MORELLO;
+  features.capability = hwcap2 & HWCAP2_MORELLO;
 
   return aarch64_read_description (features);
 }

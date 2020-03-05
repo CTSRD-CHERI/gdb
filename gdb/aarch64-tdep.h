@@ -190,7 +190,10 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
     return sme2_zt0_regnum > 0;
   }
 
+  /* First register from the capability set.  */
   int cap_reg_base;
+  /* Last register from the capability set.  */
+  int cap_reg_last;
 
   /* Returns true if the target supports capabilities.  */
   bool has_capability () const

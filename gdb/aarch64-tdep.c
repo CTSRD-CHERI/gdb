@@ -4068,12 +4068,22 @@ aarch64_cannot_store_register (struct gdbarch *gdbarch, int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
-  if (!tdep->has_pauth ())
-    return 0;
+  if (tdep->has_pauth ())
+    {
+      /* Pointer authentication registers are read-only.  */
+      if (regnum >= tdep->pauth_reg_base
+	  && regnum < tdep->pauth_reg_base + tdep->pauth_reg_count)
+	return 1;
+    }
 
-  /* Pointer authentication registers are read-only.  */
-  return (regnum >= tdep->pauth_reg_base
-	  && regnum < tdep->pauth_reg_base + tdep->pauth_reg_count);
+  if (tdep->has_capability ())
+    {
+      /* Capability register set is read-only for now.  */
+      if (regnum >= tdep->cap_reg_base && regnum < tdep->cap_reg_last)
+	return 1;
+    }
+
+  return 0;
 }
 
 /* Implement the stack_frame_destroyed_p gdbarch method.  */
@@ -4462,6 +4472,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   const struct tdesc_feature *feature_capability
       = tdesc_find_feature (tdesc,"org.gnu.gdb.aarch64.capability");
   int first_cap_regnum = -1;
+  int last_cap_regnum = -1;
 
   if (feature_capability != nullptr)
     {
@@ -4470,10 +4481,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       for (i = 0; i < ARRAY_SIZE (aarch64_c_register_names); i++)
 	valid_p &= tdesc_numbered_register (feature_capability,
 					    tdesc_data.get (),
-					    AARCH64_C0_REGNUM + i,
+					    first_cap_regnum + i,
 					    aarch64_c_register_names[i]);
 
-      num_regs = AARCH64_C0_REGNUM + i;
+      last_cap_regnum = first_cap_regnum + i - 1;
+      num_regs += i;
     }
 
   if (!valid_p)
@@ -4510,6 +4522,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->sme2_zt0_regnum = first_sme2_regnum;
 
   tdep->cap_reg_base = first_cap_regnum;
+  tdep->cap_reg_last = last_cap_regnum;
 
   set_gdbarch_push_dummy_call (gdbarch, aarch64_push_dummy_call);
   set_gdbarch_frame_align (gdbarch, aarch64_frame_align);

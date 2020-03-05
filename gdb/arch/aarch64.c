@@ -67,10 +67,6 @@ aarch64_create_target_description (const aarch64_features &features)
   if (features.sme2)
     regnum = create_feature_aarch64_sme2 (tdesc.get (), regnum);
 
-  /* FIXME-Morello: We need to append the capability registers to
-     the existing target description.  Figure out how to do that.
-     Maybe replace the general purpose register description with
-     the capability registers.  */
   if (features.capability)
     regnum = create_feature_aarch64_capability (tdesc.get (), regnum);
 
