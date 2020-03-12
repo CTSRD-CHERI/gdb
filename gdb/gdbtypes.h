@@ -2150,6 +2150,12 @@ struct builtin_type
 
   struct type *builtin_func_func = nullptr;
 
+  /* Data address capability.  */
+  struct type *builtin_data_addr_capability;
+
+  /* Code address capability.  */
+  struct type *builtin_code_addr_capability;
+
   /* Special-purpose types.  */
 
   /* * This type is used to represent a GDB internal function.  */

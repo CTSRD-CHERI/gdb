@@ -129,3 +129,6 @@ OP (TYPE_CODE_FIXED_POINT)
    for each of the namelist items. GDB process these namelist dies
    and print namelist variables during print and ptype commands.  */
 OP (TYPE_CODE_NAMELIST)
+
+/* Capability type.  */
+OP (TYPE_CODE_CAPABILITY)
