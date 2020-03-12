@@ -189,6 +189,14 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
   {
     return sme2_zt0_regnum > 0;
   }
+
+  int cap_reg_base;
+
+  /* Returns true if the target supports capabilities.  */
+  bool has_capability () const
+  {
+    return cap_reg_base != -1;
+  }
 };
 
 const target_desc *aarch64_read_description (const aarch64_features &features);
