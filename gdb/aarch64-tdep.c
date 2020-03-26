@@ -4245,6 +4245,10 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	return best_arch->gdbarch;
     }
 
+  /* FIXME-Morello: Put a check in place so we can determine, from ELF, if
+     we are dealing with a capability-enabled binary or not.  */
+  bool have_capability = false;
+
   /* Ensure we always have a target descriptor, and that it is for the given VQ
      value.  */
   const struct target_desc *tdesc = info.target_desc;
@@ -4254,6 +4258,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       aarch64_features features;
       features.vq = vq;
       features.svq = svq;
+      features.capability = have_capability;
       tdesc = aarch64_read_description (features);
     }
   gdb_assert (tdesc);

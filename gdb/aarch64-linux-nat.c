@@ -907,6 +907,8 @@ aarch64_linux_nat_target::read_description ()
   if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
     features.sme2 = supports_zt_registers (tid);
 
+  features.capacity = hwcap2 & HWCAP2_MORELLO;
+
   return aarch64_read_description (features);
 }
 

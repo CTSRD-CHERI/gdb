@@ -990,6 +990,9 @@ aarch64_target::low_arch_setup ()
 	  features.sme2 = supports_zt_registers (tid);
 	}
 
+      /* Morello is 64-bit only.  */
+      features.capability = linux_get_hwcap2 (pid, 8) & HWCAP2_MORELLO;
+
       current_process ()->tdesc = aarch64_linux_read_description (features);
 
       /* Adjust the register sets we should use for this particular set of

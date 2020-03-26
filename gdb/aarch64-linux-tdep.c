@@ -1653,6 +1653,8 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
 		   "ignored"));
     }
 
+  features.capability = hwcap2 & HWCAP2_MORELLO;
+
   return aarch64_read_description (features);
 }
 
