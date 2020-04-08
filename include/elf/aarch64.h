@@ -24,6 +24,9 @@
 
 #include "elf/reloc-macros.h"
 
+/* Processor specific flags for the ELF header e_flags field.  */
+#define EF_AARCH64_CHERIABI	0x0000000c
+
 /* Processor specific program header types.  */
 #define PT_AARCH64_ARCHEXT	(PT_LOPROC + 0)
 

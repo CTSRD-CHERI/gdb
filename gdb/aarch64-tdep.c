@@ -3720,6 +3720,11 @@ aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
 static bool
 aarch64_bfd_has_cheriabi (bfd *abfd)
 {
+
+  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour
+      && elf_elfheader (abfd)->e_flags == EF_AARCH64_CHERIABI)
+    return true;
+
   asection *note_tags = bfd_get_section_by_name (abfd, ".note.tag");
   char buf[1024], *p;
 
