@@ -296,7 +296,7 @@ mips_simple_cheri_register_p (struct gdbarch *gdbarch, int regnum)
   int cap0 = mips_regnum (gdbarch)->cap0;
 
   return (cap0 != -1
-	  && rawnum >= cap0 && rawnum <= mips_regnum (gdbarch)->cap_pcc);
+	  && rawnum >= cap0 && rawnum < mips_regnum (gdbarch)->cap_cause);
 }
 
 #define MIPS_EABI(gdbarch) (gdbarch_tdep (gdbarch)->mips_abi \
@@ -642,13 +642,14 @@ static const char *mips_generic_reg_names[NUM_MIPS_PROCESSOR_REGS] = {
 
 /* CHERI Capabilities.  */
 
-static const char *mips_cheri_reg_names[36] = {
+static const char *mips_cheri_reg_names[] = {
   "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7",
   "c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15",
   "c16", "c17", "c18", "c19", "c20", "c21", "c22", "c23",
   "c24", "c25", "c26", "c27", "c28", "c29", "c30", "c31",
   "ddc", "pcc", "cap_cause", "cap_valid",
 };
+_Static_assert(ARRAY_SIZE (mips_cheri_reg_names) == 36, "");
 
 /* Names of tx39 registers.  */
 
@@ -9426,7 +9427,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	      mips_regnum.cap0 = cap0;
 	      mips_regnum.cap_ddc = cap0 + 32;
 	      mips_regnum.cap_pcc = cap0 + 33;
-	      mips_regnum.cap_cause = cap0 + 34;
+	      mips_regnum.cap_cause = cap0 + ARRAY_SIZE (mips_cheri_reg_names) - 2;
 
 	      num_regs = mips_regnum.cap_cause + 2;
 	    }
@@ -9445,7 +9446,7 @@ mips_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       mips_regnum.cap0 = cap0;
       mips_regnum.cap_ddc = cap0 + 32;
       mips_regnum.cap_pcc = cap0 + 33;
-      mips_regnum.cap_cause = cap0 + 34;
+      mips_regnum.cap_cause = cap0 + ARRAY_SIZE (mips_cheri_reg_names) - 2;
 
       num_regs = mips_regnum.cap_cause + 2;
     }
