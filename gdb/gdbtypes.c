@@ -3531,6 +3531,20 @@ init_fixed_point_type (type_allocator &alloc,
 
 /* See gdbtypes.h.  */
 
+struct type *
+init_capability_type (type_allocator &alloc,
+		      int bit, bool unsigned_p, const char *name)
+{
+  struct type *t;
+
+  t = alloc.new_type (TYPE_CODE_CAPABILITY, bit, name);
+  t->set_is_unsigned (unsigned_p);
+
+  return t;
+}
+
+/* See gdbtypes.h.  */
+
 unsigned
 type_raw_align (struct type *type)
 {
@@ -3557,6 +3571,7 @@ type_align (struct type *type)
   switch (type->code ())
     {
     case TYPE_CODE_PTR:
+    case TYPE_CODE_CAPABILITY:
     case TYPE_CODE_FUNC:
     case TYPE_CODE_FLAGS:
     case TYPE_CODE_INT:
@@ -5231,6 +5246,9 @@ recursive_dump_type (struct type *type, int spaces)
     case TYPE_CODE_FIXED_POINT:
       gdb_printf ("(TYPE_CODE_FIXED_POINT)");
       break;
+    case TYPE_CODE_CAPABILITY:
+      gdb_printf ("(TYPE_CODE_CAPABILITY)");
+      break;
     default:
       gdb_printf ("(UNKNOWN TYPE CODE)");
       break;
@@ -6126,9 +6144,9 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
 
   /* Capability types.  */
   builtin_type->builtin_intcap_t
-    = init_integer_type (alloc, 128, 0, "__intcap_t");
+    = init_capability_type (alloc, 128, 0, "__intcap_t");
   builtin_type->builtin_uintcap_t
-    = init_integer_type (alloc, 128, 1, "__uintcap_t");
+    = init_capability_type (alloc, 128, 1, "__uintcap_t");
 
   /* Capability pointer types.  */
   builtin_type->builtin_data_addr_capability

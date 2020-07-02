@@ -2410,6 +2410,13 @@ extern struct type *init_pointer_type (type_allocator &alloc, int bit,
 extern struct type *init_fixed_point_type (type_allocator &, int, int,
 					   const char *);
 
+/* Allocate a TYPE_CODE_CAPABILITY type structure using ALLOC.  BIT is
+   the type size in bits.  If UNSIGNED_P is true, set the type's
+   TYPE_UNSIGNED flag.  NAME is the type name.  */
+
+extern struct type *init_capability_type (type_allocator &alloc, int bit,
+					  bool unsigned_p, const char *name);
+
 /* Helper functions to construct a struct or record type.  An
    initially empty type is created using arch_composite_type().
    Fields are then added using append_composite_type_field*().  A union
