@@ -185,11 +185,13 @@ fbsd_kernel_osabi_sniffer(bfd *abfd)
 		    &osabi);
 
 		/*
-		 * aarch64 kernels don't have the right note tag for
-		 * kernels so just look for /red/herring anyway.
+		 * aarch64 and RISC-V kernels don't have the right
+		 * note tag for kernels so just look for /red/herring
+		 * anyway.
 		 */
 		if (osabi == GDB_OSABI_UNKNOWN &&
-		    elf_elfheader(abfd)->e_machine == EM_AARCH64)
+		    ((elf_elfheader(abfd)->e_machine == EM_AARCH64) ||
+		    (elf_elfheader(abfd)->e_machine == EM_RISCV)))
 			break;
 		if (osabi != GDB_OSABI_FREEBSD)
 			return (GDB_OSABI_UNKNOWN);
