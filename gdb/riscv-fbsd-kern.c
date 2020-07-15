@@ -59,22 +59,68 @@ static const struct regset riscv_fbsd_pcbregset =
     regcache_supply_regset, regcache_collect_regset
   };
 
+static const struct regcache_map_entry riscv_fbsd_pcbmap_cheri[] =
+  {
+    { 1, RISCV_CRA_REGNUM, 0 },
+    { 1, RISCV_CSP_REGNUM, 0 },
+    { 1, RISCV_CGP_REGNUM, 0 },
+    { 1, RISCV_CTP_REGNUM, 0 },
+    { 2, RISCV_CFP_REGNUM, 0 },	/* s0 - s1 */
+    { 10, RISCV_CNULL_REGNUM + 18, 0 },		/* s2 - s11 */
+    { 0 }
+  };
+
+static const struct regset riscv_fbsd_pcbregset_cheri =
+  {
+    riscv_fbsd_pcbmap_cheri,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static bool
+is_cheri_kernel()
+{
+
+  return lookup_minimal_symbol ("userspace_cap", (const char *) NULL,
+				(struct objfile *) NULL).minsym != NULL;
+}
+
 static void
 riscv_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 {
-  gdb_byte buf[31 * 8];
+  bool cheri = is_cheri_kernel ();
 
   /* Always give a value for PC in case the PCB isn't readable. */
   regcache->raw_supply_zeroed (RISCV_PC_REGNUM);
+  if (cheri)
+      regcache->raw_supply_zeroed (RISCV_PCC_REGNUM);
+
   regcache->raw_supply_zeroed (RISCV_ZERO_REGNUM);
+  if (riscv_isa_clen (regcache->arch ()) != 0)
+    regcache->raw_supply_zeroed (RISCV_CNULL_REGNUM);
+
+  const struct regset *regset;
+  size_t regsize;
+  if (cheri)
+    {
+      regsize = riscv_isa_clen (regcache->arch ());
+      regset = &riscv_fbsd_pcbregset_cheri;
+    }
+  else
+    {
+      regsize = riscv_abi_xlen (regcache->arch ());
+      regset = &riscv_fbsd_pcbregset;
+    }
+  gdb_byte buf[16 * regsize];
   if (target_read_memory (pcb_addr, buf, sizeof buf) == 0)
     {
-      regcache->supply_regset (&riscv_fbsd_pcbregset, -1, buf,
+      regcache->supply_regset (regset, -1, buf,
 			       sizeof (buf));
 
       /* Supply the RA as PC as well to simulate the PC as if the
 	 thread had just returned. */
       regcache->raw_supply (RISCV_PC_REGNUM, buf);
+      if (cheri)
+	regcache->raw_supply (RISCV_PCC_REGNUM, buf);
     }
 }
 
@@ -96,6 +142,25 @@ static const struct regcache_map_entry riscv_fbsd_tfmap[] =
     { 0 }
   };
 
+static const struct regcache_map_entry riscv_fbsd_tfmap_cheri[] =
+  {
+    { 1, RISCV_CRA_REGNUM, 0 },
+    { 1, RISCV_CSP_REGNUM, 0 },
+    { 1, RISCV_CGP_REGNUM, 0 },
+    { 1, RISCV_CTP_REGNUM, 0 },
+    { 3, RISCV_CNULL_REGNUM + 5, 0 },	/* t0 - t2 */
+    { 4, RISCV_CNULL_REGNUM + 28, 0 },	/* t3 - t6 */
+    { 2, RISCV_CFP_REGNUM, 0 },		/* s0 - s1 */
+    { 10, RISCV_CNULL_REGNUM + 18, 0 },	/* s2 - s11 */
+    { 8, RISCV_CA0_REGNUM, 0 },		/* a0 - a7 */
+    { 1, RISCV_PCC_REGNUM, 0 },
+    { 1, RISCV_DDC_REGNUM, 0 },
+    { 1, RISCV_CSR_SSTATUS_REGNUM, 0 },
+    { 1, RISCV_CSR_STVAL_REGNUM, 0 },
+    { 1, RISCV_CSR_SCAUSE_REGNUM, 0 },
+    { 0 }
+  };
+
 static struct trad_frame_cache *
 riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
 {
@@ -104,7 +169,8 @@ riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   struct trad_frame_cache *cache;
   CORE_ADDR func, pc, sp;
   const char *name;
-  int xlen;
+  int xlen, clen, tf_size;
+  bool cheri;
 
   if (*this_cache != NULL)
     return ((struct trad_frame_cache *)*this_cache);
@@ -112,15 +178,37 @@ riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   cache = trad_frame_cache_zalloc (this_frame);
   *this_cache = cache;
 
-  sp = get_frame_register_unsigned (this_frame, RISCV_SP_REGNUM);
+  if (riscv_abi_clen (gdbarch) > 0)
+    {
+      gdb_byte buf[register_size (gdbarch, RISCV_CSP_REGNUM)];
 
+      get_frame_register (this_frame, RISCV_CSP_REGNUM, buf);
+      sp = extract_unsigned_integer (buf, riscv_isa_xlen (gdbarch), byte_order);
+    }
+  else
+    sp = get_frame_register_unsigned (this_frame, RISCV_SP_REGNUM);
+
+  cheri = is_cheri_kernel ();
+  clen = riscv_isa_clen (gdbarch);
   xlen = riscv_isa_xlen (gdbarch);
-  trad_frame_set_reg_regmap (cache, riscv_fbsd_tfmap, sp, 35 * xlen);
+  if (cheri)
+    {
+      tf_size = 33 * clen + 3 * xlen;
+      trad_frame_set_reg_regmap (cache, riscv_fbsd_tfmap_cheri, sp, tf_size);
+    }
+  else
+    {
+      tf_size = 35 * xlen;
+      trad_frame_set_reg_regmap (cache, riscv_fbsd_tfmap, sp, 35 * xlen);
+    }
 
   /* Read $PC from trap frame.  */
   func = get_frame_func (this_frame);
   find_pc_partial_function (func, &name, NULL, NULL);
-  pc = read_memory_unsigned_integer (sp + 31 * xlen, xlen, byte_order);
+  if (cheri)
+    pc = read_memory_unsigned_integer (sp + 31 * clen, xlen, byte_order);
+  else
+    pc = read_memory_unsigned_integer (sp + 31 * xlen, xlen, byte_order);
 
   if (pc == 0 && strcmp(name, "fork_trampoline") == 0)
     {
@@ -130,7 +218,7 @@ riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   else
     {
       /* Construct the frame ID using the function start.  */
-      trad_frame_set_id (cache, frame_id_build (sp + 35 * xlen, func));
+      trad_frame_set_id (cache, frame_id_build (sp + tf_size, func));
     }
 
   return cache;
