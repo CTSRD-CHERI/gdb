@@ -7390,7 +7390,7 @@ mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
 		     * 0xff... instead of 0x10.....
 		     */
 		    paddress (gdbarch, cap->top64()),
-		    cap->cr_otype == CAP_OTYPE_SENTRY
+		    cap->cr_otype == CC128_OTYPE_SENTRY
 		         ? " (sentry)"
 		         : (cc128_is_cap_sealed(cap) ? " (sealed)" : ""));
 }
