@@ -3606,6 +3606,8 @@ riscv_gdbarch_init (struct gdbarch_info info,
   riscv_setup_register_aliases (gdbarch, &riscv_xreg_feature);
   if (riscv_has_fp_regs (gdbarch))
     riscv_setup_register_aliases (gdbarch, &riscv_freg_feature);
+  if (riscv_has_cheri (gdbarch))
+    riscv_setup_register_aliases (gdbarch, &riscv_cheri_feature);
   riscv_setup_register_aliases (gdbarch, &riscv_csr_feature);
 
   /* Hook in OS ABI-specific overrides, if they have been registered.  */
