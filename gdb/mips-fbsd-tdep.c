@@ -954,13 +954,9 @@ mips_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	const char *meaning = fbsd_sigsegv_cause (code);
 	if (meaning == NULL)
 	  return;
-	if (uiout != NULL)
-	  {
-	    uiout->text ("\n");
-	    uiout->field_string ("sigcode-meaning", meaning);
-	  }
-	else
-	  printf_filtered ("%s\n", meaning);
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
       }
       break;
 
@@ -972,13 +968,9 @@ mips_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	const char *meaning = fbsd_sigprot_cause (code);
 	if (meaning == NULL)
 	  return;
-	if (uiout != NULL)
-	  {
-	    uiout->text ("\n");
-	    uiout->field_string ("sigcode-meaning", meaning);
-	  }
-	else
-	  printf_filtered ("%s", meaning);
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
 
 	LONGEST capreg;
 
@@ -1006,18 +998,11 @@ mips_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	    string_file file;
 	    mips_print_cheri_register (&file, get_current_frame (), regno, false);
 
-	    if (uiout != NULL)
-	      {
-		uiout->text (" caused by register ");
-		uiout->field_string ("cap-register",
-				     gdbarch_register_name (gdbarch, regno));
-		uiout->text (": ");
-		uiout->field_stream ("bounds", file);
-	      }
-	    else
-	      printf_filtered (" caused by register %s: %s\n",
-			       gdbarch_register_name (gdbarch, regno),
-			       file.c_str ());
+	    uiout->text (" caused by register ");
+	    uiout->field_string ("cap-register",
+				 gdbarch_register_name (gdbarch, regno));
+	    uiout->text (": ");
+	    uiout->field_stream ("bounds", file);
 	  }
       }
       break;

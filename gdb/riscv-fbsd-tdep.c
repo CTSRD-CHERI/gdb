@@ -284,13 +284,9 @@ riscv_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	const char *meaning = fbsd_sigsegv_cause (code);
 	if (meaning == NULL)
 	  return;
-	if (uiout != NULL)
-	  {
-	    uiout->text ("\n");
-	    uiout->field_string ("sigcode-meaning", meaning);
-	  }
-	else
-	  printf_filtered ("%s\n", meaning);
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
       }
       break;
 
@@ -302,13 +298,9 @@ riscv_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	const char *meaning = fbsd_sigprot_cause (code);
 	if (meaning == NULL)
 	  return;
-	if (uiout != NULL)
-	  {
-	    uiout->text ("\n");
-	    uiout->field_string ("sigcode-meaning", meaning);
-	  }
-	else
-	  printf_filtered ("%s", meaning);
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
 
 	LONGEST capreg;
 
@@ -333,13 +325,8 @@ riscv_fbsd_report_signal_info (struct gdbarch *gdbarch,
 	if (name == NULL)
 	  return;
 
-	if (uiout != NULL)
-	  {
-	    uiout->text (" caused by register ");
-	    uiout->field_string ("cap-register", name);
-	  }
-	else
-	  printf_filtered (" caused by register %s\n", name);
+	uiout->text (" caused by register ");
+	uiout->field_string ("cap-register", name);
       }
       break;
 
