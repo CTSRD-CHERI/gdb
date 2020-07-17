@@ -69,6 +69,77 @@
 /* All possible aarch64 target descriptors.  */
 static std::unordered_map <aarch64_features, target_desc *> tdesc_aarch64_map;
 
+/* The list of available aarch64 set/show commands.  */
+static struct cmd_list_element *set_aarch64_cmdlist = NULL;
+static struct cmd_list_element *show_aarch64_cmdlist = NULL;
+
+/* The ABI to use.  Keep this in sync with aarch64_abi_kind.  */
+static const char *const aarch64_abi_strings[] =
+{
+  "auto",
+  "AAPCS64",
+  "AAPCS64-cap",
+  nullptr
+};
+
+/* Variables for the ABI user setting.  */
+static enum aarch64_abi_kind aarch64_current_abi_global = AARCH64_ABI_AUTO;
+static const char *aarch64_current_abi_string = "auto";
+
+static void
+aarch64_update_current_architecture (void)
+{
+  struct gdbarch_info info;
+
+  /* If the current architecture is not AArch64, we have nothing to do.  */
+  if (gdbarch_bfd_arch_info (target_gdbarch ())->arch != bfd_arch_aarch64)
+    return;
+
+  /* Update the architecture.  */
+  if (!gdbarch_update_p (info))
+    internal_error (_("could not update architecture"));
+}
+
+/* Sets the current ABI for AArch64.  */
+
+static void
+aarch64_set_abi (const char *args, int from_tty,
+		 struct cmd_list_element *c)
+{
+  int abi;
+
+  for (abi = AARCH64_ABI_AUTO; abi != AARCH64_ABI_LAST; abi++)
+    if (strcmp (aarch64_current_abi_string, aarch64_abi_strings[abi]) == 0)
+      {
+	aarch64_current_abi_global = (enum aarch64_abi_kind) abi;
+	break;
+      }
+
+  if (abi == AARCH64_ABI_LAST)
+    internal_error (_("Invalid ABI accepted: %s."), aarch64_current_abi_string);
+
+  aarch64_update_current_architecture ();
+}
+
+/* Shows the current ABI for AArch64.  */
+
+static void
+aarch64_show_abi (struct ui_file *file, int from_tty,
+		  struct cmd_list_element *c, const char *value)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (target_gdbarch ());
+
+  if (aarch64_current_abi_global == AARCH64_ABI_AUTO
+      && gdbarch_bfd_arch_info (target_gdbarch ())->arch == bfd_arch_aarch64)
+    gdb_printf (file, _("\
+The current AArch64 ABI is \"auto\" (currently \"%s\").\n"),
+		aarch64_abi_strings[tdep->abi]);
+  else
+    gdb_printf (file, _("The current AArch64 ABI is \"%s\".\n"),
+		aarch64_current_abi_string);
+}
+
 /* The standard register names, and all the valid aliases for them.
    We're not adding fp here, that name is already taken, see
    _initialize_frame_reg.  */
@@ -4282,6 +4353,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   int first_mte_regnum = -1, first_tls_regnum = -1;
   uint64_t vq = aarch64_get_tdesc_vq (info.target_desc);
   uint64_t svq = aarch64_get_tdesc_svq (info.target_desc);
+  aarch64_abi_kind abi = (aarch64_current_abi_global == AARCH64_ABI_AUTO)?
+    AARCH64_ABI_AAPCS64 : aarch64_current_abi_global;
 
   if (vq > AARCH64_MAX_SVE_VQ)
     internal_error (_("VQ out of bounds: %s (max %d)"),
@@ -4546,6 +4619,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     = gdbarch_alloc (&info, gdbarch_tdep_up (new aarch64_gdbarch_tdep));
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
+  tdep->abi = abi;
   /* This should be low enough for everything.  */
   tdep->lowest_pc = 0x20;
   tdep->jb_pc = -1;		/* Longjump support not enabled by default.  */
@@ -4801,6 +4875,9 @@ aarch64_dump_tdep (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file, _("aarch64_dump_tdep: Lowest pc = 0x%s\n"),
 	      paddress (gdbarch, tdep->lowest_pc));
 
+  gdb_printf (file, _("aarch64_dump_tdep: ABI is %s"),
+	      aarch64_abi_strings[tdep->abi]);
+
   /* SME fields.  */
   gdb_printf (file, _("aarch64_dump_tdep: sme_tile_type_q = %s\n"),
 	      host_address_to_string (tdep->sme_tile_type_q));
@@ -4881,6 +4958,23 @@ _initialize_aarch64_tdep ()
 {
   gdbarch_register (bfd_arch_aarch64, aarch64_gdbarch_init,
 		    aarch64_dump_tdep);
+
+  /* Add root prefix command for all set/show aarch64 commands.  */
+  add_basic_prefix_cmd ("aarch64", no_class,
+			_("Various AArch64-specific commands."),
+			&set_aarch64_cmdlist, 0, &setlist);
+
+  add_show_prefix_cmd ("aarch64", no_class,
+		       _("Various AArch64-specific commands."),
+		       &show_aarch64_cmdlist, 0, &showlist);
+
+  /* Add a command to allow the user to force the ABI.  */
+  add_setshow_enum_cmd ("abi", class_support, aarch64_abi_strings,
+			&aarch64_current_abi_string,
+			_("Set the ABI."),
+			_("Show the ABI."),
+			NULL, aarch64_set_abi, aarch64_show_abi,
+			&set_aarch64_cmdlist, &show_aarch64_cmdlist);
 
   /* Debug this file's internals.  */
   add_setshow_boolean_cmd ("aarch64", class_maintenance, &aarch64_debug, _("\
