@@ -145,6 +145,22 @@ riscv_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
     }
 }
 
+static const struct target_desc *
+riscv_fbsd_read_description()
+{
+
+  if (!is_cheri_kernel ())
+    return nullptr;
+
+  struct riscv_gdbarch_features features;
+
+  /* FreeBSD kernels are only RV64 with double floats. */
+  features.xlen = 8;
+  features.flen = 8;
+  features.clen = features.xlen * 2;
+  return riscv_create_target_description (features);
+}
+
 static const struct regcache_map_entry riscv_fbsd_tfmap[] =
   {
     { 1, RISCV_RA_REGNUM, 0 },
@@ -300,6 +316,7 @@ riscv_fbsd_kernel_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   fbsd_vmcore_set_supply_pcb (gdbarch, riscv_fbsd_supply_pcb);
   fbsd_vmcore_set_cpu_pcb_addr (gdbarch, kgdb_trgt_stop_pcb);
+  fbsd_vmcore_set_read_description (gdbarch, riscv_fbsd_read_description);
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
