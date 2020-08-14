@@ -109,7 +109,7 @@ riscv_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 
   /* Always give a value for PC in case the PCB isn't readable. */
   regcache->raw_supply_zeroed (RISCV_PC_REGNUM);
-  if (cheri)
+  if (riscv_isa_clen (regcache->arch ()) != 0)
       regcache->raw_supply_zeroed (RISCV_PCC_REGNUM);
 
   regcache->raw_supply_zeroed (RISCV_ZERO_REGNUM);
