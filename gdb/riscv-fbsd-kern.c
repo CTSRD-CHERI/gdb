@@ -76,6 +76,24 @@ static const struct regset riscv_fbsd_pcbregset_cheri =
     regcache_supply_regset, regcache_collect_regset
   };
 
+/* Provide GPRs as aliases of capability registers. */
+static const struct regcache_map_entry riscv_fbsd_pcbmap_cheri_alias[] =
+  {
+    { 1, RISCV_RA_REGNUM, 16 },
+    { 1, RISCV_SP_REGNUM, 16 },
+    { 1, RISCV_GP_REGNUM, 16 },
+    { 1, RISCV_TP_REGNUM, 16 },
+    { 2, RISCV_FP_REGNUM, 16 },	/* s0 - s1 */
+    { 10, 18, 16 },		/* s2 - s11 */
+    { 0 }
+  };
+
+static const struct regset riscv_fbsd_pcbregset_cheri_alias =
+  {
+    riscv_fbsd_pcbmap_cheri_alias,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
 static bool
 is_cheri_kernel()
 {
@@ -115,6 +133,9 @@ riscv_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
     {
       regcache->supply_regset (regset, -1, buf,
 			       sizeof (buf));
+      if (cheri)
+	regcache->supply_regset (&riscv_fbsd_pcbregset_cheri_alias, -1, buf,
+				 sizeof (buf));
 
       /* Supply the RA as PC as well to simulate the PC as if the
 	 thread had just returned. */
