@@ -61,6 +61,9 @@ struct fbsd_vmcore_ops
 
   /* Return address of pcb for thread running on a CPU. */
   CORE_ADDR (*cpu_pcb_addr)(u_int) = nullptr;
+
+  /* Return target description to use for a kernel.  */
+  const struct target_desc * (*read_description)() = nullptr;
 };
 
 /* Per-architecture data key.  */
@@ -97,6 +100,18 @@ fbsd_vmcore_set_cpu_pcb_addr (struct gdbarch *gdbarch,
 {
   struct fbsd_vmcore_ops *ops = get_fbsd_vmcore_ops (gdbarch);
   ops->cpu_pcb_addr = cpu_pcb_addr;
+}
+
+/* Set the function that returns the target description for
+   architecture GDBARCH to CPU_PCB_ADDR.  */
+
+void
+fbsd_vmcore_set_read_description (struct gdbarch *gdbarch,
+				  const struct target_desc *
+				  (*read_description) ())
+{
+  struct fbsd_vmcore_ops *ops = get_fbsd_vmcore_ops (gdbarch);
+  ops->read_description = read_description;
 }
 
 static CORE_ADDR kernstart;
@@ -243,6 +258,7 @@ public:
   bool thread_alive (ptid_t ptid) override;
   std::string pid_to_str (ptid_t) override;
   const char *extra_thread_info (thread_info *) override;
+  const struct target_desc *read_description () override;
 
   bool has_all_memory () override { return false; }
   bool has_memory () override;
@@ -403,6 +419,9 @@ fbsd_kvm_target_open (const char *args, int from_tty)
 		}
 	}
 
+
+	registers_changed ();
+
 	kgdb_dmesg();
 
 	kt = kgdb_thr_init(ops->cpu_pcb_addr);
@@ -463,6 +482,23 @@ fbsd_kvm_target::extra_thread_info(thread_info *ti)
 {
 
 	return (kgdb_thr_extra_thread_info(ti->ptid.tid()));
+}
+
+const struct target_desc *
+fbsd_kvm_target::read_description ()
+{
+  struct fbsd_vmcore_ops *ops = get_fbsd_vmcore_ops (target_gdbarch ());
+
+  if (ops->read_description != nullptr)
+    {
+      const struct target_desc *result;
+
+      result = ops->read_description ();
+      if (result != nullptr)
+	return result;
+    }
+
+  return this->beneath ()->read_description ();
 }
 
 bool
