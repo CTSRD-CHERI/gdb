@@ -862,8 +862,10 @@ const struct riscv_opcode riscv_opcodes[] =
 */
 
 /* Adjusting to Compressed Capability Precision Instructions */
-{"crrl",       0, {"Xcheri", 0}, "d,s",     MATCH_CROUNDREPRESENTABLELENGTH, MASK_CROUNDREPRESENTABLELENGTH, match_opcode, 0},
-{"cram",       0, {"Xcheri", 0}, "d,s",     MATCH_CREPRESENTABLEALIGNMENTMASK, MASK_CREPRESENTABLEALIGNMENTMASK, match_opcode, 0},
+{"crrl",                        0, {"Xcheri", 0}, "d,s", MATCH_CROUNDREPRESENTABLELENGTH,   MASK_CROUNDREPRESENTABLELENGTH,   match_opcode, INSN_ALIAS},
+{"croundrepresentablelength",   0, {"Xcheri", 0}, "d,s", MATCH_CROUNDREPRESENTABLELENGTH,   MASK_CROUNDREPRESENTABLELENGTH,   match_opcode, 0},
+{"cram",                        0, {"Xcheri", 0}, "d,s", MATCH_CREPRESENTABLEALIGNMENTMASK, MASK_CREPRESENTABLEALIGNMENTMASK, match_opcode, INSN_ALIAS},
+{"crepresentablealignmentmask", 0, {"Xcheri", 0}, "d,s", MATCH_CREPRESENTABLEALIGNMENTMASK, MASK_CREPRESENTABLEALIGNMENTMASK, match_opcode, 0},
 
 /* Memory Loads with Explicit Address Type Instructions */
 {"lb.ddc",     0, {"Xcheri", 0}, "d,0(s)",   MATCH_LB_DDC,  MASK_LB_DDC,   match_opcode, INSN_DREF|INSN_1_BYTE},
