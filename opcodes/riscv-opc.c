@@ -830,6 +830,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"cbuildcap",  0, {"Xcheri", 0}, "Xd,XDs,Xt", MATCH_CBUILDCAP, MASK_CBUILDCAP, match_opcode, 0},
 {"ccopytype",  0, {"Xcheri", 0}, "Xd,Xs,Xt",  MATCH_CCOPYTYPE, MASK_CCOPYTYPE, match_opcode, 0},
 {"ccseal",     0, {"Xcheri", 0}, "Xd,Xs,Xt",  MATCH_CCSEAL, MASK_CCSEAL,   match_opcode, 0},
+{"csealentry", 0, {"Xcheri", 0}, "Xd,Xs",     MATCH_CSEALENTRY, MASK_CSEALENTRY, match_opcode, 0},
 
 /* Pointer-Arithmetic Instructions */
 {"ctoptr",     0, {"Xcheri", 0}, "d,Xs,XDt", MATCH_CTOPTR,  MASK_CTOPTR,   match_opcode, 0},
@@ -838,15 +839,17 @@ const struct riscv_opcode riscv_opcodes[] =
 
 {"cmove",      0, {"Xcheri", 0}, "Xd,Xs",   MATCH_CMOVE,   MASK_CMOVE,    match_opcode, 0},
 
+/* Pointer-Comparison Instructions */
+{"ctestsubset",    0, {"Xcheri", 0}, "d,XDs,Xt", MATCH_CTESTSUBSET,    MASK_CTESTSUBSET,    match_opcode, 0},
+{"cseqx",          0, {"Xcheri", 0}, "d,Xs,Xt",  MATCH_CSETEQUALEXACT, MASK_CSETEQUALEXACT, match_opcode, INSN_ALIAS},
+{"csetequalexact", 0, {"Xcheri", 0}, "d,Xs,Xt",  MATCH_CSETEQUALEXACT, MASK_CSETEQUALEXACT, match_opcode, 0},
+
 /* Control-Flow Instructions */
 {"cret",       0, {"Xcheri", 0}, "",        MATCH_CJALR | (C_CRA << OP_SH_RS1), MASK_CJALR | MASK_CD | MASK_CS1, match_opcode, INSN_ALIAS|INSN_BRANCH },
 {"cjr",        0, {"Xcheri", 0}, "Xs",      MATCH_CJALR,   MASK_CJALR | MASK_CD, match_opcode, INSN_ALIAS|INSN_BRANCH },
 {"cjalr",      0, {"Xcheri", 0}, "Xd,Xs",   MATCH_CJALR,   MASK_CJALR,    match_opcode, INSN_JSR},
 
 {"ccall",      0, {"Xcheri", 0}, "Xs,Xt",   MATCH_CCALL,   MASK_CCALL,    match_opcode, INSN_BRANCH},
-
-/* Assertion Instructions */
-{"ctestsubset", 0, {"Xcheri", 0}, "d,XDs,Xt", MATCH_CTESTSUBSET, MASK_CTESTSUBSET, match_opcode, 0},
 
 /* Special Capability Register Access Instructions */
 {"cspecialr",  0, {"Xcheri", 0}, "Xd,XE",   MATCH_CSPECIALRW, MASK_CSPECIALRW | MASK_RS1, match_opcode, INSN_ALIAS},
