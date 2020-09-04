@@ -198,6 +198,22 @@ static const struct regcache_map_entry riscv_fbsd_tfmap_cheri[] =
     { 0 }
   };
 
+/* Provide GPRs as aliases of capability registers. */
+static const struct regcache_map_entry riscv_fbsd_tfmap_cheri_alias[] =
+  {
+    { 1, RISCV_RA_REGNUM, 16 },
+    { 1, RISCV_SP_REGNUM, 16 },
+    { 1, RISCV_GP_REGNUM, 16 },
+    { 1, RISCV_TP_REGNUM, 16 },
+    { 3, 5, 16 },		/* t0 - t2 */
+    { 4, 28, 16 },		/* t3 - t6 */
+    { 2, RISCV_FP_REGNUM, 16 },	/* s0 - s1 */
+    { 10, 18, 16 },		/* s2 - s11 */
+    { 8, RISCV_A0_REGNUM, 16 },	/* a0 - a7 */
+    { 1, RISCV_PC_REGNUM, 16 },
+    { 0 }
+  };
+
 static struct trad_frame_cache *
 riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
 {
@@ -232,6 +248,13 @@ riscv_fbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
     {
       tf_size = 33 * clen + 3 * xlen;
       trad_frame_set_reg_regmap (cache, riscv_fbsd_tfmap_cheri, sp, tf_size);
+      if (cheri)
+	{
+	  int tf_alias_size
+	    = regcache_map_entry_size (riscv_fbsd_tfmap_cheri_alias);
+	  trad_frame_set_reg_regmap (cache, riscv_fbsd_tfmap_cheri_alias, sp,
+				     tf_alias_size);
+	}
     }
   else
     {
