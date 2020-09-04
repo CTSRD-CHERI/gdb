@@ -684,8 +684,8 @@ riscv_register_type (struct gdbarch *gdbarch, int regnum)
         type = riscv_fpreg_d_type (gdbarch);
     }
 
-  /* Force plain long types for GPRs when CHERI is present.  */
-  if (riscv_has_cheri (gdbarch) && regnum <= RISCV_PC_REGNUM)
+  /* Force plain long types for GPRs when using CheriABI.  */
+  if (riscv_has_cheriabi (gdbarch) && regnum <= RISCV_PC_REGNUM)
     return builtin_type (gdbarch)->builtin_long;
 
   if ((regnum == gdbarch_pc_regnum (gdbarch)
@@ -708,6 +708,13 @@ riscv_register_type (struct gdbarch *gdbarch, int regnum)
                || regnum == RISCV_GP_REGNUM
                || regnum == RISCV_TP_REGNUM)
 	type = builtin_type (gdbarch)->builtin_data_ptr;
+    }
+
+  if (regnum >= RISCV_CNULL_REGNUM && regnum <= RISCV_DDC_REGNUM)
+    {
+      /* Force uint128_t type for hybrid.  */
+      if (!riscv_has_cheriabi (gdbarch))
+	type = builtin_type (gdbarch)->builtin_uint128;
     }
 
   return type;
