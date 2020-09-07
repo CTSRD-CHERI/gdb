@@ -473,6 +473,7 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   if (op != NULL)
     {
       unsigned xlen = 0;
+      bfd_boolean in_capmode = 0;
 
       /* If XLEN is not known, get its value from the ELF class.  */
       if (info->mach == bfd_mach_riscv64)
@@ -484,11 +485,29 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 	  Elf_Internal_Ehdr *ehdr = elf_elfheader (info->section->owner);
 	  xlen = ehdr->e_ident[EI_CLASS] == ELFCLASS64 ? 64 : 32;
 	}
-
+      /*
+       * Set the value of capmode based on the flags that GDB passed or fall
+       * back to the ELF header if not available.
+       */
+      if (info->flags & RISCV_OPCODE_FLAG_CAPMODE_ENABLED)
+	in_capmode = 1;
+      else if (info->flags & RISCV_OPCODE_FLAG_CAPMODE_DISABLED)
+	in_capmode = 0;
+      else if (info->section != NULL)
+	{
+	  Elf_Internal_Ehdr *ehdr = elf_elfheader (info->section->owner);
+	  in_capmode = (ehdr->e_flags & EF_RISCV_CAPMODE) != 0;
+	}
       for (; op->name; op++)
 	{
 	  /* Does the opcode match?  */
 	  if (! (op->match_func) (op, word))
+	    continue;
+	  /* Is this a capmode instruction but we are not in capmode?  */
+	  if (! in_capmode && (op->pinfo & INSN_CAPMODE))
+	    continue;
+	  /* Is this a non-capmode instruction but we are in capmode?  */
+	  if (in_capmode && (op->pinfo & INSN_NOT_CAPMODE))
 	    continue;
 	  /* Is this a pseudo-instruction and may we print it as such?  */
 	  if (no_aliases && (op->pinfo & INSN_ALIAS))

@@ -3318,6 +3318,28 @@ riscv_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
 		         : (cc128_is_cap_sealed(&cap) ? " (sealed)" : ""));
 }
 
+static bool
+riscv_pc_is_capmode (struct gdbarch *gdbarch)
+{
+  /* TODO: actually look at PCC if it's available */
+  return riscv_has_cheriabi (gdbarch);
+}
+
+static int
+gdb_print_insn_riscv (bfd_vma memaddr, disassemble_info *info)
+{
+  gdb_disassembler *di
+      = static_cast<gdb_disassembler *>(info->application_data);
+  struct gdbarch *gdbarch = di->arch ();
+
+  if (riscv_pc_is_capmode (gdbarch))
+    info->flags |= RISCV_OPCODE_FLAG_CAPMODE_ENABLED;
+  else
+    info->flags |= RISCV_OPCODE_FLAG_CAPMODE_DISABLED;
+
+  return default_print_insn (memaddr, info);
+}
+
 /* Initialize the current architecture based on INFO.  If possible,
    re-use an architecture from ARCHES, which is a list of
    architectures already created during this debugging session.
@@ -3534,6 +3556,9 @@ riscv_gdbarch_init (struct gdbarch_info info,
       set_gdbarch_unwind_pc (gdbarch, riscv_unwind_pc);
       set_gdbarch_unwind_sp (gdbarch, riscv_unwind_sp);
     }
+
+  /* Disassembly.  */
+  set_gdbarch_print_insn (gdbarch, gdb_print_insn_riscv);
 
   /* Functions handling dummy frames.  */
   set_gdbarch_call_dummy_location (gdbarch, ON_STACK);
