@@ -914,7 +914,7 @@ aarch64_ext_a64c_imm6 (const aarch64_operand *self ATTRIBUTE_UNUSED,
 		      const aarch64_inst *inst ATTRIBUTE_UNUSED,
 		      aarch64_operand_error *errors ATTRIBUTE_UNUSED)
 {
-  return do_ext_aimm (self, info, code, inst, errors, 4, FLD_imm6_2,
+  return do_ext_aimm (self, info, code, inst, errors, 4, FLD_imm6_15,
 		      FLD_a64c_shift);
 }
 
@@ -1300,6 +1300,20 @@ aarch64_ext_perm (const aarch64_operand *self ATTRIBUTE_UNUSED,
 {
   /* perm */
   info->perm = extract_field (FLD_perm, code, 0);
+  return true;
+}
+
+/* Decode the form operand for e.g. SEAL <Cd>, <Cn>, <form>.  */
+bool
+aarch64_ext_form (const aarch64_operand *self ATTRIBUTE_UNUSED,
+		  aarch64_opnd_info *info,
+		  aarch64_insn code, const aarch64_inst *inst ATTRIBUTE_UNUSED,
+		  aarch64_operand_error *errors ATTRIBUTE_UNUSED)
+{
+  aarch64_insn value;
+  /* form */
+  value = extract_field (FLD_form, code, 0);
+  info->form = get_form_from_value (value);
   return true;
 }
 

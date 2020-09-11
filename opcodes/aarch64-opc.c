@@ -343,6 +343,7 @@ const aarch64_field fields[] =
     { 12,  4 },	/* cond: condition flags as a source operand.  */
     {  0,  4 },	/* cond2: condition in truly conditional-executed inst.  */
     {  5,  5 },	/* defgh: d:e:f:g:h bits in AdvSIMD modified immediate.  */
+    { 13,  2 },	/* form: form specifier in seal.  */
     { 21,  2 },	/* hw: in move wide constant instructions.  */
     {  0,  1 },	/* imm1_0: general immediate in bits [0].  */
     {  2,  1 },	/* imm1_2: general immediate in bits [2].  */
@@ -507,6 +508,32 @@ get_perm_bit (char p)
     }
 
   return 8;
+}
+
+/* Table of all forms.  */
+const aarch64_form aarch64_forms[] =
+{
+  {NULL, 0x0},		/* RESERVED */
+  {"rb", 0x1},
+  {"lpb", 0x2},
+  {"lb", 0x3},
+};
+
+const aarch64_form *
+get_form_from_value (aarch64_insn value)
+{
+  assert (value < sizeof (aarch64_forms) / sizeof (aarch64_form));
+  return &aarch64_forms[(unsigned int) value];
+}
+
+const aarch64_form *
+get_form_from_str (const char *form, size_t len)
+{
+  for (unsigned i = 1; i < sizeof (aarch64_forms) / sizeof (aarch64_form); i++)
+    if (!strncmp (form, aarch64_forms[i].name, len))
+      return &aarch64_forms[i];
+
+  return NULL;
 }
 
 /* Table describing the operand extension/shifting operators; indexed by
@@ -4467,6 +4494,10 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	  get_perm_str (opnd->perm, perm);
 	  snprintf (buf, size, "%s", perm);
 	}
+      break;
+
+    case AARCH64_OPND_FORM:
+      snprintf (buf, size, "%s", opnd->form->name);
       break;
 
     case AARCH64_OPND_COND:
