@@ -2452,6 +2452,11 @@
 {		      \
   QLF3(V_4S, V_8H, S_H),	\
 }
+
+#define QL2_A64C_CA_CA		\
+{				\
+  QLF2(CA, CA),			\
+}
 
 /* Opcode table.
 
@@ -2573,6 +2578,9 @@ static const aarch64_feature_set aarch64_feature_hbc =
 static const aarch64_feature_set aarch64_feature_cssc =
   AARCH64_FEATURE (CSSC);
 
+static const aarch64_feature_set aarch64_feature_a64c =
+  AARCH64_FEATURE (A64C);
+
 #define CORE		&aarch64_feature_v8
 #define FP		&aarch64_feature_fp
 #define SIMD		&aarch64_feature_simd
@@ -2630,6 +2638,7 @@ static const aarch64_feature_set aarch64_feature_cssc =
 #define MOPS_MEMTAG &aarch64_feature_mops_memtag
 #define HBC	  &aarch64_feature_hbc
 #define CSSC	  &aarch64_feature_cssc
+#define A64C		&aarch64_feature_a64c
 
 #define CORE_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, CORE, OPS, QUALS, FLAGS, 0, 0, NULL }
@@ -2777,6 +2786,8 @@ static const aarch64_feature_set aarch64_feature_cssc =
   { NAME, OPCODE, MASK, CLASS, 0, HBC, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define CSSC_INSN(NAME,OPCODE,MASK,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, cssc, 0, CSSC, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define A64C_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, OP, A64C, OPS, QUALS, FLAGS, 0, 0, NULL }
 
 #define MOPS_CPY_OP1_OP2_PME_INSN(NAME, OPCODE, MASK, FLAGS, CONSTRAINTS) \
   MOPS_INSN (NAME, OPCODE, MASK, 0, \

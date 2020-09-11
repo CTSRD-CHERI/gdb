@@ -34,6 +34,12 @@ enum aarch64_field_kind
   FLD_CRm_dsb_nxs,
   FLD_CRn,
   FLD_CSSC_imm8,
+  FLD_Cad,
+  FLD_Cam,
+  FLD_Can,
+  FLD_Cas,
+  FLD_Cat,
+  FLD_Cat2,
   FLD_H,
   FLD_L,
   FLD_M,
@@ -267,6 +273,7 @@ verify_constraints (const struct aarch64_inst *, const aarch64_insn, bfd_vma,
 #define OPD_F_SHIFT_BY_4	0x00000800	/* Need to left shift the field
 						   value by 4 to get the value
 						   of an immediate operand.  */
+#define OPD_F_MAYBE_CSP		0x00001000	/* May potentially be CSP.  */
 
 
 /* Register flags.  */
@@ -364,6 +371,12 @@ static inline bool
 operand_need_shift_by_four (const aarch64_operand *operand)
 {
   return (operand->flags & OPD_F_SHIFT_BY_4) != 0;
+}
+
+static inline bool
+operand_maybe_cap_stack_pointer (const aarch64_operand *operand)
+{
+  return (operand->flags & OPD_F_MAYBE_CSP) != 0;
 }
 
 static inline bool

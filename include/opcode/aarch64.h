@@ -160,8 +160,9 @@ enum aarch64_feature_bit {
   /* SME2.  */
   AARCH64_FEATURE_SME2,
   DUMMY1,
-  DUMMY2,
-  DUMMY3,
+  /* Capability extensions.  */
+  AARCH64_FEATURE_A64C,
+  AARCH64_FEATURE_C64,
   AARCH64_NUM_FEATURES
 };
 
@@ -224,6 +225,11 @@ enum aarch64_feature_bit {
 #define AARCH64_ARCH_V9_1A_FEATURES(X)	AARCH64_ARCH_V8_6A_FEATURES (X)
 #define AARCH64_ARCH_V9_2A_FEATURES(X)	AARCH64_ARCH_V8_7A_FEATURES (X)
 #define AARCH64_ARCH_V9_3A_FEATURES(X)	AARCH64_ARCH_V8_8A_FEATURES (X)
+#define AARCH64_ARCH_MORELLO_FEATURES(X) (AARCH64_FEATBIT (X, A64C)	\
+					 | AARCH64_FEATBIT (X, F16_FML)	\
+					 | AARCH64_FEATBIT (X, DOTPROD)	\
+					 | AARCH64_FEATBIT (X, RCPC)	\
+					 | AARCH64_FEATBIT (X, SSBS))
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8A(X)	(AARCH64_FEATBIT (X, V8) \
@@ -257,6 +263,9 @@ enum aarch64_feature_bit {
 				 | AARCH64_ARCH_V9_2A_FEATURES (X))
 #define AARCH64_ARCH_V9_3A(X)	(AARCH64_ARCH_V9_2A (X) \
 				 | AARCH64_ARCH_V9_3A_FEATURES (X))
+
+#define AARCH64_ARCH_MORELLO(X)	(AARCH64_ARCH_V8_2A (X)	\
+				 | AARCH64_ARCH_MORELLO_FEATURES (X))
 
 #define AARCH64_ARCH_NONE(X)	0
 
@@ -365,6 +374,7 @@ enum aarch64_operand_class
   AARCH64_OPND_CLASS_IMMEDIATE,
   AARCH64_OPND_CLASS_SYSTEM,
   AARCH64_OPND_CLASS_COND,
+  AARCH64_OPND_CLASS_CAP_REG,
 };
 
 /* Operand code that helps both parsing and coding.
@@ -682,6 +692,18 @@ enum aarch64_opnd
   AARCH64_OPND_MOPS_WB_Rn,	/* Rn!, in bits [5, 9].  */
   AARCH64_OPND_CSSC_SIMM8,	/* CSSC signed 8-bit immediate.  */
   AARCH64_OPND_CSSC_UIMM8,	/* CSSC unsigned 8-bit immediate.  */
+
+  AARCH64_OPND_Cad,             /* A capability register as destination.  */
+  AARCH64_OPND_Cam,             /* Capability register as source.  */
+  AARCH64_OPND_Can,             /* Capability register as source.  */
+  AARCH64_OPND_Cas,             /* A capability register.  */
+  AARCH64_OPND_Cat,             /* Capability register destination in load
+				   store instructions.  */
+  AARCH64_OPND_Cat2,            /* Capability register destination 2 in load
+				   store instructions.  */
+  AARCH64_OPND_Cad_SP,          /* Capability register or Cap SP as
+				   destination.  */
+  AARCH64_OPND_Can_SP,		/* Capability register or Cap SP as source. */
 };
 
 /* Qualifier constrains an operand.  It either specifies a variant of an
@@ -749,6 +771,9 @@ enum aarch64_opnd_qualifier
   /* Used in scaled signed immediate that are scaled by a Tag granule
      like in stg, st2g, etc.   */
   AARCH64_OPND_QLF_imm_tag,
+
+  /* Capability Registers.  */
+  AARCH64_OPND_QLF_CA,
 
   /* Constraint on value.  */
   AARCH64_OPND_QLF_CR,		/* CRn, CRm. */
@@ -885,6 +910,7 @@ enum aarch64_insn_class
   dotproduct,
   bfloat16,
   cssc,
+  a64c,
 };
 
 /* Opcode enumerators.  */
