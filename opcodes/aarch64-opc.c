@@ -3156,7 +3156,8 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
    Un-determined operand qualifiers may get established during the process.  */
 
 int
-aarch64_match_operands_constraint (aarch64_inst *inst,
+aarch64_match_operands_constraint (aarch64_feature_set features
+				   ATTRIBUTE_UNUSED, aarch64_inst *inst,
 				   aarch64_operand_error *mismatch_detail)
 {
   int i;
@@ -3265,7 +3266,8 @@ aarch64_match_operands_constraint (aarch64_inst *inst,
 	  continue;
 	}
       if (operand_general_constraint_met_p (inst->operands, i, type,
-					    inst->opcode, mismatch_detail) == 0)
+					    inst->opcode,
+					    mismatch_detail) == 0)
 	{
 	  DEBUG_TRACE ("FAIL on operand %d", i);
 	  return 0;
@@ -3380,6 +3382,15 @@ get_cap_reg_name (int regno, int sp_reg_p)
 {
   const int has_zr = sp_reg_p ? 0 : 1;
   return int_reg[has_zr][2][regno];
+}
+
+static inline const char *
+get_base_reg_name (aarch64_feature_set features, int regno, int sp_reg_p)
+{
+  if (AARCH64_CPU_HAS_FEATURE(features, C64))
+    return get_cap_reg_name (regno, sp_reg_p);
+  else
+    return get_64bit_int_reg_name (regno, sp_reg_p);
 }
 
 /* Get the name of the integer offset register in OPND, using the shift type
@@ -4404,7 +4415,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_ADDR_SIMPLE:
     case AARCH64_OPND_SIMD_ADDR_SIMPLE:
     case AARCH64_OPND_SIMD_ADDR_POST:
-      name = get_64bit_int_reg_name (opnd->addr.base_regno, 1);
+      name = get_base_reg_name (features, opnd->addr.base_regno, 1);
       if (opnd->type == AARCH64_OPND_SIMD_ADDR_POST)
 	{
 	  if (opnd->addr.offset.is_reg)
@@ -4432,7 +4443,8 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_ADDR_RX_LSL2:
     case AARCH64_OPND_SVE_ADDR_RX_LSL3:
       print_register_offset_address
-	(buf, size, opnd, get_64bit_int_reg_name (opnd->addr.base_regno, 1),
+	(buf, size, opnd,
+	 get_base_reg_name (features, opnd->addr.base_regno, 1),
 	 get_offset_int_reg_name (opnd), styler);
       break;
 
@@ -4482,8 +4494,8 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_ADDR_RI_U6x4:
     case AARCH64_OPND_SVE_ADDR_RI_U6x8:
       print_immediate_offset_address
-	(buf, size, opnd, get_64bit_int_reg_name (opnd->addr.base_regno, 1),
-	 styler);
+	(buf, size, opnd,
+	 get_base_reg_name (features, opnd->addr.base_regno, 1), styler);
       break;
 
     case AARCH64_OPND_SVE_ADDR_ZI_U5:
@@ -4507,7 +4519,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_ADDR_UIMM12:
-      name = get_64bit_int_reg_name (opnd->addr.base_regno, 1);
+      name = get_base_reg_name (features, opnd->addr.base_regno, 1);
       if (opnd->addr.offset.imm)
 	snprintf (buf, size, "[%s, %s]",
 		  style_reg (styler, name),
