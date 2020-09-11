@@ -53,7 +53,8 @@ static int last_mapping_sym = -1;
 static bfd_vma last_stop_offset = 0;
 static bfd_vma last_mapping_addr = 0;
 
-#define MAYBE_C64 (last_type == MAP_C64 ? arch_variant_c64 : arch_variant)
+#define MAYBE_C64 (last_type == MAP_C64)
+#define MAYBE_C64_ARCH (MAYBE_C64 ? arch_variant_c64 : arch_variant)
 
 /* Other options */
 static int no_aliases = 0;	/* If set disassemble as most general inst.  */
@@ -300,6 +301,11 @@ aarch64_ext_regno (const aarch64_operand *self, aarch64_opnd_info *info,
   /* For capability registers, set the qualifier.  */
   if (aarch64_get_operand_class (info->type) == AARCH64_OPND_CLASS_CAP_REG)
     info->qualifier = AARCH64_OPND_QLF_CA;
+
+  /* Reject the A64 disassembly of ADR when in C64.  */
+  if (inst->opcode->iclass == pcreladdr && MAYBE_C64
+      && info->type != AARCH64_OPND_Cad)
+    return false;
 
   /* Allow disassembly of A64 RET when encountered in C64 code.  */
   if (inst->opcode->iclass == branch_reg)
@@ -710,6 +716,17 @@ aarch64_ext_imm (const aarch64_operand *self, aarch64_opnd_info *info,
 
   imm = extract_all_fields (self, code);
 
+  if (MAYBE_C64 && info->type == AARCH64_OPND_ADDR_ADRP)
+    {
+      unsigned long highbit = 1UL << 20;
+
+      /* False match, this is an ADRDP.  */
+      if (!(imm & highbit))
+	return false;
+
+      imm &= (1UL << 20) - 1;
+    }
+
   if (operand_need_sign_extension (self))
     imm = sign_extend (imm, get_operand_fields_width (self) - 1);
 
@@ -720,7 +737,8 @@ aarch64_ext_imm (const aarch64_operand *self, aarch64_opnd_info *info,
   else if (operand_need_shift_by_four (self))
     imm <<= 4;
 
-  if (info->type == AARCH64_OPND_ADDR_ADRP)
+  if (info->type == AARCH64_OPND_ADDR_ADRP
+      || info->type == AARCH64_OPND_A64C_ADDR_ADRDP)
     imm <<= 12;
 
   if (inst->operands[0].type == AARCH64_OPND_PSTATEFIELD
@@ -3193,7 +3211,7 @@ determine_disassembling_preference (struct aarch64_inst *inst,
 	  if (convert_to_alias (&copy, alias) == 1)
 	    {
 	      aarch64_replace_opcode (&copy, alias);
-	      if (aarch64_match_operands_constraint (MAYBE_C64, &copy,
+	      if (aarch64_match_operands_constraint (MAYBE_C64_ARCH, &copy,
 						     NULL) != 1)
 		{
 		  DEBUG_TRACE ("FAILED with alias %s ", alias->name);
@@ -3517,7 +3535,7 @@ aarch64_opcode_decode (const aarch64_opcode *opcode, const aarch64_insn code,
     }
 
   /* Match the qualifiers.  */
-  if (aarch64_match_operands_constraint (MAYBE_C64, inst, NULL) == 1)
+  if (aarch64_match_operands_constraint (MAYBE_C64_ARCH, inst, NULL) == 1)
     {
       /* Arriving here, the CODE has been determined as a valid instruction
 	 of OPCODE and *INST has been filled with information of this OPCODE
@@ -3720,7 +3738,7 @@ print_operands (bfd_vma pc, const aarch64_opcode *opcode,
       /* Generate the operand string in STR.  */
       aarch64_print_operand (str, sizeof (str), pc, opcode, opnds, i, &pcrel_p,
 			     &info->target, &notes, cmt, sizeof (cmt),
-			     MAYBE_C64, &styler);
+			     MAYBE_C64_ARCH, &styler);
 
       /* Print the delimiter (taking account of omitted operand(s)).  */
       if (str[0] != '\0')

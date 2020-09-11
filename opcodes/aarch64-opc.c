@@ -333,6 +333,7 @@ const aarch64_field fields[] =
     { 22,  1 }, /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
     { 22,  1 },	/* S_imm10: in LDRAA and LDRAB instructions.  */
     { 13,  8 },	/* a64c_imm8: BICFLGS imm8.  */
+    {  5, 18 },	/* a64c_immhi: e.g. in ADRDP.  */
     { 30,  1 },	/* a64c_index2: in ld/st pair inst deciding the pre/post-index.  */
     { 14,  1 },	/* a64c_shift: Shift bit in SCBNDS.  */
     { 22,  1 },	/* a64c_shift_ai: Shift bit in immediate ADD/SUB.  */
@@ -1747,6 +1748,19 @@ check_za_access (const aarch64_opnd_info *opnd,
   return true;
 }
 
+static bool
+validate_adr_reg_for_feature (enum aarch64_opnd type,
+			      aarch64_feature_set features,
+			      aarch64_operand_error *mismatch_detail)
+{
+  if (AARCH64_CPU_HAS_FEATURE (features, C64) && type != AARCH64_OPND_Cad)
+    {
+      set_syntax_error (mismatch_detail, 0, _("capability register expected"));
+      return false;
+    }
+  return true;
+}
+
 /* General constraint checking based on operand code.
 
    Return 1 if OPNDS[IDX] meets the general constraint of operand code TYPE
@@ -2114,6 +2128,12 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	}
       switch (type)
 	{
+	case AARCH64_OPND_ADDR_ADRP:
+	  if (!validate_adr_reg_for_feature (opcode->operands[0], features,
+					     mismatch_detail))
+	      return 0;
+	  break;
+
 	case AARCH64_OPND_A64C_ADDR_SIMM7:
 	case AARCH64_OPND_CAPADDR_SIMM7:
 	case AARCH64_OPND_ADDR_SIMM7:
@@ -2309,10 +2329,14 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	    }
 	  break;
 
+	case AARCH64_OPND_ADDR_PCREL21:
+	  if (!validate_adr_reg_for_feature (opcode->operands[0], features,
+					     mismatch_detail))
+	      return 0;
+	  /* Fall through.  */
 	case AARCH64_OPND_ADDR_PCREL14:
 	case AARCH64_OPND_ADDR_PCREL17:
 	case AARCH64_OPND_ADDR_PCREL19:
-	case AARCH64_OPND_ADDR_PCREL21:
 	case AARCH64_OPND_ADDR_PCREL26:
 	    {
 	      int shift_amt = 0;
@@ -4579,6 +4603,10 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	    snprintf (comment + len, comment_size - len, ", %s",
 		      opnd->cond->names[i]);
 	}
+      break;
+
+    case AARCH64_OPND_A64C_ADDR_ADRDP:
+      snprintf (buf, size, "#0x%" PRIx64, opnd->imm.value);
       break;
 
     case AARCH64_OPND_ADDR_ADRP:
