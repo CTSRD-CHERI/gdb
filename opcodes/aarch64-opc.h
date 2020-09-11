@@ -138,6 +138,7 @@ enum aarch64_field_kind
   FLD_SVE_xs_14,
   FLD_SVE_xs_22,
   FLD_S_imm10,
+  FLD_a64c_shift_ai,
   FLD_abc,
   FLD_asisdlso_opcode,
   FLD_b40,
