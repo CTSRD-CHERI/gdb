@@ -27,6 +27,7 @@
 #include "elf-bfd.h"
 #include "safe-ctype.h"
 #include "obstack.h"
+#include "elf/aarch64.h"
 
 #define obstack_chunk_alloc xmalloc
 #define obstack_chunk_free free
@@ -3943,12 +3944,11 @@ get_sym_code_type (struct disassemble_info *info, int n,
 
   type = ELF_ST_TYPE (es->internal_elf_sym.st_info);
 
-  /* If the symbol has function type then use that.  Set mapping symbol as
-     MAP_INSN only if transitioning from MAP_DATA.  We do this to conserve any
-     previous MAP_C64 type.  */
+  /* ST_TARGET_INTERNAL is set for C64.  */
   if (type == STT_FUNC)
     {
-      *map_type = *map_type == MAP_DATA ? MAP_INSN : *map_type;
+      *map_type = (es->internal_elf_sym.st_target_internal & ST_BRANCH_TO_C64
+		   ? MAP_C64 : MAP_INSN);
       return true;
     }
 
