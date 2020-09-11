@@ -206,6 +206,7 @@ enum aarch64_field_kind
   FLD_opc1,
   FLD_opcode,
   FLD_option,
+  FLD_perm,
   FLD_rotate1,
   FLD_rotate2,
   FLD_rotate3,

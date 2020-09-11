@@ -400,6 +400,7 @@ const aarch64_field fields[] =
     { 23,  1 },	/* opc1: in load/store reg offset instructions.  */
     { 12,  4 },	/* opcode: in advsimd load/store instructions.  */
     { 13,  3 },	/* option: in ld/st reg offset + add/sub extended reg inst.  */
+    { 13,  3 },	/* perm: permission specifier in clrperm.  */
     { 11,  2 }, /* rotate1: FCMLA immediate rotate.  */
     { 13,  2 }, /* rotate2: Indexed element FCMLA immediate rotate.  */
     { 12,  1 }, /* rotate3: FCADD immediate rotate.  */
@@ -464,6 +465,47 @@ const aarch64_cond *
 get_inverted_cond (const aarch64_cond *cond)
 {
   return &aarch64_conds[cond->value ^ 0x1];
+}
+
+/* Return a permission string in OUT.  OUT needs to be at least 4 bytes wide.  */
+static void
+get_perm_str (aarch64_insn perm, char *out)
+{
+  int i = 0;
+  assert (perm < 8);
+
+  /* XXX 0x0 is a valid permission, i.e. no permissions at all.  The
+     reference however deems the value to be RESERVED.  */
+  if (perm == 0)
+    {
+      out[i++] = '#';
+      out[i++] = '0';
+    }
+
+  if (perm & 4)
+    out[i++] = 'r';
+  if (perm & 2)
+    out[i++] = 'w';
+  if (perm & 1)
+    out[i++] = 'x';
+
+  out [i] = '\0';
+}
+
+aarch64_insn
+get_perm_bit (char p)
+{
+  switch (p)
+    {
+    case 'r':
+      return 4;
+    case 'w':
+      return 2;
+    case 'x':
+      return 1;
+    }
+
+  return 8;
 }
 
 /* Table describing the operand extension/shifting operators; indexed by
@@ -4391,6 +4433,14 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	break;
       snprintf (buf, size, "%s",
 		style_imm (styler, "#0x%x", (unsigned int) opnd->imm.value));
+      break;
+
+    case AARCH64_OPND_PERM:
+	{
+	  char perm[4];
+	  get_perm_str (opnd->perm, perm);
+	  snprintf (buf, size, "%s", perm);
+	}
       break;
 
     case AARCH64_OPND_COND:

@@ -375,6 +375,7 @@ enum aarch64_operand_class
   AARCH64_OPND_CLASS_SYSTEM,
   AARCH64_OPND_CLASS_COND,
   AARCH64_OPND_CLASS_CAP_REG,
+  AARCH64_OPND_CLASS_PERM,
 };
 
 /* Operand code that helps both parsing and coding.
@@ -711,6 +712,7 @@ enum aarch64_opnd
 				   BRS/BLRS.  */
   AARCH64_OPND_A64C_AIMM,	/* Add immediate for A64C ADD/SUB.  */
   AARCH64_OPND_A64C_IMM8,	/* IMM8 for BICFLGS.  */
+  AARCH64_OPND_PERM,		/* 3-bit capability permission for e.g. CLRPERM.  */
 };
 
 /* Qualifier constrains an operand.  It either specifies a variant of an
@@ -1340,6 +1342,9 @@ extern const aarch64_cond aarch64_conds[16];
 
 const aarch64_cond* get_cond_from_value (aarch64_insn value);
 const aarch64_cond* get_inverted_cond (const aarch64_cond *cond);
+
+/* Capability permissions.  */
+aarch64_insn get_perm_bit (const char p);
 
 /* Information about a reference to part of ZA.  */
 struct aarch64_indexed_za
@@ -1441,6 +1446,7 @@ struct aarch64_opnd_info
       struct aarch64_indexed_za indexed_za;
 
       const aarch64_cond *cond;
+      aarch64_insn perm;
       /* The encoding of the PSTATE field.  */
       aarch64_insn pstatefield;
       const aarch64_sys_ins_reg *sysins_op;
