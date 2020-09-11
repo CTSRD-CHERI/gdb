@@ -332,6 +332,7 @@ const aarch64_field fields[] =
     { 14,  1 }, /* SVE_xs_14: UXTW/SXTW select (bit 14).  */
     { 22,  1 }, /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
     { 22,  1 },	/* S_imm10: in LDRAA and LDRAB instructions.  */
+    { 13,  8 },	/* a64c_imm8: BICFLGS imm8.  */
     { 22,  1 },	/* a64c_shift_ai: Shift bit in immediate ADD/SUB.  */
     { 16,  3 },	/* abc: a:b:c bits in AdvSIMD modified immediate.  */
     { 13,  3 },	/* asisdlso_opcode: opcode in advsimd ld/st single element.  */
@@ -4149,6 +4150,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 		style_reg (styler, "C%" PRIi64, opnd->imm.value));
       break;
 
+    case AARCH64_OPND_A64C_IMM8:
     case AARCH64_OPND_IDX:
     case AARCH64_OPND_MASK:
     case AARCH64_OPND_IMM:
