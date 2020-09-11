@@ -131,6 +131,7 @@ struct vector_type_el
 };
 
 #define FIXUP_F_HAS_EXPLICIT_SHIFT	0x00000001
+#define FIXUP_F_C64			0x00000002
 
 struct reloc
 {
@@ -3397,9 +3398,9 @@ find_reloc_table_entry (char **str)
    result is OK.  */
 
 static signed int
-aarch64_force_reloc (unsigned int type)
+aarch64_force_reloc (struct fix *fixp)
 {
-  switch (type)
+  switch (fixp->fx_r_type)
     {
     case BFD_RELOC_AARCH64_GAS_INTERNAL_FIXUP:
       /* Perform these "immediate" internal relocations
@@ -3490,6 +3491,26 @@ aarch64_force_reloc (unsigned int type)
       /* Always leave these relocations for the linker.  */
       return 1;
 
+    case BFD_RELOC_AARCH64_ADR_LO21_PCREL:
+    case BFD_RELOC_AARCH64_BRANCH19:
+    case BFD_RELOC_AARCH64_TSTBR14:
+    case BFD_RELOC_AARCH64_CALL26:
+    case BFD_RELOC_AARCH64_JUMP26:
+      gas_assert (fixp->fx_addsy != NULL);
+
+      /* A jump/call destination will get adjusted to section+offset only
+	 if both caller and callee are of the same type.  */
+      if (symbol_section_p (fixp->fx_addsy))
+	return -1;
+
+      if ((fixp->tc_fix_data.c64
+	   && !AARCH64_IS_C64 (fixp->fx_addsy))
+	  || (!fixp->tc_fix_data.c64
+	      && AARCH64_IS_C64 (fixp->fx_addsy)))
+	return 1;
+
+      return -1;
+
     default:
       return -1;
     }
@@ -3498,7 +3519,7 @@ aarch64_force_reloc (unsigned int type)
 int
 aarch64_force_relocation (struct fix *fixp)
 {
-  int res = aarch64_force_reloc (fixp->fx_r_type);
+  int res = aarch64_force_reloc (fixp);
 
   if (res == -1)
     return generic_force_reloc (fixp);
@@ -6196,6 +6217,8 @@ output_inst (struct aarch64_inst *new_inst)
 	  fixp->tc_fix_data.opnd = inst.reloc.opnd;
 	  fixp->fx_addnumber = inst.reloc.flags;
 	}
+      if (inst.reloc.flags & FIXUP_F_C64)
+	fixp->tc_fix_data.c64 = true;
     }
 
   dwarf2_emit_insn (INSN_SIZE);
@@ -7329,6 +7352,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    }
 	  else
 	    {
+	      bool c64 = AARCH64_CPU_HAS_FEATURE (cpu_variant, C64);
+
 	      info->imm.value = 0;
 	      if (inst.reloc.type == BFD_RELOC_UNUSED)
 		switch (opcode->iclass)
@@ -7378,6 +7403,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		    gas_assert (0);
 		    abort ();
 		  }
+	      if (c64)
+		inst.reloc.flags = FIXUP_F_C64;
 	      inst.reloc.pc_rel = 1;
 	    }
 	  break;
@@ -9339,7 +9366,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
   /* Note whether this will delete the relocation.  */
 
   if (fixP->fx_addsy == 0 && !fixP->fx_pcrel
-      && aarch64_force_reloc (fixP->fx_r_type) <= 0)
+      && aarch64_force_reloc (fixP) <= 0)
     fixP->fx_done = 1;
 
   /* Process the relocations.  */
@@ -9960,16 +9987,21 @@ aarch64_fix_adjustable (struct fix *fixP)
 {
   switch (fixP->fx_r_type)
     {
-      /* A64 <-> C64 transitions are handled by the static linker, so keep
-	 symbol information intact to allow the linker to do something useful
-	 with it.  */
+      /* We need to retain symbol information when jumping between A64 and C64
+	 states or between two C64 functions.  In the C64 -> C64 situation it's
+	 really only a corner case that breaks when symbols get replaced with
+	 section symbols; this is when the jump distance is longer than what a
+	 branch instruction can handle and we want to branch through a stub.
+	 In such a case, the linker needs to know the symbol types of the
+	 source and the destination and section symbols are an unreliable
+	 source of this information.  */
     case BFD_RELOC_AARCH64_ADR_LO21_PCREL:
     case BFD_RELOC_AARCH64_ADD_LO12:
     case BFD_RELOC_AARCH64_BRANCH19:
     case BFD_RELOC_AARCH64_TSTBR14:
     case BFD_RELOC_AARCH64_JUMP26:
     case BFD_RELOC_AARCH64_CALL26:
-      if (AARCH64_IS_C64 (fixP->fx_addsy))
+      if (fixP->tc_fix_data.c64 || AARCH64_IS_C64 (fixP->fx_addsy))
 	return false;
       break;
     default:
