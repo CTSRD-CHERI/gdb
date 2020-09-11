@@ -382,6 +382,7 @@ const aarch64_field fields[] =
     {  5, 14 },	/* imm14: in test bit and branch instructions.  */
     {  0, 16 },	/* imm16_0: in udf instruction. */
     {  5, 16 },	/* imm16_5: in exception instructions.  */
+    {  5, 17 },	/* imm17: in ld/st pair inst deciding the pre/post-index.  */
     {  5, 19 },	/* imm19: e.g. in CBZ.  */
     {  0, 26 },	/* imm26: in unconditional branch instructions.  */
     { 16,  3 },	/* immb: in advsimd shift by immediate instructions.  */
@@ -2278,31 +2279,43 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	  break;
 
 	case AARCH64_OPND_ADDR_PCREL14:
+	case AARCH64_OPND_ADDR_PCREL17:
 	case AARCH64_OPND_ADDR_PCREL19:
 	case AARCH64_OPND_ADDR_PCREL21:
 	case AARCH64_OPND_ADDR_PCREL26:
-	  imm = opnd->imm.value;
-	  if (operand_need_shift_by_two (get_operand_from_code (type)))
 	    {
-	      /* The offset value in a PC-relative branch instruction is alway
-		 4-byte aligned and is encoded without the lowest 2 bits.  */
-	      if (!value_aligned_p (imm, 4))
+	      int shift_amt = 0;
+	      const aarch64_operand *op = get_operand_from_code (type);
+	      if (operand_need_shift_by_two (op))
+		shift_amt = 2;
+	      else if (operand_need_shift_by_four (op))
+		shift_amt = 4;
+
+	      imm = opnd->imm.value;
+
+	      if (shift_amt > 0)
 		{
-		  set_unaligned_error (mismatch_detail, idx, 4);
+		  /* The offset value in a PC-relative (or PCC-relative) branch
+		     instruction is always encoded without the lowest alignment
+		     bits, i.e. 2 bits for PC and 4 bits for PCC.  */
+		  if (!value_aligned_p (imm, 1 << shift_amt))
+		    {
+		      set_unaligned_error (mismatch_detail, idx, 1 << shift_amt);
+		      return 0;
+		    }
+		  /* Right shift by 2 so that we can carry out the following check
+		     canonically.  */
+		  imm >>= shift_amt;
+		}
+	      size = get_operand_fields_width (get_operand_from_code (type));
+	      if (!value_fit_signed_field_p (imm, size))
+		{
+		  set_other_error (mismatch_detail, idx,
+				   _("immediate out of range"));
 		  return 0;
 		}
-	      /* Right shift by 2 so that we can carry out the following check
-		 canonically.  */
-	      imm >>= 2;
+	      break;
 	    }
-	  size = get_operand_fields_width (get_operand_from_code (type));
-	  if (!value_fit_signed_field_p (imm, size))
-	    {
-	      set_other_error (mismatch_detail, idx,
-			       _("immediate out of range"));
-	      return 0;
-	    }
-	  break;
 
 	case AARCH64_OPND_SME_ADDR_RI_U4xVL:
 	  if (!value_in_range_p (opnd->addr.offset.imm, 0, 15))
@@ -4536,10 +4549,17 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_ADDR_PCREL14:
+    case AARCH64_OPND_ADDR_PCREL17:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
     case AARCH64_OPND_ADDR_PCREL26:
       addr = pc + AARCH64_PCREL_OFFSET + opnd->imm.value;
+
+      /* For A64C PCREL17, the final address is rounded down to align to
+         capability boundary.  */
+      if (opnd->type == AARCH64_OPND_ADDR_PCREL17)
+	addr = addr & ~(uint64_t) 0xf;
+
       if (pcrel_p)
 	*pcrel_p = 1;
       if (address)
