@@ -333,6 +333,7 @@ const aarch64_field fields[] =
     { 22,  1 }, /* SVE_xs_22: UXTW/SXTW select (bit 22).  */
     { 22,  1 },	/* S_imm10: in LDRAA and LDRAB instructions.  */
     { 13,  8 },	/* a64c_imm8: BICFLGS imm8.  */
+    { 30,  1 },	/* a64c_index2: in ld/st pair inst deciding the pre/post-index.  */
     { 14,  1 },	/* a64c_shift: Shift bit in SCBNDS.  */
     { 22,  1 },	/* a64c_shift_ai: Shift bit in immediate ADD/SUB.  */
     { 16,  3 },	/* abc: a:b:c bits in AdvSIMD modified immediate.  */
@@ -2105,6 +2106,7 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	}
       switch (type)
 	{
+	case AARCH64_OPND_A64C_ADDR_SIMM7:
 	case AARCH64_OPND_CAPADDR_SIMM7:
 	case AARCH64_OPND_ADDR_SIMM7:
 	  /* Scaled signed 7 bits immediate offset.  */
@@ -4620,6 +4622,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	(buf, size, opnd, get_cap_reg_name (opnd->addr.base_regno, 1), styler);
       break;
 
+    case AARCH64_OPND_A64C_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM9:
     case AARCH64_OPND_ADDR_SIMM9_2:
