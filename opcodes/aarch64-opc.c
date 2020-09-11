@@ -339,6 +339,7 @@ const aarch64_field fields[] =
     { 13,  3 },	/* asisdlso_opcode: opcode in advsimd ld/st single element.  */
     { 19,  5 },	/* b40: in the test bit and branch instructions.  */
     { 31,  1 },	/* b5: in the test bit and branch instructions.  */
+    { 13,  7 },	/* capaddr_simm7: Signed immediate for BLR/BR.  */
     { 12,  4 },	/* cmode: in advsimd modified immediate instructions.  */
     { 12,  4 },	/* cond: condition flags as a source operand.  */
     {  0,  4 },	/* cond2: condition in truly conditional-executed inst.  */
@@ -2104,6 +2105,7 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	}
       switch (type)
 	{
+	case AARCH64_OPND_CAPADDR_SIMM7:
 	case AARCH64_OPND_ADDR_SIMM7:
 	  /* Scaled signed 7 bits immediate offset.  */
 	  /* Get the size of the data element that is accessed, which may be
@@ -4547,6 +4549,11 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       snprintf (buf, size, "%s", style_addr (styler, "#0x%" PRIx64, addr));
       break;
 
+    case AARCH64_OPND_CAPADDR_SIMPLE:
+      snprintf (buf, size, "[%s]",
+		get_cap_reg_name (opnd->addr.base_regno, 1));
+      break;
+
     case AARCH64_OPND_ADDR_SIMPLE:
     case AARCH64_OPND_SIMD_ADDR_SIMPLE:
     case AARCH64_OPND_SIMD_ADDR_POST:
@@ -4606,6 +4613,11 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	(buf, size, opnd, get_64bit_int_reg_name (opnd->addr.base_regno, 1),
 	 get_addr_sve_reg_name (opnd->addr.offset.regno, opnd->qualifier),
 	 styler);
+      break;
+
+    case AARCH64_OPND_CAPADDR_SIMM7:
+      print_immediate_offset_address
+	(buf, size, opnd, get_cap_reg_name (opnd->addr.base_regno, 1), styler);
       break;
 
     case AARCH64_OPND_ADDR_SIMM7:

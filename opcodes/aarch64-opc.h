@@ -145,6 +145,7 @@ enum aarch64_field_kind
   FLD_asisdlso_opcode,
   FLD_b40,
   FLD_b5,
+  FLD_capaddr_simm7,
   FLD_cmode,
   FLD_cond,
   FLD_cond2,
