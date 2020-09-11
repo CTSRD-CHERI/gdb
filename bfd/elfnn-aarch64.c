@@ -858,6 +858,36 @@ static reloc_howto_type elfNN_aarch64_howto_table[] =
 	 0x7ffff,		/* dst_mask */
 	 true),			/* pcrel_offset */
 
+  /* C64 ADRP:   ((PG(S+A)-PG(P)) >> 12) & 0xfffff */
+  HOWTO64 (MORELLO_R (ADR_PREL_PG_HI20),	/* type */
+	 12,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 20,			/* bitsize */
+	 true,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_signed,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 MORELLO_R_STR (ADR_PREL_PG_HI20),	/* name */
+	 false,			/* partial_inplace */
+	 0xfffff,		/* src_mask */
+	 0xfffff,		/* dst_mask */
+	 true),			/* pcrel_offset */
+
+  /* C64 ADRP:   ((PG(S+A)-PG(P)) >> 12) & 0xfffff [no overflow check] */
+  HOWTO64 (MORELLO_R (ADR_PREL_PG_HI20_NC),	/* type */
+	 12,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 20,			/* bitsize */
+	 true,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 MORELLO_R_STR (ADR_PREL_PG_HI20_NC),	/* name */
+	 false,			/* partial_inplace */
+	 0xfffff,		/* src_mask */
+	 0xfffff,		/* dst_mask */
+	 true),			/* pcrel_offset */
+
   /* ADR:    (S+A-P) & 0x1fffff */
   HOWTO (AARCH64_R (ADR_PREL_LO21),	/* type */
 	 0,			/* rightshift */
@@ -1085,6 +1115,22 @@ static reloc_howto_type elfNN_aarch64_howto_table[] =
 	 false,			/* partial_inplace */
 	 0,			/* src_mask */
 	 0x1fffff,		/* dst_mask */
+	 true),			/* pcrel_offset */
+
+  /* Get to the page for the GOT entry for the symbol
+     (G(S) - P) using a C64 ADRP instruction.  */
+  HOWTO64 (MORELLO_R (ADR_GOT_PAGE),	/* type */
+	 12,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 20,			/* bitsize */
+	 true,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 MORELLO_R_STR (ADR_GOT_PAGE),	/* name */
+	 false,			/* partial_inplace */
+	 0xfffff,		/* src_mask */
+	 0xfffff,		/* dst_mask */
 	 true),			/* pcrel_offset */
 
   /* LD64: GOT offset G(S) & 0xff8  */
@@ -5245,6 +5291,7 @@ aarch64_reloc_got_type (bfd_reloc_code_real_type r_type)
   switch (r_type)
     {
     case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
     case BFD_RELOC_AARCH64_GOT_LD_PREL19:
     case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
     case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
@@ -5575,7 +5622,7 @@ _bfd_aarch64_erratum_843419_branch_to_stub (struct bfd_hash_entry *gen_entry,
   if ((htab->fix_erratum_843419 & ERRAT_ADR)
       && (imm >= AARCH64_MIN_ADRP_IMM  && imm <= AARCH64_MAX_ADRP_IMM))
     {
-      insn = (_bfd_aarch64_reencode_adr_imm (AARCH64_ADR_OP, imm)
+      insn = (_bfd_aarch64_reencode_adr_imm (AARCH64_ADR_OP, imm, 0)
 	      | AARCH64_RT (insn));
       bfd_putl32 (insn, contents + stub_entry->adrp_offset);
       /* Stub is not needed, don't map it out.  */
@@ -5873,6 +5920,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 	  return _bfd_aarch64_elf_put_addend (input_bfd, hit_data, bfd_r_type,
 					      howto, value);
 	case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+	case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
 	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
 	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
@@ -5950,6 +5998,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 	  return _bfd_aarch64_elf_put_addend (input_bfd, hit_data, bfd_r_type, howto, value);
 	case BFD_RELOC_AARCH64_ADD_LO12:
 	case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
+	case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
 	  break;
 	}
     }
@@ -6134,6 +6183,8 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
     case BFD_RELOC_AARCH64_64_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
+    case BFD_RELOC_MORELLO_ADR_HI20_NC_PCREL:
+    case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
     case BFD_RELOC_AARCH64_ADR_LO21_PCREL:
     case BFD_RELOC_AARCH64_LD_LO19_PCREL:
     case BFD_RELOC_MORELLO_LD_LO17_PCREL:
@@ -6214,6 +6265,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
       break;
 
     case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
     case BFD_RELOC_AARCH64_GOT_LD_PREL19:
     case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
     case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
@@ -7963,7 +8015,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	    case BFD_RELOC_AARCH64_ADD_LO12:
 	    case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+	    case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
 	    case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
+	    case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
 	    case BFD_RELOC_AARCH64_CALL26:
 	    case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	    case BFD_RELOC_AARCH64_JUMP26:
@@ -8041,6 +8095,8 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case BFD_RELOC_AARCH64_ADD_LO12:
 	case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
 	case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
+	case BFD_RELOC_MORELLO_ADR_HI20_NC_PCREL:
+	case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
 	case BFD_RELOC_AARCH64_ADR_LO21_PCREL:
 	case BFD_RELOC_AARCH64_LDST128_LO12:
 	case BFD_RELOC_AARCH64_LDST16_LO12:
@@ -8166,6 +8222,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* RR: We probably want to keep a consistency check that
 	     there are no dangling GOT_PAGE relocs.  */
 	case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+	case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
 	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
 	case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:

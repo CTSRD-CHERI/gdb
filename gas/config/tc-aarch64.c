@@ -2833,6 +2833,7 @@ struct reloc_table_entry
   int pc_rel;
   bfd_reloc_code_real_type adr_type;
   bfd_reloc_code_real_type adrp_type;
+  bfd_reloc_code_real_type c64_adrp_type;
   bfd_reloc_code_real_type movw_type;
   bfd_reloc_code_real_type add_type;
   bfd_reloc_code_real_type ldst_type;
@@ -2846,6 +2847,7 @@ static struct reloc_table_entry reloc_table[] =
    0,				/* adr_type */
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_ADD_LO12,
    BFD_RELOC_AARCH64_LDST_LO12,
    0},
@@ -2854,15 +2856,18 @@ static struct reloc_table_entry reloc_table[] =
   {"pg_hi21", 1,
    0,				/* adr_type */
    BFD_RELOC_AARCH64_ADR_HI21_PCREL,
+   BFD_RELOC_MORELLO_ADR_HI20_PCREL,
    0,
    0,
    0,
    0},
 
-  /* Higher 21 bits of pc-relative page offset: ADRP, no check */
+  /* Higher 21 bits (20 bits for C64) of pc-relative page offset: ADRP, no
+     check */
   {"pg_hi21_nc", 1,
    0,				/* adr_type */
    BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL,
+   BFD_RELOC_MORELLO_ADR_HI20_NC_PCREL,
    0,
    0,
    0,
@@ -2871,6 +2876,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 0-15 of unsigned address/value: MOVZ */
   {"abs_g0", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_G0,
    0,
@@ -2881,6 +2887,7 @@ static struct reloc_table_entry reloc_table[] =
   {"abs_g0_s", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_G0_S,
    0,
    0,
@@ -2889,6 +2896,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Less significant bits 0-15 of address/value: MOVK, no check */
   {"abs_g0_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_G0_NC,
    0,
@@ -2899,6 +2907,7 @@ static struct reloc_table_entry reloc_table[] =
   {"abs_g1", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_G1,
    0,
    0,
@@ -2907,6 +2916,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 16-31 of signed address/value: MOVN/Z */
   {"abs_g1_s", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_G1_S,
    0,
@@ -2917,6 +2927,7 @@ static struct reloc_table_entry reloc_table[] =
   {"abs_g1_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_G1_NC,
    0,
    0,
@@ -2925,6 +2936,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 32-47 of unsigned address/value: MOVZ */
   {"abs_g2", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_G2,
    0,
@@ -2935,6 +2947,7 @@ static struct reloc_table_entry reloc_table[] =
   {"abs_g2_s", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_G2_S,
    0,
    0,
@@ -2943,6 +2956,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Less significant bits 32-47 of address/value: MOVK, no check */
   {"abs_g2_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_G2_NC,
    0,
@@ -2953,6 +2967,7 @@ static struct reloc_table_entry reloc_table[] =
   {"abs_g3", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_G3,
    0,
    0,
@@ -2961,6 +2976,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 0-15 of signed/unsigned address/value: MOVZ */
   {"prel_g0", 1,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_PREL_G0,
    0,
@@ -2971,6 +2987,7 @@ static struct reloc_table_entry reloc_table[] =
   {"prel_g0_nc", 1,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_PREL_G0_NC,
    0,
    0,
@@ -2979,6 +2996,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 16-31 of signed/unsigned address/value: MOVZ */
   {"prel_g1", 1,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_PREL_G1,
    0,
@@ -2989,6 +3007,7 @@ static struct reloc_table_entry reloc_table[] =
   {"prel_g1_nc", 1,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_PREL_G1_NC,
    0,
    0,
@@ -2997,6 +3016,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 32-47 of signed/unsigned address/value: MOVZ */
   {"prel_g2", 1,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_PREL_G2,
    0,
@@ -3007,6 +3027,7 @@ static struct reloc_table_entry reloc_table[] =
   {"prel_g2_nc", 1,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_MOVW_PREL_G2_NC,
    0,
    0,
@@ -3015,6 +3036,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 48-63 of signed/unsigned address/value: MOVZ */
   {"prel_g3", 1,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_PREL_G3,
    0,
@@ -3025,6 +3047,7 @@ static struct reloc_table_entry reloc_table[] =
   {"got", 1,
    0,				/* adr_type */
    BFD_RELOC_AARCH64_ADR_GOT_PAGE,
+   BFD_RELOC_MORELLO_ADR_GOT_PAGE,
    0,
    0,
    0,
@@ -3036,12 +3059,14 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_LD_GOT_LO12_NC,
    0},
 
   /* 0-15 bits of address/value: MOVk, no check.  */
   {"gotoff_g0_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC,
    0,
@@ -3051,6 +3076,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 16-31 of address/value: MOVZ.  */
   {"gotoff_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_MOVW_GOTOFF_G1,
    0,
@@ -3063,12 +3089,14 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_LD64_GOTOFF_LO15,
    0},
 
   /* Get to the page containing GOT TLS entry for a symbol */
   {"gottprel_g0_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC,
    0,
@@ -3078,6 +3106,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Get to the page containing GOT TLS entry for a symbol */
   {"gottprel_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1,
    0,
@@ -3091,11 +3120,13 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    0},
 
   /* 12 bit offset into the page containing GOT TLS entry for a symbol */
   {"tlsgd_lo12", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC,
@@ -3106,6 +3137,7 @@ static struct reloc_table_entry reloc_table[] =
   {"tlsgd_g0_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC,
    0,
    0,
@@ -3114,6 +3146,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 16-31 of address/value: MOVZ.  */
   {"tlsgd_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSGD_MOVW_G1,
    0,
@@ -3127,11 +3160,13 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSDESC_LD_PREL19},
 
   /* 12 bit offset into the page containing GOT TLS entry for a symbol */
   {"tlsdesc_lo12", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSDESC_ADD_LO12,
@@ -3149,11 +3184,13 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    0},
 
   /* 12 bit offset into the page containing GOT TLS entry for a symbol */
   {"tlsldm_lo12_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSLD_ADD_LO12_NC,
@@ -3165,6 +3202,7 @@ static struct reloc_table_entry reloc_table[] =
    0,				/* adr_type */
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12,
    BFD_RELOC_AARCH64_TLSLD_LDST_DTPREL_LO12,
    0},
@@ -3172,6 +3210,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Same as dtprel_lo12, no overflow check.  */
   {"dtprel_lo12_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_LO12_NC,
@@ -3183,6 +3222,7 @@ static struct reloc_table_entry reloc_table[] =
    0,				/* adr_type */
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLD_ADD_DTPREL_HI12,
    0,
    0},
@@ -3190,6 +3230,7 @@ static struct reloc_table_entry reloc_table[] =
   /* bits[15:0] of offset to the module TLS base address.  */
   {"dtprel_g0", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0,
    0,
@@ -3200,6 +3241,7 @@ static struct reloc_table_entry reloc_table[] =
   {"dtprel_g0_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G0_NC,
    0,
    0,
@@ -3208,6 +3250,7 @@ static struct reloc_table_entry reloc_table[] =
   /* bits[31:16] of offset to the module TLS base address.  */
   {"dtprel_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1,
    0,
@@ -3218,6 +3261,7 @@ static struct reloc_table_entry reloc_table[] =
   {"dtprel_g1_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G1_NC,
    0,
    0,
@@ -3226,6 +3270,7 @@ static struct reloc_table_entry reloc_table[] =
   /* bits[47:32] of offset to the module TLS base address.  */
   {"dtprel_g2", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSLD_MOVW_DTPREL_G2,
    0,
@@ -3236,6 +3281,7 @@ static struct reloc_table_entry reloc_table[] =
   {"tlsdesc_off_g0_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC,
    0,
    0,
@@ -3244,6 +3290,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Higher 16 bit offset into GOT entry for a symbol */
   {"tlsdesc_off_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSDESC_OFF_G1,
    0,
@@ -3257,11 +3304,13 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_PREL19},
 
   /* 12 bit offset into the page containing GOT TLS entry for a symbol */
   {"gottprel_lo12", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    0,
@@ -3273,6 +3322,7 @@ static struct reloc_table_entry reloc_table[] =
    0,				/* adr_type */
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12,
    0,
    0},
@@ -3280,6 +3330,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Get tp offset for a symbol.  */
   {"tprel_lo12", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12,
@@ -3291,6 +3342,7 @@ static struct reloc_table_entry reloc_table[] =
    0,				/* adr_type */
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12,
    0,
    0},
@@ -3298,6 +3350,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Get tp offset for a symbol.  */
   {"tprel_lo12_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    0,
    BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC,
@@ -3308,6 +3361,7 @@ static struct reloc_table_entry reloc_table[] =
   {"tprel_g2", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2,
    0,
    0,
@@ -3316,6 +3370,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 16-31 of address/value: MOVZ.  */
   {"tprel_g1", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1,
    0,
@@ -3326,6 +3381,7 @@ static struct reloc_table_entry reloc_table[] =
   {"tprel_g1_nc", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC,
    0,
    0,
@@ -3335,6 +3391,7 @@ static struct reloc_table_entry reloc_table[] =
   {"tprel_g0", 0,
    0,				/* adr_type */
    0,
+   0,
    BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0,
    0,
    0,
@@ -3343,6 +3400,7 @@ static struct reloc_table_entry reloc_table[] =
   /* Most significant bits 0-15 of address/value: MOVZ, no check.  */
   {"tprel_g0_nc", 0,
    0,				/* adr_type */
+   0,
    0,
    BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC,
    0,
@@ -3355,11 +3413,13 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
+   0,
    BFD_RELOC_AARCH64_LD64_GOTPAGE_LO15,
    0},
 
   /* 14bit offset from got entry to base address of GOT table.  */
   {"gotpage_lo14", 0,
+   0,
    0,
    0,
    0,
@@ -3416,6 +3476,9 @@ aarch64_force_reloc (struct fix *fixp)
 
     case BFD_RELOC_AARCH64_ADD_LO12:
     case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_HI20_NC_PCREL:
+    case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
     case BFD_RELOC_AARCH64_GOT_LD_PREL19:
@@ -4382,6 +4445,7 @@ parse_adrp (char **str)
   if (*p == ':')
     {
       struct reloc_table_entry *entry;
+      bfd_reloc_code_real_type adrp_type;
 
       /* Try to parse a relocation.  Anything else is an error.  */
       ++p;
@@ -4391,17 +4455,22 @@ parse_adrp (char **str)
 	  return false;
 	}
 
-      if (entry->adrp_type == 0)
+      adrp_type = (AARCH64_CPU_HAS_FEATURE (cpu_variant, C64)
+		   ? entry->c64_adrp_type : entry->adrp_type);
+
+      if (adrp_type == 0)
 	{
 	  set_syntax_error
 	    (_("this relocation modifier is not allowed on this instruction"));
 	  return false;
 	}
 
-      inst.reloc.type = entry->adrp_type;
+      inst.reloc.type = adrp_type;
     }
   else
-    inst.reloc.type = BFD_RELOC_AARCH64_ADR_HI21_PCREL;
+    inst.reloc.type = (AARCH64_CPU_HAS_FEATURE (cpu_variant, C64)
+		       ? BFD_RELOC_MORELLO_ADR_HI20_PCREL
+		       : BFD_RELOC_AARCH64_ADR_HI21_PCREL);
 
   inst.reloc.pc_rel = 1;
   if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
@@ -9996,6 +10065,9 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 
     case BFD_RELOC_AARCH64_ADD_LO12:
     case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_GOT_PAGE:
+    case BFD_RELOC_MORELLO_ADR_HI20_NC_PCREL:
+    case BFD_RELOC_MORELLO_ADR_HI20_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
     case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
     case BFD_RELOC_AARCH64_GOT_LD_PREL19:
