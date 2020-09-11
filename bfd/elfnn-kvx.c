@@ -418,6 +418,7 @@ struct elf_kvx_obj_tdata
    && elf_tdata (bfd) != NULL				\
    && elf_object_id (bfd) == KVX_ELF_DATA)
 
+
 static bool
 elfNN_kvx_mkobject (bfd *abfd)
 {
@@ -3197,7 +3198,7 @@ kvx_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
     }
 
   /* The first bit of the global offset table is the header.  */
-  s->size += bed->got_header_size;
+  s->size += bed->got_header_size (info);
 
   /* we still need to handle got content when doing static link with PIC */
   if (bfd_link_executable (info) && !bfd_link_pic (info)) {
@@ -4682,6 +4683,14 @@ elfNN_kvx_plt_sym_val (bfd_vma i, const asection *plt,
   return plt->vma + PLT_ENTRY_SIZE + i * PLT_SMALL_ENTRY_SIZE;
 }
 
+/* Determine the size of the header of for the GOT section.  */
+
+static bfd_vma
+elfNN_kvx_got_header_size (struct bfd_link_info* info ATTRIBUTE_UNUSED)
+{
+  return GOT_ENTRY_SIZE * 3;
+}
+
 #define ELF_ARCH			bfd_arch_kvx
 #define ELF_MACHINE_CODE		EM_KVX
 #define ELF_MAXPAGESIZE			0x10000
@@ -4771,7 +4780,6 @@ elfNN_kvx_plt_sym_val (bfd_vma i, const asection *plt,
 #define elf_backend_may_use_rela_p     1
 #define elf_backend_default_use_rela_p 1
 #define elf_backend_rela_normal        1
-#define elf_backend_got_header_size (GOT_ENTRY_SIZE * 3)
 #define elf_backend_default_execstack  0
 #define elf_backend_extern_protected_data 1
 #define elf_backend_hash_symbol elf_kvx_hash_symbol
