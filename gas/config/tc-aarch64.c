@@ -2368,6 +2368,25 @@ s_tlsdescldr (int ignored ATTRIBUTE_UNUSED)
 
   demand_empty_rest_of_line ();
 }
+
+static void
+s_aarch64_capinit (int ignored ATTRIBUTE_UNUSED)
+{
+  expressionS exp;
+
+  expression (&exp);
+  if (exp.X_op != O_symbol)
+    {
+      as_bad (_(".capinit expects a target symbol as an argument"));
+      return;
+    }
+
+  frag_grow (8);
+  fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 8, &exp, 0,
+		   BFD_RELOC_MORELLO_CAPINIT);
+
+  demand_empty_rest_of_line ();
+}
 #endif	/* OBJ_ELF */
 
 #ifdef TE_PE
@@ -2449,6 +2468,7 @@ const pseudo_typeS md_pseudo_table[] = {
   {"tlsdesccall", s_tlsdesccall, 0},
   {"tlsdescldr", s_tlsdescldr, 0},
   {"variant_pcs", s_variant_pcs, 0},
+  {"capinit", s_aarch64_capinit, 0},
 #endif
 #if defined(OBJ_ELF) || defined(OBJ_COFF)
   {"word", s_aarch64_cons, 4},
@@ -10090,6 +10110,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_TLSDESC_ADD:
     case BFD_RELOC_AARCH64_TLSDESC_CALL:
     case BFD_RELOC_AARCH64_TLSDESC_LDR:
+    case BFD_RELOC_MORELLO_CAPINIT:
       break;
 
     case BFD_RELOC_UNUSED:
@@ -10366,6 +10387,11 @@ check_mapping_symbols (bfd * abfd ATTRIBUTE_UNUSED, asection * sec,
 bool
 aarch64_fix_adjustable (struct fix *fixP)
 {
+  /* We need size information of the target symbols to initialise
+     capabilities.  */
+  if (fixP->fx_r_type == BFD_RELOC_MORELLO_CAPINIT)
+    return false;
+
   switch (fixP->fx_r_type)
     {
       /* We need to retain symbol information when jumping between A64 and C64
