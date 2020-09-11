@@ -337,6 +337,10 @@ const aarch64_field fields[] =
     { 14,  1 },	/* a64c_shift: Shift bit in SCBNDS.  */
     { 22,  1 },	/* a64c_shift_ai: Shift bit in immediate ADD/SUB.  */
     { 16,  3 },	/* abc: a:b:c bits in AdvSIMD modified immediate.  */
+    { 10,  1 },	/* altbase_sf: in altbase instructions.
+		   XXX We should make the SF fields into full fields throughout
+		   the code base and even identify capability registers that
+		   way.  The OP in the altbase instructions allow that.  */
     { 13,  3 },	/* asisdlso_opcode: opcode in advsimd ld/st single element.  */
     { 19,  5 },	/* b40: in the test bit and branch instructions.  */
     { 31,  1 },	/* b5: in the test bit and branch instructions.  */
@@ -2075,6 +2079,7 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	case ldstnapair_offs:
 	case ldstpair_off:
 	case ldst_unpriv:
+	case ldst_altbase:
 	  if (opnd->addr.writeback == 1)
 	    {
 	      set_syntax_error (mismatch_detail, idx,
@@ -2248,6 +2253,7 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	    }
 	  break;
 
+	case AARCH64_OPND_CAPADDR_REGOFF:
 	case AARCH64_OPND_ADDR_REGOFF:
 	  /* Get the size of the data element that is accessed, which may be
 	     different from that of the source register size,
@@ -2276,16 +2282,21 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	    }
 	  break;
 
+	case AARCH64_OPND_CAPADDR_UIMM9:
 	case AARCH64_OPND_ADDR_UIMM12:
 	  imm = opnd->addr.offset.imm;
+	  unsigned range = 4095;
+	  if (opnd->type == AARCH64_OPND_CAPADDR_UIMM9)
+	    range >>= 3;
+
 	  /* Get the size of the data element that is accessed, which may be
 	     different from that of the source register size,
 	     e.g. in strb/ldrb.  */
 	  size = aarch64_get_qualifier_esize (qualifier);
-	  if (!value_in_range_p (opnd->addr.offset.imm, 0, 4095 * size))
+	  if (!value_in_range_p (opnd->addr.offset.imm, 0, size * range))
 	    {
 	      set_offset_out_of_range_error (mismatch_detail, idx,
-					     0, 4095 * size);
+					     0, size * range);
 	      return 0;
 	    }
 	  if (!value_aligned_p (opnd->addr.offset.imm, size))
@@ -3955,6 +3966,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
   switch (opnd->type)
     {
+    case AARCH64_OPND_Rsz:
     case AARCH64_OPND_Rd:
     case AARCH64_OPND_Rn:
     case AARCH64_OPND_Rm:
@@ -4624,6 +4636,13 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	snprintf (buf, size, "[%s]", style_reg (styler, name));
       break;
 
+    case AARCH64_OPND_CAPADDR_REGOFF:
+      print_register_offset_address
+	(buf, size, opnd,
+	 get_altbase_reg_name (features, opnd->addr.base_regno, 1, opcode),
+	 get_offset_int_reg_name (opnd), styler);
+      break;
+
     case AARCH64_OPND_ADDR_REGOFF:
     case AARCH64_OPND_SVE_ADDR_R:
     case AARCH64_OPND_SVE_ADDR_RR:
@@ -4718,8 +4737,13 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 	 styler);
       break;
 
+    case AARCH64_OPND_CAPADDR_UIMM9:
+      name = get_altbase_reg_name (features, opnd->addr.base_regno, 1, opcode);
+      goto do_print;
+
     case AARCH64_OPND_ADDR_UIMM12:
       name = get_base_reg_name (features, opnd->addr.base_regno, 1);
+do_print:
       if (opnd->addr.offset.imm)
 	snprintf (buf, size, "[%s, %s]",
 		  style_reg (styler, name),
