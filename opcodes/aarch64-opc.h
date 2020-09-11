@@ -141,6 +141,7 @@ enum aarch64_field_kind
   FLD_a64c_imm8,
   FLD_a64c_immhi,
   FLD_a64c_index2,
+  FLD_a64c_op0,
   FLD_a64c_shift,
   FLD_a64c_shift_ai,
   FLD_abc,
@@ -340,6 +341,8 @@ verify_constraints (const struct aarch64_inst *, const aarch64_insn, bfd_vma,
 /* Bits [15, 18] contain the maximum value for an immediate MSR.  */
 #define F_REG_MAX_VALUE(X) ((X) << 15)
 #define F_GET_REG_MAX_VALUE(X) (((X) >> 15) & 0x0f)
+
+#define F_CAPREG	(1 << 19)  /* Needs a capability register.  */
 
 /* HINT operand flags.  */
 #define HINT_OPD_F_NOPRINT	(1 << 0)  /* Should not be printed.  */

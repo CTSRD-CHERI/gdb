@@ -335,6 +335,7 @@ const aarch64_field fields[] =
     { 13,  8 },	/* a64c_imm8: BICFLGS imm8.  */
     {  5, 18 },	/* a64c_immhi: e.g. in ADRDP.  */
     { 30,  1 },	/* a64c_index2: in ld/st pair inst deciding the pre/post-index.  */
+    { 19,  1 },	/* a64c_op0: in A64C system instructions.  */
     { 14,  1 },	/* a64c_shift: Shift bit in SCBNDS.  */
     { 22,  1 },	/* a64c_shift_ai: Shift bit in immediate ADD/SUB.  */
     { 16,  3 },	/* abc: a:b:c bits in AdvSIMD modified immediate.  */
@@ -3203,6 +3204,45 @@ operand_general_constraint_met_p (aarch64_feature_set features,
 	      return 0;
 	    }
 	  break;
+	case AARCH64_OPND_SYSREG:
+	    {
+	      bool part_match = false, full_match = false;
+	      unsigned flags = 0;
+	      int regno_idx = idx == 0 ? 1 : 0;
+	      enum aarch64_opnd reg_type = opcode->operands[regno_idx];
+
+	      if (reg_type == AARCH64_OPND_Cat)
+		flags = F_CAPREG;
+
+	      for (i = 0; aarch64_sys_regs[i].name; ++i)
+		if (aarch64_sys_regs[i].value == opnd->sysreg.value)
+		    {
+		      part_match = true;
+		      if ((aarch64_sys_regs[i].flags & F_CAPREG) == flags)
+			{
+			  full_match = true;
+			  break;
+			}
+		    }
+
+	      /* Matching values but mismatched target register.  */
+	      if (part_match && !full_match)
+		{
+		  if (flags & F_CAPREG)
+		    {
+		      set_other_error (mismatch_detail, regno_idx,
+				       _("sysreg expects capability register"));
+		      return 0;
+		    }
+		  else
+		    {
+		      set_other_error (mismatch_detail, regno_idx,
+				       _("sysreg expects integer register"));
+		      return 0;
+		    }
+		}
+	    }
+	  break;
 	default:
 	  break;
 	}
@@ -4796,8 +4836,10 @@ do_print:
 
 	  bool exact_match
 	    = (!(sr->flags & (F_REG_READ | F_REG_WRITE))
-	    || (sr->flags & opnd->sysreg.flags) == opnd->sysreg.flags)
-	    && AARCH64_CPU_HAS_ALL_FEATURES (features, sr->features);
+	       || (sr->flags & opnd->sysreg.flags) == opnd->sysreg.flags)
+	    && AARCH64_CPU_HAS_ALL_FEATURES (features, sr->features)
+	    && ((sr->flags & F_CAPREG)
+		== (opcode->iclass == a64c ? F_CAPREG : 0));
 
 	  /* Try and find an exact match, But if that fails, return the first
 	     partial match that was found.  */
@@ -5011,6 +5053,14 @@ bool
 aarch64_sys_reg_alias_p (const uint32_t reg_flags)
 {
   return (reg_flags & F_REG_ALIAS) != 0;
+}
+
+bool
+aarch64_sys_reg_capreg_supported_p (enum aarch64_insn_class iclass,
+				    const aarch64_sys_reg *reg)
+{
+  unsigned needs_capreg = iclass == a64c ? F_CAPREG : 0;
+  return (reg->flags & F_CAPREG) == needs_capreg;
 }
 
 /* The CPENC below is fairly misleading, the fields
