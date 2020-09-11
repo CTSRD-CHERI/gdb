@@ -5939,7 +5939,7 @@ output_operand_error_report (char *str, bool non_fatal_only)
   enum aarch64_operand_error_kind kind;
   operand_error_record *curr;
   operand_error_record *head = operand_error_report.head;
-  operand_error_record *record;
+  operand_error_record *record, *record2;
 
   /* No error to report.  */
   if (head == NULL)
@@ -5995,6 +5995,7 @@ output_operand_error_report (char *str, bool non_fatal_only)
 
   /* Pick up one of errors of KIND to report.  */
   record = NULL;
+  record2 = NULL;
   for (curr = head; curr != NULL; curr = curr->next)
     {
       /* If we don't want to print non-fatal errors then don't consider them
@@ -6006,37 +6007,78 @@ output_operand_error_report (char *str, bool non_fatal_only)
 	 mismatching operand index.  In the case of multiple errors with
 	 the equally highest operand index, pick up the first one or the
 	 first one with non-NULL error message.  */
-      if (!record || curr->detail.index > record->detail.index)
-	record = curr;
-      else if (curr->detail.index == record->detail.index
-	       && !record->detail.error)
+      if (AARCH64_CPU_HAS_ALL_FEATURES (cpu_variant, *curr->opcode->avariant))
 	{
-	  if (curr->detail.error)
+	  if (!record || curr->detail.index > record->detail.index)
 	    record = curr;
-	  else if (kind == AARCH64_OPDE_SYNTAX_ERROR)
+	  else if (curr->detail.index == record->detail.index
+		   && !record->detail.error)
 	    {
-	      record->detail.data[0].i |= curr->detail.data[0].i;
-	      record->detail.data[1].i |= curr->detail.data[1].i;
-	      record->detail.data[2].i |= curr->detail.data[2].i;
-	      DEBUG_TRACE ("\t--> %s [%x, %x, %x]",
-			   operand_mismatch_kind_names[kind],
-			   curr->detail.data[0].i, curr->detail.data[1].i,
-			   curr->detail.data[2].i);
+	      if (curr->detail.error)
+		record = curr;
+	      else if (kind == AARCH64_OPDE_SYNTAX_ERROR)
+		{
+		  record->detail.data[0].i |= curr->detail.data[0].i;
+		  record->detail.data[1].i |= curr->detail.data[1].i;
+		  record->detail.data[2].i |= curr->detail.data[2].i;
+		  DEBUG_TRACE ("\t--> %s [%x, %x, %x]",
+			       operand_mismatch_kind_names[kind],
+			       curr->detail.data[0].i, curr->detail.data[1].i,
+			       curr->detail.data[2].i);
+		}
+	      else if (kind == AARCH64_OPDE_REG_LIST_LENGTH
+		       || kind == AARCH64_OPDE_REG_LIST_STRIDE)
+		{
+		  record->detail.data[0].i |= curr->detail.data[0].i;
+		  DEBUG_TRACE ("\t--> %s [%x]",
+			       operand_mismatch_kind_names[kind],
+			       curr->detail.data[0].i);
+		}
+	      /* Pick the variant with the cloest match.  */
+	      else if (kind == AARCH64_OPDE_INVALID_VARIANT
+		       && record->detail.data[0].i > curr->detail.data[0].i)
+		record = curr;
 	    }
-	  else if (kind == AARCH64_OPDE_REG_LIST_LENGTH
-		   || kind == AARCH64_OPDE_REG_LIST_STRIDE)
+	}
+      else
+	{
+	  if (!record2 || curr->detail.index > record2->detail.index)
+	    record2 = curr;
+	  else if (curr->detail.index == record2->detail.index
+		   && !record2->detail.error)
 	    {
-	      record->detail.data[0].i |= curr->detail.data[0].i;
-	      DEBUG_TRACE ("\t--> %s [%x]",
-			   operand_mismatch_kind_names[kind],
-			   curr->detail.data[0].i);
+	      if (curr->detail.error)
+		record2 = curr;
+	      else if (kind == AARCH64_OPDE_SYNTAX_ERROR)
+		{
+		  record2->detail.data[0].i |= curr->detail.data[0].i;
+		  record2->detail.data[1].i |= curr->detail.data[1].i;
+		  record2->detail.data[2].i |= curr->detail.data[2].i;
+		  DEBUG_TRACE ("\t--> %s [%x, %x, %x]",
+			       operand_mismatch_kind_names[kind],
+			       curr->detail.data[0].i, curr->detail.data[1].i,
+			       curr->detail.data[2].i);
+		}
+	      else if (kind == AARCH64_OPDE_REG_LIST_LENGTH
+		       || kind == AARCH64_OPDE_REG_LIST_STRIDE)
+		{
+		  record2->detail.data[0].i |= curr->detail.data[0].i;
+		  DEBUG_TRACE ("\t--> %s [%x]",
+			       operand_mismatch_kind_names[kind],
+			       curr->detail.data[0].i);
+		}
+	      /* Pick the variant with the cloest match.  */
+	      else if (kind == AARCH64_OPDE_INVALID_VARIANT
+		       && record2->detail.data[0].i > curr->detail.data[0].i)
+		record2 = curr;
 	    }
-	  /* Pick the variant with the cloest match.  */
-	  else if (kind == AARCH64_OPDE_INVALID_VARIANT
-		   && record->detail.data[0].i > curr->detail.data[0].i)
-	    record = curr;
 	}
     }
+
+  /* No errors in enabled cpu feature variants, look for errors in the disabled
+     ones.  XXX we should do this segregation when prioritizing too.  */
+  if (!record)
+    record = record2;
 
   /* The way errors are collected in the back-end is a bit non-intuitive.  But
      essentially, because each operand template is tried recursively you may
