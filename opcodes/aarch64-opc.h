@@ -144,6 +144,8 @@ enum aarch64_field_kind
   FLD_a64c_shift_ai,
   FLD_abc,
   FLD_altbase_sf,
+  FLD_altbase_sf2,
+  FLD_altbase_sf3,
   FLD_asisdlso_opcode,
   FLD_b40,
   FLD_b5,
