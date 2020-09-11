@@ -6305,6 +6305,7 @@ process_omitted_operand (enum aarch64_opnd type, const aarch64_opcode *opcode,
 
   switch (type)
     {
+    case AARCH64_OPND_Can:
     case AARCH64_OPND_Rd:
     case AARCH64_OPND_Rn:
     case AARCH64_OPND_Rm:
@@ -6982,6 +6983,20 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  info->qualifier = AARCH64_OPND_QLF_CA;
 	  break;
 
+	case AARCH64_OPND_A64C_CST_REG:
+	  po_reg_or_fail (REG_TYPE_CA_N);
+	  if (reg->number != 29
+	      && (opcode->iclass == br_sealed))
+	    {
+	      set_fatal_syntax_error
+		(_(N_ ("Capability register c29 expected")));
+	      goto failure;
+	    }
+	  info->reg.regno = reg->number;
+	  info->qualifier = AARCH64_OPND_QLF_CA;
+	  break;
+
+	case AARCH64_OPND_Cam_SP:
 	case AARCH64_OPND_Can_SP:
 	case AARCH64_OPND_Cad_SP:
 	  po_reg_or_fail (REG_TYPE_CA_N_SP);
@@ -7105,6 +7120,16 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_IMMS:
 	  po_imm_or_fail (0, 63);
 	  info->imm.value = val;
+	  break;
+
+	case AARCH64_OPND_A64C_IMMV4:
+	  po_imm_nc_or_fail ();
+	  if (val != 4)
+	    {
+	      set_fatal_syntax_error (_("immediate #4 expected"));
+	      goto failure;
+	    }
+	  info->imm.value = 4;
 	  break;
 
 	case AARCH64_OPND_IMM0:
