@@ -572,6 +572,8 @@ set_expected_reglist_error (aarch64_reg_type type, const reg_entry *reg)
 /* Some well known registers that we refer to directly elsewhere.  */
 #define REG_SP	31
 #define REG_ZR	31
+#define REG_DW_CSP	(31 + 198)
+#define REG_DW_CLR	(30 + 198)
 
 /* Instructions take 4 bytes in the object file.  */
 #define INSN_SIZE	4
@@ -2315,7 +2317,7 @@ s_aarch64_cfi_b_key_frame (int ignored ATTRIBUTE_UNUSED)
 {
   demand_empty_rest_of_line ();
   struct fde_entry *fde = frchain_now->frch_cfi_data->cur_fde_data;
-  fde->pauth_key = AARCH64_PAUTH_KEY_B;
+  fde->entry_extras.pauth_key = AARCH64_PAUTH_KEY_B;
 }
 
 #ifdef OBJ_ELF
@@ -9296,6 +9298,26 @@ aarch64_sframe_get_abi_arch (void)
   return sframe_abi_arch;
 }
 
+/* The extra initialisation steps needed by AArch64 in alloc_fde_entry.
+   Currently only used to initialise the key used to sign the return
+   address.  */
+void
+tc_aarch64_fde_entry_init_extra(struct fde_entry *fde)
+{
+  fde->entry_extras.pauth_key = AARCH64_PAUTH_KEY_A;
+  fde->entry_extras.c64 = IS_C64;
+}
+
+bool
+tc_aarch64_cfi_startproc_exp (const char *arg)
+{
+  // Allow purecap only for C64 functions.
+  if (!strcmp ("purecap", arg) && IS_C64)
+    return true;
+
+  return false;
+}
+
 #endif /* OBJ_ELF */
 
 /* Initialize the DWARF-2 unwind information for this procedure.  */
@@ -9303,7 +9325,13 @@ aarch64_sframe_get_abi_arch (void)
 void
 tc_aarch64_frame_initial_instructions (void)
 {
-  cfi_add_CFA_def_cfa (REG_SP, 0);
+  if (IS_C64)
+    {
+      cfi_set_return_column (REG_DW_CLR);
+      cfi_add_CFA_def_cfa (REG_DW_CSP, 0);
+    }
+  else
+    cfi_add_CFA_def_cfa (REG_SP, 0);
 }
 
 /* Convert REGNAME to a DWARF-2 register number.  */
@@ -9329,6 +9357,11 @@ tc_aarch64_regname_to_dw2regnum (char *regname)
     case REG_TYPE_FP_D:
     case REG_TYPE_FP_Q:
       return reg->number + 64;
+
+    case REG_TYPE_CA_N:
+    case REG_TYPE_CA_SP:
+    case REG_TYPE_CA_D:
+      return reg->number + 198;
 
     default:
       break;

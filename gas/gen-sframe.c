@@ -111,7 +111,7 @@ static bool
 get_dw_fde_pauth_b_key_p (const struct fde_entry *dw_fde ATTRIBUTE_UNUSED)
 {
 #ifdef tc_fde_entry_extras
-  return (dw_fde->pauth_key == AARCH64_PAUTH_KEY_B);
+  return (dw_fde->entry_extras.pauth_key == AARCH64_PAUTH_KEY_B);
 #else
   return false;
 #endif

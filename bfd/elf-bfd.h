@@ -1469,6 +1469,8 @@ struct elf_backend_data
      (bfd *, struct bfd_link_info *, asection *);
   bool (*elf_backend_can_make_lsda_relative_eh_frame)
      (bfd *, struct bfd_link_info *, asection *);
+  bool (*elf_backend_eh_frame_augmentation_char)
+    (char);
 
   /* Tell linker to support multiple eh_frame sections.  */
   bool elf_backend_can_make_multiple_eh_frame;
