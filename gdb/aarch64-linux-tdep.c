@@ -54,6 +54,9 @@
 #include "arch-utils.h"
 #include "value.h"
 
+/* For aarch64_debug.  */
+#include "arch/aarch64-insn.h"
+
 #include "gdbsupport/selftest.h"
 
 #include "elf/common.h"
@@ -161,6 +164,7 @@
 #define AARCH64_ZA_MAGIC			0x54366345
 #define AARCH64_TPIDR2_MAGIC			0x54504902
 #define AARCH64_ZT_MAGIC			0x5a544e01
+#define AARCH64_MORELLO_MAGIC			0x4d524c01
 
 /* Defines for the extra_context that follows an AARCH64_EXTRA_MAGIC.  */
 #define AARCH64_EXTRA_DATAP_OFFSET		8
@@ -202,6 +206,24 @@
    the signal context state.  */
 #define AARCH64_SME2_CONTEXT_REGS_OFFSET	16
 
+/* Defines for the Morello sigcontext data, which is define in the kernel like
+   so:
+
+   struct morello_context
+   {
+     struct _aarch64_ctx head;
+     __u64 __pad;
+     __kernel_uintcap_t cregs[31];
+     __kernel_uintcap_t csp;
+     __kernel_uintcap_t rcsp;
+     __kernel_uintcap_t pcc;
+   };
+
+*/
+
+#define AARCH64_MORELLO_SIGCONTEXT_SIZE	      (8 + 8 + 34 * 16)
+#define AARCH64_MORELLO_SIGCONTEXT_C0_OFFSET  16
+
 /* Holds information about the signal frame.  */
 struct aarch64_linux_sigframe
 {
@@ -228,6 +250,9 @@ struct aarch64_linux_sigframe
   CORE_ADDR zt_section = 0;
   /* Starting address of the section containing extra information.  */
   CORE_ADDR extra_section = 0;
+  /* Starting address of the section containing the capability
+     registers.  */
+  CORE_ADDR cap_section = 0;
 
   /* The vector length (SVE or SSVE).  */
   ULONGEST vl = 0;
@@ -525,6 +550,16 @@ aarch64_linux_read_signal_frame_info (frame_info_ptr this_frame,
 	    section += size;
 	    break;
 	  }
+	case AARCH64_MORELLO_MAGIC:
+	  {
+	    if (aarch64_debug)
+	      debug_printf ("aarch64: Found Morello section at %s.\n",
+			    paddress (get_frame_arch (this_frame), section));
+
+	    signal_frame.cap_section = section;
+	    section += size;
+	    break;	    
+	  }
 	case AARCH64_EXTRA_MAGIC:
 	  {
 	    /* Extra is always the last valid section in reserved and points to
@@ -575,6 +610,11 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 			     struct trad_frame_cache *this_cache,
 			     CORE_ADDR func)
 {
+  if (aarch64_debug)
+    {
+      debug_printf ("\naarch64: Entering aarch64_linux_sigframe_init\n");
+    }
+
   /* Read the signal context information.  */
   struct aarch64_linux_sigframe signal_frame;
   aarch64_linux_read_signal_frame_info (this_frame, signal_frame);
@@ -699,7 +739,48 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 			       + AARCH64_TPIDR2_CONTEXT_TPIDR2_OFFSET);
     }
 
+  /* Restore capability registers.  */
+  if (tdep->has_capability () && signal_frame.cap_section != 0)
+    {
+      int regno = tdep->cap_reg_base;
+      CORE_ADDR offset = signal_frame.cap_section
+	+ AARCH64_MORELLO_SIGCONTEXT_C0_OFFSET;
+      int reg_size = C_REGISTER_SIZE;
+
+      if (aarch64_debug)
+	{
+	  debug_printf ("aarch64: Reading C registers from sigreturn frame.\n");
+	}
+
+      for (int i = 0; i < AARCH64_C_REGS_NUM; i++)
+	{
+	  trad_frame_set_reg_addr (this_cache, regno + i,
+				   offset + i * reg_size);
+	}
+
+      int pcc_regnum = tdep->cap_reg_base + 31;
+      int csp_regnum = tdep->cap_reg_base + 32;
+      int rcsp_regnum = tdep->cap_reg_base + 35;
+
+      if (aarch64_debug)
+	{
+	  debug_printf ("aarch64: Reading PCC, CSP and RCSP registers "
+			"from sigreturn frame at %s.\n",
+			paddress (gdbarch, offset + 31 * reg_size));
+	}
+
+      trad_frame_set_reg_addr (this_cache, csp_regnum,
+			       offset + 31 * reg_size);
+      trad_frame_set_reg_addr (this_cache, rcsp_regnum,
+			       offset + 32 * reg_size);
+      trad_frame_set_reg_addr (this_cache, pcc_regnum,
+			       offset + 33 * reg_size);
+    }
+
   trad_frame_set_id (this_cache, frame_id_build (signal_frame.sp, func));
+
+  if (aarch64_debug)
+    debug_printf ("aarch64: Exitting aarch64_linux_sigframe_init\n");
 }
 
 /* Implements the "prev_arch" method of struct tramp_frame.  */
