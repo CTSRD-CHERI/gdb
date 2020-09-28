@@ -34,13 +34,13 @@ __FBSDID("$FreeBSD: head/gnu/usr.bin/gdb/kgdb/trgt_mips.c 249878 2013-04-25 04:5
 #include "frame-unwind.h"
 #include "osabi.h"
 #include "regcache.h"
+#include "regset.h"
 #include "solib.h"
 #include "trad-frame.h"
 #include "mips-tdep.h"
 
 #ifdef __mips__
 #include <machine/asm.h>
-#include <machine/pcb.h>
 #include <machine/frame.h>
 #endif
 
@@ -49,40 +49,36 @@ __FBSDID("$FreeBSD: head/gnu/usr.bin/gdb/kgdb/trgt_mips.c 249878 2013-04-25 04:5
 /* Size of struct trapframe in registers. */
 #define	TRAPFRAME_WORDS	74
 
-/* From sys/mips/include/pcb.h.  Offsets in the pcb_context[] array. */
-#define	FBSD_PCB_REG_S0	0
-#define	FBSD_PCB_REG_S1	1
-#define	FBSD_PCB_REG_S2	2
-#define	FBSD_PCB_REG_S3	3
-#define	FBSD_PCB_REG_S4	4
-#define	FBSD_PCB_REG_S5	5
-#define	FBSD_PCB_REG_S6	6
-#define	FBSD_PCB_REG_S7	7
-#define	FBSD_PCB_REG_SP	8
-#define	FBSD_PCB_REG_S8	9
-#define	FBSD_PCB_REG_RA	10
-#define	FBSD_PCB_REG_SR	11
-#define	FBSD_PCB_REG_GP	12
-#define	FBSD_PCB_REG_PC	13
-
 #ifdef __mips__
 _Static_assert(TRAPFRAME_WORDS * sizeof(register_t) ==
 	       sizeof(struct trapframe), "TRAPFRAME_WORDS mismatch");
-_Static_assert(FBSD_PCB_REG_S0 == PCB_REG_S0, "PCB_REG_S0 mismatch");
-_Static_assert(FBSD_PCB_REG_S1 == PCB_REG_S1, "PCB_REG_S1 mismatch");
-_Static_assert(FBSD_PCB_REG_S2 == PCB_REG_S2, "PCB_REG_S2 mismatch");
-_Static_assert(FBSD_PCB_REG_S3 == PCB_REG_S3, "PCB_REG_S3 mismatch");
-_Static_assert(FBSD_PCB_REG_S4 == PCB_REG_S4, "PCB_REG_S4 mismatch");
-_Static_assert(FBSD_PCB_REG_S5 == PCB_REG_S5, "PCB_REG_S5 mismatch");
-_Static_assert(FBSD_PCB_REG_S6 == PCB_REG_S6, "PCB_REG_S6 mismatch");
-_Static_assert(FBSD_PCB_REG_S7 == PCB_REG_S7, "PCB_REG_S7 mismatch");
-_Static_assert(FBSD_PCB_REG_SP == PCB_REG_SP, "PCB_REG_SP mismatch");
-_Static_assert(FBSD_PCB_REG_S8 == PCB_REG_S8, "PCB_REG_S8 mismatch");
-_Static_assert(FBSD_PCB_REG_RA == PCB_REG_RA, "PCB_REG_RA mismatch");
-_Static_assert(FBSD_PCB_REG_SR == PCB_REG_SR, "PCB_REG_SR mismatch");
-_Static_assert(FBSD_PCB_REG_GP == PCB_REG_GP, "PCB_REG_GP mismatch");
-_Static_assert(FBSD_PCB_REG_PC == PCB_REG_PC, "PCB_REG_PC mismatch");
 #endif
+
+static const struct regcache_map_entry mips_fbsd_pcbmap[] =
+  {
+   { 8, MIPS_S2_REGNUM - 2, 0 },	/* s0 - s7 */
+   { 1, MIPS_SP_REGNUM, 0 },
+   { 1, MIPS_S2_REGNUM + 6, 0 },
+   { 1, MIPS_RA_REGNUM, 0 },
+   { 1, MIPS_PS_REGNUM, 0 },
+   { 1, MIPS_GP_REGNUM, 0 },
+   { 1, MIPS_EMBED_PC_REGNUM, 0 },
+   { 0 }
+  };
+
+static const struct regset mips_fbsd_pcbregset =
+  {
+    mips_fbsd_pcbmap,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static bool
+is_cheri_kernel()
+{
+
+  return lookup_minimal_symbol ("userspace_cap", (const char *) NULL,
+				(struct objfile *) NULL).minsym != NULL;
+}
 
 static size_t
 mipsfbsd_trapframe_size(struct gdbarch *gdbarch)
@@ -91,7 +87,7 @@ mipsfbsd_trapframe_size(struct gdbarch *gdbarch)
   size_t size;
 
   size = TRAPFRAME_WORDS * regsize;
-  if (mips_regnum(gdbarch)->cap0 != -1)
+  if (mips_regnum(gdbarch)->cap0 != -1 && is_cheri_kernel ())
     size += 34 * register_size(gdbarch, mips_regnum(gdbarch)->cap0);
   return (size);
 }
@@ -101,43 +97,66 @@ mipsfbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   size_t regsize = mips_isa_regsize (gdbarch);
-  gdb_byte buf[regsize * (FBSD_PCB_REG_PC + 1)];
+  gdb_byte buf[regsize * 14];
+
+  regcache->raw_supply_zeroed (MIPS_ZERO_REGNUM);
+
+  /* Always give a value for PC in case the PCB isn't readable. */
+  regcache->raw_supply_zeroed (MIPS_EMBED_PC_REGNUM);
+  if (mips_regnum (gdbarch)->cap0 != -1)
+    regcache->raw_supply_zeroed (mips_regnum (gdbarch)->cap_pcc);
 
   /* Read the entire pcb_context[] array in one go.  The pcb_context[]
      array is after the pcb_regs member which is a trapframe.  */
-  if (target_read_memory (pcb_addr + mipsfbsd_trapframe_size (gdbarch), buf,
-			  sizeof(buf)) != 0)
-    return;
+  CORE_ADDR pcb_context_addr = pcb_addr + mipsfbsd_trapframe_size (gdbarch);
+  if (target_read_memory (pcb_context_addr, buf, sizeof(buf)) == 0)
+      regcache->supply_regset (&mips_fbsd_pcbregset, -1, buf, sizeof (buf));
 
-  regcache->raw_supply_unsigned (MIPS_ZERO_REGNUM, 0);
-  regcache->raw_supply (MIPS_S2_REGNUM - 2,
-			buf + (regsize * FBSD_PCB_REG_S0));
-  regcache->raw_supply (MIPS_S2_REGNUM - 1,
-			buf + (regsize * FBSD_PCB_REG_S1));
-  regcache->raw_supply (MIPS_S2_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_S2));
-  regcache->raw_supply (MIPS_S2_REGNUM + 1,
-			buf + (regsize * FBSD_PCB_REG_S3));
-  regcache->raw_supply (MIPS_S2_REGNUM + 2,
-			buf + (regsize * FBSD_PCB_REG_S4));
-  regcache->raw_supply (MIPS_S2_REGNUM + 3,
-			buf + (regsize * FBSD_PCB_REG_S5));
-  regcache->raw_supply (MIPS_S2_REGNUM + 4,
-			buf + (regsize * FBSD_PCB_REG_S6));
-  regcache->raw_supply (MIPS_S2_REGNUM + 5,
-			buf + (regsize * FBSD_PCB_REG_S7));
-  regcache->raw_supply (MIPS_SP_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_SP));
-  regcache->raw_supply (MIPS_S2_REGNUM + 6,
-			buf + (regsize * FBSD_PCB_REG_S8));
-  regcache->raw_supply (MIPS_RA_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_RA));
-  regcache->raw_supply (MIPS_PS_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_SR));
-  regcache->raw_supply (MIPS_GP_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_GP));
-  regcache->raw_supply (MIPS_EMBED_PC_REGNUM,
-			buf + (regsize * FBSD_PCB_REG_PC));
+  if (mips_regnum(gdbarch)->cap0 != -1 && is_cheri_kernel ())
+    {
+      int cap0 = mips_regnum (gdbarch)->cap0;
+      size_t capregsize = register_size (gdbarch, cap0);
+      enum mips_abi abi = mips_abi (gdbarch);
+      int numkframeregs;
+
+      if (abi == MIPS_ABI_CHERI128)
+	numkframeregs = 11;
+      else
+	numkframeregs = 8;
+      
+      gdb_byte cherikframe[capregsize * numkframeregs];
+
+      CORE_ADDR cherikframe_addr = pcb_context_addr + sizeof(buf);
+
+      /* Skip over pcb_onfault (padded on hybrid) and pcb_tpc.  */
+      cherikframe_addr += 2 * capregsize;
+
+      /* Skip over pcb_cherisignal.  */
+      cherikframe_addr += 6 * capregsize;
+      
+      if (target_read_memory (cherikframe_addr, cherikframe,
+			      sizeof (cherikframe)) == 0)
+	{
+	  /* Can't use a register map here since register numbers
+	     aren't fixed.  */
+	  regcache->raw_supply (cap0 + 17, cherikframe);
+	  regcache->raw_supply (cap0 + 18, cherikframe + capregsize * 1);
+	  regcache->raw_supply (cap0 + 19, cherikframe + capregsize * 2);
+	  regcache->raw_supply (cap0 + 20, cherikframe + capregsize * 3);
+	  regcache->raw_supply (cap0 + 21, cherikframe + capregsize * 4);
+	  regcache->raw_supply (cap0 + 22, cherikframe + capregsize * 5);
+	  regcache->raw_supply (cap0 + 23, cherikframe + capregsize * 6);
+	  regcache->raw_supply (cap0 + 24, cherikframe + capregsize * 7);
+
+	  if (numkframeregs == 11)
+	    {
+	      regcache->raw_supply (mips_regnum (gdbarch)->cap_pcc,
+				    cherikframe + capregsize * 8);
+	      regcache->raw_supply (cap0 + 11, cherikframe + capregsize * 9);
+	      regcache->raw_supply (cap0 + 26, cherikframe + capregsize * 10);
+	    }
+	}
+    }
 }
 
 static struct trad_frame_cache *
@@ -145,6 +164,9 @@ mipsfbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   size_t regsize = mips_isa_regsize (gdbarch);
+  enum mips_abi abi = mips_abi (gdbarch);
+  int cap0 = mips_regnum (gdbarch)->cap0;
+  size_t capregsize = cap0 == -1 ? 0 : register_size (gdbarch, cap0);
   struct trad_frame_cache *cache;
   CORE_ADDR addr, func, sp;
   int regnum;
@@ -156,15 +178,28 @@ mipsfbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
   *this_cache = cache;
 
   func = get_frame_func (this_frame);
-  sp = get_frame_register_signed (this_frame,
-				  MIPS_SP_REGNUM + gdbarch_num_regs (gdbarch));
+
+  if (abi == MIPS_ABI_CHERI128)
+    sp = get_cheri_frame_register_signed (this_frame, cap0 + 11
+					  + gdbarch_num_regs (gdbarch));
+  else
+    sp = get_frame_register_signed (this_frame,
+				    MIPS_SP_REGNUM + gdbarch_num_regs (gdbarch));
 
   /* Skip over CALLFRAME_SIZ.  */
   addr = sp;
-  if (regsize == 8)
-    addr += regsize * 4;
-  else
+  switch (abi) {
+  case MIPS_ABI_O32:
     addr += regsize * (4 + 2);
+    break;
+  case MIPS_ABI_N32:
+  case MIPS_ABI_N64:
+    addr += regsize * 4;
+    break;
+  case MIPS_ABI_CHERI128:
+    addr += capregsize * 4;
+    break;
+  }
 
   /* GPRs.  Skip zero.  */
   addr += regsize;
@@ -233,6 +268,9 @@ mipsfbsd_trapframe_cache (struct frame_info *this_frame, void **this_cache)
 	}
 
       /* PC and PCC. */
+      /* XXX: This is wrong as this gives the address of PC instead of
+	 the offset.  However, a hybrid kernel always has a base of 0
+	 for PCC.  */
       regnum = mips_regnum (gdbarch)->pc;
       trad_frame_set_reg_addr (cache,
 			       regnum + gdbarch_num_regs (gdbarch),
