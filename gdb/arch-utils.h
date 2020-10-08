@@ -325,4 +325,14 @@ extern enum return_value_convention default_gdbarch_return_value
       struct regcache *regcache, struct value **read_value,
       const gdb_byte *writebuf);
 
+/* Default implementation of gdbarch_register_has_tag.  */
+extern bool default_register_has_tag (struct gdbarch *gdbarch,
+				      readable_regcache *regcache,
+				      int cookednum);
+
+/* Default implementation of gdbarch_register_tag.  */
+extern bool default_register_tag (struct gdbarch *gdbarch,
+				  readable_regcache *regcache,
+				  int cookednum);
+
 #endif /* ARCH_UTILS_H */

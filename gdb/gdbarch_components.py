@@ -2823,3 +2823,33 @@ The corefile's bfd is passed through COREFILE_BFD.
     predefault="default_use_target_description_from_corefile_notes",
     invalid=False,
 )
+
+Method(
+    comment="""
+Returns true if register COOKEDNUM has a tag and false otherwise.
+The default is to always return false.
+""",
+    type="bool",
+    name="register_has_tag",
+    params=[
+        ("readable_regcache *", "regcache"),
+        ("int", "cookednum"),
+    ],
+    predefault="default_register_has_tag",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Returns true if the register tag bit is 1 and false otherwise.
+The default is to always return false.
+""",
+    type="bool",
+    name="register_tag",
+    params=[
+        ("readable_regcache *", "regcache"),
+        ("int", "cookednum"),
+    ],
+    predefault="default_register_tag",
+    invalid=False,
+)

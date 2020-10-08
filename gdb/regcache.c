@@ -804,6 +804,14 @@ readable_regcache::cooked_read_value (int regnum)
 	result->mark_bytes_unavailable (0,
 					result->type ()->length ());
 
+      if (gdbarch_register_has_tag (m_descr->gdbarch, this, regnum))
+	{
+	  result->set_tagged (true);
+
+	  bool tag = gdbarch_register_tag (m_descr->gdbarch, this, regnum);
+	  result->set_tag (tag);
+	}
+
       return result;
     }
   else

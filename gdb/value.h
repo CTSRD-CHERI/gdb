@@ -138,8 +138,10 @@ private:
       m_stack (false),
       m_is_zero (false),
       m_in_history (false),
+      m_tagged (false),
       m_type (type_),
-      m_enclosing_type (type_)
+      m_enclosing_type (type_),
+      m_tag (false)
   {
   }
 
@@ -253,6 +255,18 @@ public:
 
   void set_embedded_offset (LONGEST val)
   { m_embedded_offset = val; }
+
+  bool tagged () const
+  { return m_tagged; }
+
+  void set_tagged (bool val)
+  { m_tagged = val; }
+
+  bool tag () const
+  { return m_tag; }
+
+  void set_tag (bool val)
+  { m_tag = val; }
 
   /* If false, contents of this value are in the contents field.  If
      true, contents are in inferior.  If the lval field is lval_memory,
@@ -658,6 +672,9 @@ private:
   /* True if this a value recorded in value history; false otherwise.  */
   bool m_in_history : 1;
 
+  /* Whether the value has a tag bit.  */
+  bool m_tagged : 1;
+
   /* Location of value (if lval).  */
   union
   {
@@ -765,6 +782,9 @@ private:
   struct type *m_enclosing_type;
   LONGEST m_embedded_offset = 0;
   LONGEST m_pointed_to_offset = 0;
+
+  /* The tag value, if tagged.  */
+  bool m_tag;
 
   /* Actual contents of the value.  Target byte-order.
 

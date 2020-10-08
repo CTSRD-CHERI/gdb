@@ -262,6 +262,8 @@ struct gdbarch
   gdbarch_get_pc_address_flags_ftype *get_pc_address_flags = default_get_pc_address_flags;
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
   gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes = default_use_target_description_from_corefile_notes;
+  gdbarch_register_has_tag_ftype *register_has_tag = default_register_has_tag;
+  gdbarch_register_tag_ftype *register_tag = default_register_tag;
 };
 
 /* Create a new ``struct gdbarch'' based on information provided by
@@ -541,6 +543,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of get_pc_address_flags, invalid_p == 0 */
   /* Skip verify of read_core_file_mappings, invalid_p == 0 */
   /* Skip verify of use_target_description_from_corefile_notes, invalid_p == 0 */
+  /* Skip verify of register_has_tag, invalid_p == 0 */
+  /* Skip verify of register_tag, invalid_p == 0 */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
 		    log.c_str ());
@@ -1412,6 +1416,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: use_target_description_from_corefile_notes = <%s>\n",
 	      host_address_to_string (gdbarch->use_target_description_from_corefile_notes));
+  gdb_printf (file,
+	      "gdbarch_dump: register_has_tag = <%s>\n",
+	      host_address_to_string (gdbarch->register_has_tag));
+  gdb_printf (file,
+	      "gdbarch_dump: register_tag = <%s>\n",
+	      host_address_to_string (gdbarch->register_tag));
   if (gdbarch->dump_tdep != NULL)
     gdbarch->dump_tdep (gdbarch, file);
 }
@@ -5559,4 +5569,38 @@ set_gdbarch_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
 							gdbarch_use_target_description_from_corefile_notes_ftype use_target_description_from_corefile_notes)
 {
   gdbarch->use_target_description_from_corefile_notes = use_target_description_from_corefile_notes;
+}
+
+bool
+gdbarch_register_has_tag (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->register_has_tag != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_register_has_tag called\n");
+  return gdbarch->register_has_tag (gdbarch, regcache, cookednum);
+}
+
+void
+set_gdbarch_register_has_tag (struct gdbarch *gdbarch,
+			      gdbarch_register_has_tag_ftype register_has_tag)
+{
+  gdbarch->register_has_tag = register_has_tag;
+}
+
+bool
+gdbarch_register_tag (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->register_tag != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_register_tag called\n");
+  return gdbarch->register_tag (gdbarch, regcache, cookednum);
+}
+
+void
+set_gdbarch_register_tag (struct gdbarch *gdbarch,
+			  gdbarch_register_tag_ftype register_tag)
+{
+  gdbarch->register_tag = register_tag;
 }

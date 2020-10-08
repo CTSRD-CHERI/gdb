@@ -1212,6 +1212,10 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
 				 copy_length * unit_size);
   gdb::copy (src_contents, dst_contents);
 
+  /* Copy the tagged and tag metadata.  */
+  dst->set_tagged (m_tagged);
+  dst->set_tag (m_tag);
+
   /* Copy the meta-data, adjusted.  */
   src_bit_offset = src_offset * unit_size * HOST_CHAR_BIT;
   dst_bit_offset = dst_offset * unit_size * HOST_CHAR_BIT;
@@ -1525,6 +1529,7 @@ value::copy () const
   val->m_stack = m_stack;
   val->m_is_zero = m_is_zero;
   val->m_in_history = m_in_history;
+  val->m_tagged = m_tagged;
   val->m_initialized = m_initialized;
   val->m_unavailable = m_unavailable;
   val->m_optimized_out = m_optimized_out;
