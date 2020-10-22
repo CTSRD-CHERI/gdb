@@ -3712,10 +3712,7 @@ aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
   return NULL;
 }
 
-/* Determine if a bfd is using CheriABI.  Currently this is only
-   supported for FreeBSD binaries.  This has to be done here rather
-   than in the FreeBSD/aarch64 osabi hook so that the target
-   description uses capability registers.  */
+/* Determine if a bfd is using CheriABI.  */
 
 static bool
 aarch64_bfd_has_cheriabi (bfd *abfd)
@@ -3729,42 +3726,6 @@ aarch64_bfd_has_cheriabi (bfd *abfd)
       && (elf_elfheader (abfd)->e_entry & 1) == 1)
     return true;
 
-  asection *note_tags = bfd_get_section_by_name (abfd, ".note.tag");
-  char buf[1024], *p;
-
-  if (note_tags == NULL)
-    return false;
-
-  unsigned int sectsize = bfd_section_size (abfd, note_tags);
-  if (sectsize > sizeof (buf))
-    sectsize = sizeof (buf);
-
-  if (!bfd_get_section_contents (abfd, note_tags, buf, 0, sectsize))
-    return false;
-
-  unsigned int align = 1U << note_tags->alignment_power;
-  p = buf;
-  while (p + 12 < buf + sectsize)
-    {
-      unsigned int namesize = bfd_h_get_32 (abfd, p);
-      unsigned int descsize = bfd_h_get_32 (abfd, p + 4);
-      unsigned int notetype = bfd_h_get_32 (abfd, p + 8);
-
-      unsigned int notesize = 12;
-      notesize += (namesize + 3) & ~3;
-      notesize += (descsize + 3) & ~3;
-      if (p + notesize > buf + sectsize)
-	break;
-
-      if (namesize == strlen ("FreeBSD") + 1
-	  && strcmp (p + 12, "FreeBSD") == 0
-	  && notetype == NT_FREEBSD_USE_CHERIABI_TAG)
-	return true;
-
-      notesize += align;
-      notesize &= ~align;
-      p += notesize;
-    }
   return false;
 }
 
