@@ -3262,7 +3262,7 @@ static void
 riscv_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch,
 				      struct type *type,
 				      const gdb_byte *buffer,
-				      struct cap_register *cap, bool *valid)
+				      cc128_cap_t *cap, bool *valid)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -3276,7 +3276,7 @@ riscv_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch,
 
       cursor = extract_unsigned_integer (buffer, 8, byte_order);
       pesbt = extract_unsigned_integer (buffer + 8, 8, byte_order);
-      decompress_128cap(pesbt, cursor, cap);
+      cc128_decompress_mem(pesbt, cursor, 0, cap);
       *valid = pesbt != 0;
     }
 }
@@ -3289,7 +3289,7 @@ riscv_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
 				      int embedded_offset,
 				      struct ui_file *stream)
 {
-  struct cap_register cap;
+  cc128_cap_t cap;
   bool attr_valid;
 
   memset(&cap, 0, sizeof(cap));
