@@ -32,10 +32,10 @@
    alignment.  */
 #define AARCH64_FBSD_SIZEOF_FPREGSET (33 * V_REGISTER_SIZE)
 
-/* The capability regset consists of 40 C registers plus the tag_map
+/* The capability regset consists of 34 C registers plus the tag_map
    pseudo-register, and the whole structure is padded to 128 bit
    alignment.  */
-#define AARCH64_FBSD_SIZEOF_CAPREGSET (41 * C_REGISTER_SIZE)
+#define AARCH64_FBSD_SIZEOF_CAPREGSET (35 * C_REGISTER_SIZE)
 
 extern const struct regset aarch64_fbsd_gregset;
 extern const struct regset aarch64_fbsd_fpregset;

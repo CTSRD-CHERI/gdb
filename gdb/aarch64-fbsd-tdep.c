@@ -57,12 +57,14 @@ const struct regcache_map_entry aarch64_fbsd_capregmap[] =
     { 1, AARCH64_CSP_REGNUM, 16 },
     { 1, AARCH64_PCC_REGNUM, 16 },
     { 1, AARCH64_DDC_REGNUM, 16 },
+#if 0
     { 1, AARCH64_CTPIDR_REGNUM, 16 },
     { 1, AARCH64_CTPIDRRO_REGNUM, 16 },
     { 1, AARCH64_CID_REGNUM, 16 },
     { 1, AARCH64_RCSP_REGNUM, 16 },
     { 1, AARCH64_RDDC_REGNUM, 16 },
     { 1, AARCH64_RCTPIDR_REGNUM, 16 },
+#endif
     { 1, AARCH64_TAG_MAP_REGNUM, 8 },
     { 1, REGCACHE_MAP_SKIP, 8 },
     { 0 }
