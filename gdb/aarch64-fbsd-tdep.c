@@ -143,18 +143,17 @@ static const struct tramp_frame aarch64_fbsd_sigframe =
 
 /* The CheriABI sigframe replaces struct gpregs at offset 0 of
    mcontext_t with a struct capregs.  This holds capability-sized
-   registers for all GPRs, even ones that are not expanded to
-   capabilities.  To aid with this, two extra register maps are
-   defined below.  The first one populates the X registers from
+   registers for all GPRs.  To aid with this, two extra register maps
+   are defined below.  The first one populates the X registers from
    mc_capregs.  The second populates the C registers.  */
 
 #define AARCH64C_SIGFRAME_UCONTEXT_OFFSET	112
 #define AARCH64C_UCONTEXT_MCONTEXT_OFFSET	16
-#define	AARCH64C_MCONTEXT_SPSR_OFFSET		4
-#define	AARCH64C_MCONTEXT_CAPREGS_OFFSET	16
-#define	AARCH64C_MCONTEXT_FPREGS_OFFSET		560
-#define	AARCH64C_MCONTEXT_FLAGS_OFFSET		0
+#define	AARCH64C_MCONTEXT_CAPREGS_OFFSET	0
+#define	AARCH64C_MCONTEXT_FPREGS_OFFSET		544
+#define	AARCH64C_MCONTEXT_FLAGS_OFFSET		1072
 #define AARCH64C_MCONTEXT_FLAG_FP_VALID		0x1
+#define	AARCH64C_MCONTEXT_SPSR_OFFSET		1076
 
 static const struct regcache_map_entry aarch64_fbsd_cheriabi_gregmap[] =
   {
@@ -226,8 +225,7 @@ static const struct tramp_frame aarch64_fbsd_cheriabi_sigframe =
   SIGTRAMP_FRAME,
   4,
   {
-    {0x860053e0, ULONGEST_MAX},		/* mov  c0, csp  */
-    {0x8401c000, ULONGEST_MAX},		/* add  c0, c0, #SF_C_UC  */
+    {0x0201c3e0, ULONGEST_MAX},		/* add  c0, x0, #SF_UC  */
     {0xd2803428, ULONGEST_MAX},		/* mov  x8, #SYS_sigreturn  */
     {0xd4000001, ULONGEST_MAX},		/* svc  0x0  */
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
