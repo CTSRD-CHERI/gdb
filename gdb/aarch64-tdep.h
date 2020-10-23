@@ -36,7 +36,7 @@ struct regset;
 #define AARCH64_DWARF_SVE_FFR  47
 #define AARCH64_DWARF_SVE_P0   48
 #define AARCH64_DWARF_SVE_Z0   96
-#define AARCH64_DWARF_C0  128
+#define AARCH64_DWARF_C0  198
 
 /* Size of integer registers.  */
 #define X_REGISTER_SIZE  8
