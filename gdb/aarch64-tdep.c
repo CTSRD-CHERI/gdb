@@ -221,7 +221,7 @@ static const char *const aarch64_cheri_register_names[] =
   "c24", "c25", "c26", "c27",
   "c28", "c29", "c30", "csp",
   "pcc", "ddc", "ctpidr", "ctpidrro",
-  "cid", "rcsp", "rddc", "rctipdr",
+  "cid", "rcsp", "rddc", "rctpidr",
   "tag_map"
 };
 
