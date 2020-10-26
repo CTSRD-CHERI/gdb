@@ -223,7 +223,7 @@ static const struct tramp_frame aarch64_fbsd_cheriabi_sigframe =
   SIGTRAMP_FRAME,
   4,
   {
-    {0x0201c3e0, ULONGEST_MAX},		/* add  c0, x0, #SF_UC  */
+    {0x0201c3e0, ULONGEST_MAX},		/* add  c0, csp, #SF_UC  */
     {0xd2803428, ULONGEST_MAX},		/* mov  x8, #SYS_sigreturn  */
     {0xd4000001, ULONGEST_MAX},		/* svc  0x0  */
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
