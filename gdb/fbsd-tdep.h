@@ -71,4 +71,10 @@ extern const char *fbsd_sigsegv_cause (int code);
 
 extern const char *fbsd_sigprot_cause (int code);
 
+/* Report additional details for a signal stop.  */
+
+extern void fbsd_report_signal_info (struct gdbarch *gdbarch,
+				     struct ui_out *uiout,
+				     enum gdb_signal siggnal);
+
 #endif /* fbsd-tdep.h */

@@ -2089,6 +2089,53 @@ fbsd_sigprot_cause (int code)
     }
 }
 
+/* See fbsd-tdep.h.  */
+
+void
+fbsd_report_signal_info (struct gdbarch *gdbarch, struct ui_out *uiout,
+			 enum gdb_signal siggnal)
+{
+  LONGEST code;
+
+  TRY
+    {
+      code = parse_and_eval_long ("$_siginfo.si_code");
+    }
+  CATCH (exception, RETURN_MASK_ALL)
+    {
+      return;
+    }
+  END_CATCH
+
+  switch (siggnal)
+    {
+    case GDB_SIGNAL_SEGV:
+      {
+	const char *meaning = fbsd_sigsegv_cause (code);
+	if (meaning == NULL)
+	  return;
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
+      }
+      break;
+
+    case GDB_SIGNAL_PROT:
+      {
+	const char *meaning = fbsd_sigprot_cause (code);
+	if (meaning == NULL)
+	  return;
+
+	uiout->text ("\n");
+	uiout->field_string ("sigcode-meaning", meaning);
+      }
+      break;
+
+    default:
+      break;
+    }
+}
+
 /* To be called from GDB_OSABI_FREEBSD handlers. */
 
 void
@@ -2104,6 +2151,7 @@ fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_get_siginfo_type (gdbarch, fbsd_get_siginfo_type);
   set_gdbarch_gdb_signal_from_target (gdbarch, fbsd_gdb_signal_from_target);
   set_gdbarch_gdb_signal_to_target (gdbarch, fbsd_gdb_signal_to_target);
+  set_gdbarch_report_signal_info (gdbarch, fbsd_report_signal_info);
   set_gdbarch_skip_solib_resolver (gdbarch, fbsd_skip_solib_resolver);
 
   /* `catch syscall' */

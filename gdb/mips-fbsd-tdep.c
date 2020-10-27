@@ -935,42 +935,14 @@ mips_fbsd_report_signal_info (struct gdbarch *gdbarch,
 			      struct ui_out *uiout,
 			      enum gdb_signal siggnal)
 {
-  LONGEST code;
-
-  TRY
-    {
-      code = parse_and_eval_long ("$_siginfo.si_code");
-    }
-  CATCH (exception, RETURN_MASK_ALL)
-    {
-      return;
-    }
-  END_CATCH
+  fbsd_report_signal_info (gdbarch, uiout, siggnal);
 
   switch (siggnal)
     {
-    case GDB_SIGNAL_SEGV:
-      {
-	const char *meaning = fbsd_sigsegv_cause (code);
-	if (meaning == NULL)
-	  return;
-
-	uiout->text ("\n");
-	uiout->field_string ("sigcode-meaning", meaning);
-      }
-      break;
-
     case GDB_SIGNAL_PROT:
       {
 	if (mips_regnum (gdbarch)->cap0 == -1)
 	  return;
-
-	const char *meaning = fbsd_sigprot_cause (code);
-	if (meaning == NULL)
-	  return;
-
-	uiout->text ("\n");
-	uiout->field_string ("sigcode-meaning", meaning);
 
 	LONGEST capreg;
 
