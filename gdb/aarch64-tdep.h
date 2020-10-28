@@ -210,6 +210,14 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
   int cap_reg_base;
   /* Last register from the capability set.  */
   int cap_reg_last;
+  /* CLR register number.  */
+  int cap_reg_clr;
+  /* CSP register numbers.  */
+  int cap_reg_csp;
+  /* PCC register number.  */
+  int cap_reg_pcc;
+  /* RCSP register number.  */
+  int cap_reg_rcsp;
 
   /* Returns true if the target supports capabilities.  */
   bool has_capability () const
