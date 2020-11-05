@@ -556,7 +556,7 @@ generic_value_print_capability (struct value *val, struct ui_file *stream,
       uint128_t dummy_cap;
       memcpy (&dummy_cap, contents, length);
       capability cap (dummy_cap, tag);
-      gdb_printf (stream, "%s", cap.to_str ().c_str ());
+      gdb_printf (stream, "%s", cap.to_str (true).c_str ());
     }
 
   return;
