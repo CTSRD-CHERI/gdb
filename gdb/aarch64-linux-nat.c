@@ -764,7 +764,11 @@ aarch64_store_registers (struct regcache *regcache, int regno)
   else if (regno < AARCH64_V0_REGNUM)
     {
       store_gregs_to_thread (regcache);
-      fetch_cregs_from_thread (regcache);
+
+      /* If we have capability registers, refresh them when we store to
+	 the general register set.  */
+      if (tdep->has_capability ())
+	fetch_cregs_from_thread (regcache);
     }
   /* SVE register?  */
   else if ((tdep->has_sve () || tdep->has_sme ())
