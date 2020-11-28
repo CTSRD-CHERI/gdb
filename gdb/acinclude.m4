@@ -357,13 +357,21 @@ AC_DEFUN([GDB_AC_CHECK_BFD], [
   LDFLAGS="-L../bfd -L../libiberty $ZLIBDIR $LDFLAGS"
   intl=`echo $LIBINTL | sed 's,${top_builddir}/,,g'`
   LIBS="-lbfd -liberty -lz $intl $LIBS"
-  AC_CACHE_CHECK([$1], [$2],
-  [AC_TRY_LINK(
-  [#include <stdlib.h>
-  #include "bfd.h"
-  #include "$4"
-  ],
-  [return $3;], [[$2]=yes], [[$2]=no])])
+  AC_CACHE_CHECK(
+    [$1],
+    [$2],
+    [AC_LINK_IFELSE(
+       [AC_LANG_PROGRAM(
+	  [#include <stdlib.h>
+	   #include <string.h>
+	   #include "bfd.h"
+	   #include "$4"],
+	  [return $3;]
+	)],
+       [[$2]=yes],
+       [[$2]=no]
+     )]
+  )
   CFLAGS=$OLD_CFLAGS
   LDFLAGS=$OLD_LDFLAGS
   LIBS=$OLD_LIBS])
