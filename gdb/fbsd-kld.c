@@ -473,10 +473,7 @@ kld_current_sos (void)
 		 * Try to read the pathname (if it exists) and store
 		 * it in so_name.
 		 */
-		if (find_kld_path(newobj->so_original_name, newobj->so_name,
-		    sizeof(newobj->so_name))) {
-			/* we found the kld */;
-		} else if (info->off_pathname != 0) {
+		if (info->off_pathname != 0) {
 			target_read_string(read_pointer(kld +
 			    info->off_pathname),
 			    &path, sizeof(newobj->so_name), &error);
