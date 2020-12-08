@@ -1773,6 +1773,16 @@ install-only: $(CONFIG_INSTALL)
 			$(DESTDIR)$(bindir)/$$transformed_name$(EXEEXT) ; \
 		$(SHELL) $(srcdir)/../mkinstalldirs $(DESTDIR)$(includedir)/gdb ; \
 		$(INSTALL_DATA) jit-reader.h $(DESTDIR)$(includedir)/gdb/jit-reader.h
+	transformed_name=`t='$(program_transform_name)'; \
+			  echo kgdb | sed -e "$$t"` ; \
+		if test "x$$transformed_name" = x; then \
+		  transformed_name=kgdb ; \
+		else \
+		  true ; \
+		fi ; \
+		$(SHELL) $(srcdir)/../mkinstalldirs $(DESTDIR)$(bindir) ; \
+		$(INSTALL_PROGRAM) kgdb$(EXEEXT) \
+			$(DESTDIR)$(bindir)/$$transformed_name$(EXEEXT) ; \
 	if test "x$(HAVE_NATIVE_GCORE_TARGET)$(HAVE_NATIVE_GCORE_HOST)" != x; \
 	then \
 	  transformed_name=`t='$(program_transform_name)'; \
