@@ -123,6 +123,7 @@ struct value_print_options user_print_options =
   true,				/* memory_tag_violations */
   false,			/* stop_print_at_null */
   false,			/* print_array_indexes */
+  true,				/* compact_capabilities */
   false,			/* deref_ref */
   true,				/* static_field_print */
   true,				/* pascal_static_field_print */
@@ -213,6 +214,17 @@ show_print_array_indexes (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
 {
   gdb_printf (file, _("Printing of array indexes is %s.\n"), value);
+}
+
+/* By default we print capabilities in compact form.  This may be changed to
+   print them in a more verbose format.  */
+
+static void
+show_print_compact_capabilities (struct ui_file *file, int from_tty,
+				 struct cmd_list_element *c,
+				 const char *value)
+{
+  gdb_printf (file, _("Printing of compact capabilities is %s.\n"), value);
 }
 
 /* Print repeat counts if there are more than this many repetitions of an
@@ -556,7 +568,8 @@ generic_value_print_capability (struct value *val, struct ui_file *stream,
       uint128_t dummy_cap;
       memcpy (&dummy_cap, contents, length);
       capability cap (dummy_cap, tag);
-      gdb_printf (stream, "%s ", cap.to_str (true).c_str ());
+      gdb_printf (stream, "%s ",
+			cap.to_str (options->compact_capabilities).c_str ());
     }
 
   return;
@@ -3015,6 +3028,15 @@ static const gdb::option::option_def value_print_option_defs[] = {
     N_("Show limit on string chars to print."),
     N_("\"elements\" causes the array element limit to be used.\n"
        "\"unlimited\" causes there to be no limit."),
+  },
+
+  boolean_option_def {
+    "compact-capabilities",
+    [] (value_print_options *opt) { return &opt->compact_capabilities; },
+    show_print_compact_capabilities, /* show_cmd_cb */
+    N_("Set compact printing of capabilities."),
+    N_("Show compact printing of capabilities."),
+    NULL, /* help_doc */
   },
 
   uinteger_option_def {
