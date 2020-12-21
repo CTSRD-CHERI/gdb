@@ -3899,6 +3899,13 @@ value::fetch_lazy_memory ()
   if (len > 0)
     read_value_memory (this, 0, stack (), addr,
 		       contents_all_raw ().data (), len);
+
+  if (TYPE_CAPABILITY (type))
+    {
+      set_tagged (true);
+      bool tag = gdbarch_get_cap_tag_from_address (arch (), addr);
+      set_tag (tag);
+    }
 }
 
 /* See value.h.  */

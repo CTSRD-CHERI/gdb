@@ -1120,6 +1120,13 @@ default_register_tag (struct gdbarch *gdbarch,
   return false;
 }
 
+/* See arch-utils.h.  */
+bool default_get_cap_tag_from_address (struct gdbarch *gdbarch,
+				       CORE_ADDR addr)
+{
+  return false;
+}
+
 CORE_ADDR
 default_get_return_buf_addr (struct type *val_type, frame_info_ptr cur_frame)
 {

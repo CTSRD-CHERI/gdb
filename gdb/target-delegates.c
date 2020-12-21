@@ -197,6 +197,7 @@ struct dummy_target : public target_ops
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
   x86_xsave_layout fetch_x86_xsave_layout () override;
+  gdb::byte_vector read_capability (CORE_ADDR arg0) override;
 };
 
 struct debug_target : public target_ops
@@ -372,6 +373,7 @@ struct debug_target : public target_ops
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
   x86_xsave_layout fetch_x86_xsave_layout () override;
+  gdb::byte_vector read_capability (CORE_ADDR arg0) override;
 };
 
 void
@@ -4559,6 +4561,32 @@ debug_target::fetch_x86_xsave_layout ()
   gdb_printf (gdb_stdlog, "<- %s->fetch_x86_xsave_layout (", this->beneath ()->shortname ());
   gdb_puts (") = ", gdb_stdlog);
   target_debug_print_x86_xsave_layout (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
+}
+
+gdb::byte_vector
+target_ops::read_capability (CORE_ADDR arg0)
+{
+  return this->beneath ()->read_capability (arg0);
+}
+
+gdb::byte_vector
+dummy_target::read_capability (CORE_ADDR arg0)
+{
+  tcomplain ();
+}
+
+gdb::byte_vector
+debug_target::read_capability (CORE_ADDR arg0)
+{
+  gdb_printf (gdb_stdlog, "-> %s->read_capability (...)\n", this->beneath ()->shortname ());
+  gdb::byte_vector result
+    = this->beneath ()->read_capability (arg0);
+  gdb_printf (gdb_stdlog, "<- %s->read_capability (", this->beneath ()->shortname ());
+  target_debug_print_CORE_ADDR (arg0);
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_gdb_byte_vector (result);
   gdb_puts ("\n", gdb_stdlog);
   return result;
 }

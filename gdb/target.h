@@ -210,6 +210,8 @@ enum target_object
   TARGET_OBJECT_FREEBSD_VMMAP,
   /* FreeBSD process strings.  */
   TARGET_OBJECT_FREEBSD_PS_STRINGS,
+  /* CHERI capabilities.  */
+  TARGET_OBJECT_CAPABILITY,
   /* Possible future objects: TARGET_OBJECT_FILE, ...  */
 };
 
@@ -1330,6 +1332,10 @@ struct target_ops
     /* Return the x86 XSAVE extended state area layout.  */
     virtual x86_xsave_layout fetch_x86_xsave_layout ()
       TARGET_DEFAULT_RETURN (x86_xsave_layout ());
+
+    /* Read a capability from ADDR.  */
+    virtual gdb::byte_vector read_capability (CORE_ADDR addr)
+      TARGET_DEFAULT_NORETURN (tcomplain ());
   };
 
 /* Deleter for std::unique_ptr.  See comments in
@@ -2572,5 +2578,8 @@ extern void target_prepare_to_generate_core (void);
 
 /* See to_done_generating_core.  */
 extern void target_done_generating_core (void);
+
+/* See read_capability.  */
+extern gdb::byte_vector target_read_capability (CORE_ADDR addr);
 
 #endif /* !defined (TARGET_H) */
