@@ -173,6 +173,7 @@ proc_with_prefix test-print {{prefix ""}} {
 	"-array"
 	"-array-indexes"
 	"-characters"
+	"-compact-capabilities"
 	"-elements"
 	"-max-depth"
 	"-memory-tag-violations"
