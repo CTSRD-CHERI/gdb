@@ -302,7 +302,7 @@ enum {
      packets and the tag violation stop replies.  */
   PACKET_memory_tagging_feature,
 
-  /* Support for the qXfer:capa:read packet.  */
+  /* Support for the qXfer:capa:read and qXfer:capa:write packets.  */
   PACKET_qXfer_capability,
 
   PACKET_MAX
@@ -997,6 +997,8 @@ public:
 		      const gdb::byte_vector &tags, int type) override;
 
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
+  bool write_capability (CORE_ADDR addr,
+			 gdb::array_view<const gdb_byte> buffer) override;
 
 public: /* Remote specific methods.  */
 
@@ -11422,6 +11424,9 @@ remote_target::xfer_partial (enum target_object object,
 	return remote_read_qxfer ("capa", annex,
 				  readbuf, offset, len, xfered_len,
 				  PACKET_qXfer_capability);
+      else if (writebuf)
+	return remote_write_qxfer ("capa", annex, writebuf, offset, len,
+				   xfered_len, PACKET_qXfer_capability);
       else
 	return TARGET_XFER_E_IO;
     }
@@ -15367,6 +15372,28 @@ remote_target::read_capability (CORE_ADDR addr)
   return cap_vec;
 }
 
+/* Implementation of the write_capability method.  */
+
+bool
+remote_target::write_capability (CORE_ADDR addr,
+				 gdb::array_view<const gdb_byte> buffer)
+{
+  gdb_assert (!buffer.empty ());
+  std::string addr_str = string_printf ("%s", phex_nz (addr, 0));
+  ULONGEST xfered_len;
+  enum target_xfer_status status;
+
+  status = target_xfer_partial (current_inferior ()->top_target (),
+				TARGET_OBJECT_CAPABILITY, addr_str.c_str (),
+				nullptr, buffer.data (), 0, buffer.size (),
+				&xfered_len);
+
+  if (status != TARGET_XFER_OK)
+    perror_with_name (_("Unable to write capability to address."));
+
+  return true;
+}
+
 void _initialize_remote ();
 void
 _initialize_remote ()
@@ -15726,7 +15753,7 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 			 "memory-tagging-feature", "memory-tagging-feature", 0);
 
   add_packet_config_cmd (PACKET_qXfer_capability,
-			 "qXfer:capa:read", "read-capability", 0);
+			 "qXfer:capa:read", "read-write-capability", 0);
 
   /* Assert that we've registered "set remote foo-packet" commands
      for all packet configs.  */
