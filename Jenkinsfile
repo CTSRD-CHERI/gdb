@@ -12,13 +12,13 @@ def buildNative(String label) {
             nodeLabel: label,
             sdkCompilerOnly: true,
             uniqueId: "native-${label}",
-            beforeBuild: 'ls -la $WORKSPACE && find cherisdk')
+            beforeBuild: 'ls -la $WORKSPACE')
 }
 
-buildNative('linux-latest')
-buildNative('linux-baseline')
-buildNative('freebsd')
+parallel(['linux-latest'  : { buildNative('linux-latest') },
+          'linux-baseline': { buildNative('linux-baseline') },
+          'freebsd'       : { buildNative('freebsd') }])
 
 cheribuildProject(target: 'gdb',
         targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-purecap", "riscv64", "riscv64-purecap"],
-        beforeBuild: 'ls -la $WORKSPACE && find cherisdk')
+        beforeBuild: 'ls -la $WORKSPACE')
