@@ -21,5 +21,12 @@ parallel(['linux-latest'  : { buildNative('linux-latest') },
           'freebsd'       : { buildNative('freebsd') }])
 
 cheribuildProject(target: 'gdb',
-        targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-hybrid", "riscv64", "riscv64-hybrid"],
-        beforeBuild: 'ls -la $WORKSPACE')
+        targetArchitectures: [
+          "amd64",
+          // TODO: builds morello-gdb repo "aarch64",
+          // TODO: builds morello-gdb repo "morello-hybrid",
+          "mips64",
+          "mips64-hybrid",
+          // TODO: doesn't compile "riscv64",
+          "riscv64-hybrid"
+        ])
