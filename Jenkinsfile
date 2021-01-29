@@ -20,5 +20,5 @@ parallel(['linux-latest'  : { buildNative('linux-latest') },
           'freebsd'       : { buildNative('freebsd') }])
 
 cheribuildProject(target: 'gdb',
-        targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-purecap", "riscv64", "riscv64-purecap"],
+        targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-hybrid", "riscv64", "riscv64-hybrid"],
         beforeBuild: 'ls -la $WORKSPACE')
