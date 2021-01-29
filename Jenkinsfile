@@ -5,11 +5,6 @@ setDefaultJobProperties([rateLimitBuilds([count: 2, durationName: 'hour', userBo
                          [$class: 'GithubProjectProperty', projectUrlStr: 'https://github.com/CTSRD-CHERI/gdb'],
                          copyArtifactPermission('*'),])
 
-cheribuildProject(target: 'gdb',
-        targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-purecap", "riscv64", "riscv64-purecap"],
-        beforeBuild: 'ls -la $WORKSPACE')
-
-
 def buildNative(String label) {
     cheribuildProject(target: 'gdb', targetArchitectures: ['native'],
             extraArgs: '--install-prefix=/ --gdb-native/configure-options=--with-python=no',
@@ -17,9 +12,13 @@ def buildNative(String label) {
             nodeLabel: label,
             sdkCompilerOnly: true,
             uniqueId: "native-${label}",
-            beforeBuild: 'ls -la $WORKSPACE')
+            beforeBuild: 'ls -la $WORKSPACE && find cherisdk')
 }
 
 buildNative('linux-latest')
 buildNative('linux-baseline')
 buildNative('freebsd')
+
+cheribuildProject(target: 'gdb',
+        targetArchitectures: ["amd64", "aarch64", "mips64", "mips64-purecap", "riscv64", "riscv64-purecap"],
+        beforeBuild: 'ls -la $WORKSPACE && find cherisdk')
