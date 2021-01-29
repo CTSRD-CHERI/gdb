@@ -12,6 +12,7 @@ def buildNative(String label) {
             nodeLabel: label,
             sdkCompilerOnly: true,
             uniqueId: "native-${label}",
+            stageSuffix: label
             beforeBuild: 'ls -la $WORKSPACE')
 }
 
