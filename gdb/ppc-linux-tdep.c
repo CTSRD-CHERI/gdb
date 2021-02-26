@@ -250,7 +250,7 @@ ppc_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
 static enum return_value_convention
 ppc_linux_return_value (struct gdbarch *gdbarch, struct value *function,
 			struct type *valtype, struct regcache *regcache,
-			struct value **read_value, const gdb_byte *writebuf)
+			struct value **read_value, struct value *write_value)
 {  
   gdb_byte *readbuf = nullptr;
   if (read_value != nullptr)
@@ -258,6 +258,10 @@ ppc_linux_return_value (struct gdbarch *gdbarch, struct value *function,
       *read_value = value::allocate (valtype);
       readbuf = (*read_value)->contents_raw ().data ();
     }
+
+  const gdb_byte *writebuf = nullptr;
+  if (write_value != nullptr)
+    writebuf = write_value->contents ().data ();
 
   if ((valtype->code () == TYPE_CODE_STRUCT
        || valtype->code () == TYPE_CODE_UNION)

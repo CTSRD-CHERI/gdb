@@ -482,8 +482,8 @@ extern void set_gdbarch_return_value (struct gdbarch *gdbarch, gdbarch_return_va
    to force the value returned by a function (see the "return" command
    for instance). */
 
-typedef enum return_value_convention (gdbarch_return_value_as_value_ftype) (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, const gdb_byte *writebuf);
-extern enum return_value_convention gdbarch_return_value_as_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, const gdb_byte *writebuf);
+typedef enum return_value_convention (gdbarch_return_value_as_value_ftype) (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, struct value *write_value);
+extern enum return_value_convention gdbarch_return_value_as_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, struct value *write_value);
 extern void set_gdbarch_return_value_as_value (struct gdbarch *gdbarch, gdbarch_return_value_as_value_ftype *return_value_as_value);
 
 /* Return the address at which the value being returned from

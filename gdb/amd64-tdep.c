@@ -736,7 +736,7 @@ amd64_classify (struct type *type, enum amd64_reg_class theclass[2])
 static enum return_value_convention
 amd64_return_value (struct gdbarch *gdbarch, struct value *function,
 		    struct type *type, struct regcache *regcache,
-		    struct value **read_value, const gdb_byte *writebuf)
+		    struct value **read_value, struct value *write_value)
 {
   enum amd64_reg_class theclass[2];
   int len = type->length ();
@@ -746,7 +746,7 @@ amd64_return_value (struct gdbarch *gdbarch, struct value *function,
   int sse_reg = 0;
   int i;
 
-  gdb_assert (!(read_value && writebuf));
+  gdb_assert (!(read_value && write_value));
 
   /* 1. Classify the return type with the classification algorithm.  */
   amd64_classify (type, theclass);
@@ -781,6 +781,9 @@ amd64_return_value (struct gdbarch *gdbarch, struct value *function,
       *read_value = value::allocate (type);
       readbuf = (*read_value)->contents_raw ().data ();
     }
+  const gdb_byte *writebuf = nullptr;
+  if (write_value != nullptr)
+    writebuf = write_value->contents ().data ();
 
   /* 8. If the class is COMPLEX_X87, the real part of the value is
 	returned in %st0 and the imaginary part in %st1.  */

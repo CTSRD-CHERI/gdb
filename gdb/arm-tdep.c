@@ -9222,12 +9222,16 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 static enum return_value_convention
 arm_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *valtype, struct regcache *regcache,
-		  struct value **read_value, const gdb_byte *writebuf)
+		  struct value **read_value, struct value *write_value)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
   struct type *func_type = function ? function->type () : NULL;
   enum arm_vfp_cprc_base_type vfp_base_type;
   int vfp_base_count;
+
+  const gdb_byte *writebuf = nullptr;
+  if (write_value != nullptr)
+    writebuf = write_value->contents ().data ();
 
   if (arm_vfp_abi_for_function (gdbarch, func_type)
       && arm_vfp_call_candidate (valtype, &vfp_base_type, &vfp_base_count))

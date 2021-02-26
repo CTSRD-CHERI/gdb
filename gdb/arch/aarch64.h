@@ -152,6 +152,9 @@ enum aarch64_regnum
    (Top Byte Ignore).  */
 #define AARCH64_TOP_BITS_MASK	  0xff80000000000000ULL
 
+/* Size of a memory tag granule for Morello.  */
+#define MORELLO_MEMORY_TAG_GRANULE_SIZE 16
+
 /* Pseudo register base numbers.  */
 #define AARCH64_Q0_REGNUM 0
 #define AARCH64_D0_REGNUM (AARCH64_Q0_REGNUM + AARCH64_D_REGISTER_COUNT)

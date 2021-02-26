@@ -3492,7 +3492,7 @@ riscv_return_value (struct gdbarch  *gdbarch,
 		    struct type *type,
 		    struct regcache *regcache,
 		    struct value **read_value,
-		    const gdb_byte *writebuf)
+		    struct value *write_value)
 {
   struct riscv_call_info call_info (gdbarch);
   struct riscv_arg_info info;
@@ -3507,6 +3507,10 @@ riscv_return_value (struct gdbarch  *gdbarch,
       riscv_print_arg_location (&tmp, gdbarch, &info, 0, 0);
       riscv_infcall_debug_printf ("[R] %s", tmp.string ().c_str ());
     }
+
+  const gdb_byte *writebuf = nullptr;
+  if (write_value != nullptr)
+    writebuf = write_value->contents ().data ();
 
   if (read_value != nullptr || writebuf != nullptr)
     {

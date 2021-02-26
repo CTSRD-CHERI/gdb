@@ -919,7 +919,7 @@ for instance).
         ("struct type *", "valtype"),
         ("struct regcache *", "regcache"),
         ("struct value **", "read_value"),
-        ("const gdb_byte *", "writebuf"),
+        ("struct value *", "write_value"),
     ],
     predefault="default_gdbarch_return_value",
     # If we're using the default, then the other method must be set;

@@ -547,6 +547,7 @@ generic_value_print_capability (struct value *val, struct ui_file *stream,
 
   switch (val->lval ())
     {
+      case not_lval:
       case lval_register:
 	if (val->tagged ())
 	  tag = val->tag ();

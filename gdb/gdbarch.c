@@ -2679,13 +2679,13 @@ set_gdbarch_return_value (struct gdbarch *gdbarch,
 }
 
 enum return_value_convention
-gdbarch_return_value_as_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, const gdb_byte *writebuf)
+gdbarch_return_value_as_value (struct gdbarch *gdbarch, struct value *function, struct type *valtype, struct regcache *regcache, struct value **read_value, struct value *write_value)
 {
   gdb_assert (gdbarch != NULL);
   gdb_assert (gdbarch->return_value_as_value != NULL);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_return_value_as_value called\n");
-  return gdbarch->return_value_as_value (gdbarch, function, valtype, regcache, read_value, writebuf);
+  return gdbarch->return_value_as_value (gdbarch, function, valtype, regcache, read_value, write_value);
 }
 
 void

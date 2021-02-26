@@ -1496,7 +1496,7 @@ sparc32_store_return_value (struct type *type, struct regcache *regcache,
 static enum return_value_convention
 sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
 		      struct type *type, struct regcache *regcache,
-		      struct value **read_value, const gdb_byte *writebuf)
+		      struct value **read_value, struct value *write_value)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
@@ -1518,11 +1518,12 @@ sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
 	  addr = read_memory_unsigned_integer (sp + 64, 4, byte_order);
 	  *read_value = value_at_non_lval (type, addr);
 	}
-      if (writebuf)
+      if (write_value != nullptr)
 	{
 	  regcache_cooked_read_unsigned (regcache, SPARC_SP_REGNUM, &sp);
 	  addr = read_memory_unsigned_integer (sp + 64, 4, byte_order);
-	  write_memory (addr, writebuf, type->length ());
+	  write_memory (addr, write_value->contents ().data (),
+			type->length ());
 	}
 
       return RETURN_VALUE_ABI_PRESERVES_ADDRESS;
@@ -1534,8 +1535,9 @@ sparc32_return_value (struct gdbarch *gdbarch, struct value *function,
       gdb_byte *readbuf = (*read_value)->contents_raw ().data ();
       sparc32_extract_return_value (type, regcache, readbuf);
     }
-  if (writebuf)
-    sparc32_store_return_value (type, regcache, writebuf);
+  if (write_value != nullptr)
+    sparc32_store_return_value (type, regcache,
+				write_value->contents ().data ());
 
   return RETURN_VALUE_REGISTER_CONVENTION;
 }

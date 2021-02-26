@@ -355,7 +355,8 @@ amd64_windows_push_dummy_call
 static enum return_value_convention
 amd64_windows_return_value (struct gdbarch *gdbarch, struct value *function,
 			    struct type *type, struct regcache *regcache,
-			    struct value **read_value, const gdb_byte *writebuf)
+			    struct value **read_value,
+			    struct value *write_value)
 {
   int len = type->length ();
   int regnum = -1;
@@ -412,8 +413,9 @@ amd64_windows_return_value (struct gdbarch *gdbarch, struct value *function,
 	  regcache->raw_read_part (regnum, 0, len,
 				   (*read_value)->contents_raw ().data ());
 	}
-      if (writebuf)
-	regcache->raw_write_part (regnum, 0, len, writebuf);
+      if (write_value != nullptr)
+	regcache->raw_write_part (regnum, 0, len,
+				  write_value->contents ().data ());
       return RETURN_VALUE_REGISTER_CONVENTION;
     }
 }

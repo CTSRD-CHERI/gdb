@@ -1220,7 +1220,7 @@ enum return_value_convention
 default_gdbarch_return_value
      (struct gdbarch *gdbarch, struct value *function, struct type *valtype,
       struct regcache *regcache, struct value **read_value,
-      const gdb_byte *writebuf)
+      struct value *write_value)
 {
   gdb_byte *readbuf = nullptr;
 
@@ -1229,6 +1229,10 @@ default_gdbarch_return_value
       *read_value = value::allocate (valtype);
       readbuf = (*read_value)->contents_raw ().data ();
     }
+
+  const gdb_byte *writebuf = nullptr;
+  if (write_value != nullptr)
+    writebuf = write_value->contents ().data ();
 
   return gdbarch->return_value (gdbarch, function, valtype, regcache,
 				readbuf, writebuf);

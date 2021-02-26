@@ -2812,7 +2812,7 @@ return_command (const char *retval_exp, int from_tty)
       gdbarch_return_value_as_value
 	(cache_arch, function, return_type,
 	 get_current_regcache (), NULL /*read*/,
-	 return_value->contents ().data () /*write*/);
+	 return_value /*write*/);
     }
 
   /* If we are at the end of a call dummy now, pop the dummy frame
