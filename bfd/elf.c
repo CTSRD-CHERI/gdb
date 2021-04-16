@@ -10728,6 +10728,12 @@ elfcore_grok_aarch_zt (bfd *abfd, Elf_Internal_Note *note)
 }
 
 static bool
+elfcore_grok_aarch_morello (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-aarch-morello", note);
+}
+
+static bool
 elfcore_grok_arc_v2 (bfd *abfd, Elf_Internal_Note *note)
 {
   return elfcore_make_note_pseudosection (abfd, ".reg-arc-v2", note);
@@ -11502,6 +11508,13 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
 	  && strcmp (note->namedata, "LINUX") == 0)
 	return elfcore_grok_loongarch_lasx (abfd, note);
+      else
+	return true;
+
+    case NT_ARM_MORELLO:
+      if (note->namesz == 6
+	  && strcmp (note->namedata, "LINUX") == 0)
+	return elfcore_grok_aarch_morello (abfd, note);
       else
 	return true;
 
@@ -13125,6 +13138,18 @@ elfcore_write_aarch_zt (bfd *abfd,
 }
 
 char *
+elfcore_write_aarch_morello (bfd *abfd,
+			     char *buf,
+			     int *bufsiz,
+			     const void *aarch_morello,
+			     int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     note_name, NT_ARM_MORELLO, aarch_morello, size);
+}
+
+char *
 elfcore_write_arc_v2 (bfd *abfd,
 		      char *buf,
 		      int *bufsiz,
@@ -13311,6 +13336,8 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_aarch_za (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-aarch-zt") == 0)
     return elfcore_write_aarch_zt (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-aarch-morello") == 0)
+    return elfcore_write_aarch_morello (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-arc-v2") == 0)
     return elfcore_write_arc_v2 (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".gdb-tdesc") == 0)

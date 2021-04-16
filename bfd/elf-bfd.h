@@ -2957,6 +2957,8 @@ extern char *elfcore_write_aarch_za
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_aarch_zt
   (bfd *, char *, int *, const void *, int);
+extern char *elfcore_write_aarch_morello
+  (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_arc_v2
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_riscv_csr
