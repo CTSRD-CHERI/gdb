@@ -81,6 +81,7 @@ static const struct osabi_names gdb_osabi_names[] =
   { "Newlib", NULL },
   { "SDE", NULL },
   { "PikeOS", NULL },
+  { "RTEMS", NULL },
 
   { "<invalid>", NULL }
 };
