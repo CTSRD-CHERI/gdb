@@ -40,6 +40,57 @@
 
 #include "riscv-tdep.h"
 
+/* Implement the "init" method of struct tramp_frame.  */
+static void
+riscv_cherifreertos_tramp_init (const struct tramp_frame *self,
+              struct frame_info *this_frame,
+              struct trad_frame_cache *this_cache,
+              CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR frame_sp = get_frame_sp (this_frame);
+  int clen = riscv_abi_clen (gdbarch);
+
+  CORE_ADDR mcontext_addr
+    = (frame_sp + clen * 13);
+
+  trad_frame_set_reg_addr(this_cache, RISCV_CFP_REGNUM, mcontext_addr);
+  trad_frame_set_reg_addr(this_cache, RISCV_PCC_REGNUM, mcontext_addr + 1 * clen);
+
+  trad_frame_set_id (this_cache, frame_id_build (frame_sp, func));
+}
+
+static const struct tramp_frame riscv_cherifreertos_intercompartment_tramp  =
+{
+  NORMAL_FRAME,
+  4,
+  {
+    { 0x00000317, ULONGEST_MAX },
+    { 0xf343135b, ULONGEST_MAX },
+    { 0x0003230f, ULONGEST_MAX },
+    { 0xfec300db, ULONGEST_MAX },
+    { 0x03012d8f, ULONGEST_MAX },
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  riscv_cherifreertos_tramp_init
+};
+
+static const struct tramp_frame riscv_cherifreertos_intracompartment_tramp =
+{
+  NORMAL_FRAME,
+  4,
+  {
+    { 0x00000297, ULONGEST_MAX },
+    { 0xede292db, ULONGEST_MAX },
+    { 0x0002a28f, ULONGEST_MAX },
+    { 0xfec280db, ULONGEST_MAX },
+    { 0x0d01240f, ULONGEST_MAX },
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  riscv_cherifreertos_tramp_init
+};
+
 static void
 riscv_rtems_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 {
@@ -53,6 +104,9 @@ riscv_rtems_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
              : (riscv_isa_xlen (gdbarch) == 4
                ? rtems_ilp32_fetch_link_map_offsets
                : rtems_lp64_fetch_link_map_offsets))));
+
+  tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intercompartment_tramp);
+  tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intracompartment_tramp);
 
   set_solib_rtems_fetch_link_map_offsets
     (gdbarch, rtems_c128_fetch_link_map_offsets);
