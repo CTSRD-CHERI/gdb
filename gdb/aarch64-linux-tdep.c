@@ -67,6 +67,8 @@
 /* For std::pow */
 #include <cmath>
 
+#include "gdbsupport/capability.h"
+
 /* Signal frame handling.
 
       +------------+  ^
@@ -3037,10 +3039,29 @@ maint_print_cap_from_addr_cmd (const char *args, int from_tty)
   CORE_ADDR addr = parse_and_eval_address (args);
   cap = target_read_capability (addr);
 
+  if (cap.empty ())
+    {
+      gdb_printf (gdb_stdlog,
+		  "Could not read capability from address %s.\n",
+		  phex_nz (addr, 8));
+      return;
+    }
+
   for (auto it : cap)
     gdb_printf (gdb_stdlog, "%02x ", it);
-
   gdb_puts ("\n", gdb_stdlog);
+
+  bool tag = (cap[0] == 1);
+  uint128_t cap_128bits;
+  memcpy (&cap_128bits, &cap[1], 16);
+
+  capability capability (cap_128bits, tag);
+
+  gdb_printf (gdb_stdlog, "verbose: %s\n",
+	      capability.to_str (false).c_str ());
+  gdb_puts ("\n", gdb_stdlog);
+  gdb_printf (gdb_stdlog, "compact: %s\n",
+	      capability.to_str (true).c_str ());
 }
 
 /* Implement the maintenance set capability in memory command.  */
