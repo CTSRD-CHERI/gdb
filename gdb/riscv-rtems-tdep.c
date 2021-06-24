@@ -56,6 +56,7 @@ riscv_cherifreertos_tramp_init (const struct tramp_frame *self,
     = (frame_sp + clen * 13);
 
   trad_frame_set_reg_addr(this_cache, RISCV_CFP_REGNUM, mcontext_addr);
+  trad_frame_set_reg_value (this_cache, RISCV_CSP_REGNUM, frame_sp + clen * 15);
   trad_frame_set_reg_addr(this_cache, RISCV_PCC_REGNUM, mcontext_addr + 1 * clen);
 
   trad_frame_set_id (this_cache, frame_id_build (frame_sp, func));
