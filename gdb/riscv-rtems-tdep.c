@@ -67,8 +67,6 @@ static const struct tramp_frame riscv_cherifreertos_intercompartment_tramp  =
   NORMAL_FRAME,
   4,
   {
-    { 0x00000317, ULONGEST_MAX },
-    { 0xf343135b, ULONGEST_MAX },
     { 0x0003230f, ULONGEST_MAX },
     { 0xfec300db, ULONGEST_MAX },
     { 0x03012d8f, ULONGEST_MAX },
@@ -82,10 +80,7 @@ static const struct tramp_frame riscv_cherifreertos_intracompartment_tramp =
   NORMAL_FRAME,
   4,
   {
-    { 0x00000297, ULONGEST_MAX },
-    { 0xede292db, ULONGEST_MAX },
-    { 0x0002a28f, ULONGEST_MAX },
-    { 0xfec280db, ULONGEST_MAX },
+    { 0xfec300db, ULONGEST_MAX },
     { 0x0d01240f, ULONGEST_MAX },
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
   },
