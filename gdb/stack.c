@@ -1528,11 +1528,10 @@ info_frame_command_core (struct frame_info *fi, bool selected_frame_p)
 	    if (VALUE_LVAL (value) == not_lval)
 	      {
 		CORE_ADDR sp;
-		enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-		int sp_size = register_size (gdbarch, sp_regnum);
+		struct type *sp_type = register_type (gdbarch, sp_regnum);
 
-		sp = extract_unsigned_integer (value_contents_all (value),
-					       sp_size, byte_order);
+		sp = extract_typed_address (value_contents_all (value),
+					    sp_type);
 
 		printf_filtered (" Previous frame's sp is ");
 		fputs_filtered (paddress (gdbarch, sp), gdb_stdout);
