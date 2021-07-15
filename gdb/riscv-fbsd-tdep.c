@@ -188,7 +188,8 @@ riscv_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
    by the floating point register set.  The floating point register
    set is only valid if the _MC_FP_VALID flag is set in mc_flags.  */
 
-#define RISCV_SIGFRAME_UCONTEXT_OFFSET 		80
+#define RISCV_SIGFRAME_UCONTEXT_OFFSET_LP64	80
+#define RISCV_SIGFRAME_UCONTEXT_OFFSET_L64PC128	112
 #define RISCV_UCONTEXT_MCONTEXT_OFFSET		16
 #define RISCV_MCONTEXT_FLAG_FP_VALID		0x1
 
@@ -197,23 +198,21 @@ riscv_fbsd_iterate_over_regset_sections (struct gdbarch *gdbarch,
 static void
 riscv_fbsd_sigframe_init (const struct tramp_frame *self,
 			  struct frame_info *this_frame,
-			  struct trad_frame_cache *this_cache,
-			  CORE_ADDR func)
+			  struct trad_frame_cache *this_cache, CORE_ADDR func,
+			  size_t ucontext_offset,
+			  const struct regcache_map_entry *gp_regmap,
+			  size_t gp_regmap_size)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR sp = get_frame_register_unsigned (this_frame, RISCV_SP_REGNUM);
+  CORE_ADDR sp = get_frame_sp (this_frame);
   CORE_ADDR mcontext_addr
-    = (sp
-       + RISCV_SIGFRAME_UCONTEXT_OFFSET
-       + RISCV_UCONTEXT_MCONTEXT_OFFSET);
+    = sp + ucontext_offset + RISCV_UCONTEXT_MCONTEXT_OFFSET;
   gdb_byte buf[4];
 
-  trad_frame_set_reg_regmap (this_cache, riscv_fbsd_gregmap, mcontext_addr,
-			     RISCV_FBSD_NUM_GREGS * riscv_isa_xlen (gdbarch));
-
-  CORE_ADDR fpregs_addr
-    = mcontext_addr + RISCV_FBSD_NUM_GREGS * riscv_isa_xlen (gdbarch);
+  trad_frame_set_reg_regmap (this_cache, gp_regmap, mcontext_addr,
+			     gp_regmap_size);
+  CORE_ADDR fpregs_addr = mcontext_addr + gp_regmap_size;
   CORE_ADDR fp_flags_addr
     = fpregs_addr + RISCV_FBSD_SIZEOF_FPREGSET;
   if (target_read_memory (fp_flags_addr, buf, 4) == 0
@@ -223,6 +222,32 @@ riscv_fbsd_sigframe_init (const struct tramp_frame *self,
 			       RISCV_FBSD_SIZEOF_FPREGSET);
 
   trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static void
+riscv_fbsd_lp64_sigframe_init (const struct tramp_frame *self,
+			       struct frame_info *this_frame,
+			       struct trad_frame_cache *this_cache,
+			       CORE_ADDR func)
+{
+  size_t xlen = riscv_isa_xlen (get_frame_arch (this_frame));
+  riscv_fbsd_sigframe_init (self, this_frame, this_cache, func,
+			    RISCV_SIGFRAME_UCONTEXT_OFFSET_LP64,
+			    riscv_fbsd_gregmap, RISCV_FBSD_NUM_GREGS * xlen);
+}
+
+static void
+riscv_fbsd_cheriabi_sigframe_init (const struct tramp_frame *self,
+				   struct frame_info *this_frame,
+				   struct trad_frame_cache *this_cache,
+				   CORE_ADDR func)
+{
+  size_t clen = riscv_abi_clen (get_frame_arch (this_frame));
+  gdb_assert (clen != 0);
+  riscv_fbsd_sigframe_init (self, this_frame, this_cache, func,
+			    RISCV_SIGFRAME_UCONTEXT_OFFSET_L64PC128,
+			    riscv_fbsd_capregmap,
+			    RISCV_FBSD_NUM_CAPREGS * clen);
 }
 
 /* RISC-V supports 16-bit instructions ("C") as well as 32-bit
@@ -245,7 +270,23 @@ static const struct tramp_frame riscv_fbsd_sigframe =
     {0x0000, ULONGEST_MAX},
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
   },
-  riscv_fbsd_sigframe_init
+  riscv_fbsd_lp64_sigframe_init
+};
+
+static const struct tramp_frame riscv_fbsd_sigframe_purecap =
+{
+  SIGTRAMP_FRAME,
+  2,
+  {
+    {0x155b, ULONGEST_MAX},		/* cincoffset ca0, csp, #SF_UC  */
+    {0x0701, ULONGEST_MAX},
+    {0x0293, ULONGEST_MAX},		/* li   t0, #SYS_sigreturn  */
+    {0x1a10, ULONGEST_MAX},
+    {0x0073, ULONGEST_MAX},		/* ecall  */
+    {0x0000, ULONGEST_MAX},
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  riscv_fbsd_cheriabi_sigframe_init
 };
 
 static const char *scr_names[32] =
@@ -356,7 +397,10 @@ riscv_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 		  ? svr4_ilp32_fetch_link_map_offsets
 		  : svr4_lp64_fetch_link_map_offsets)));
 
-  tramp_frame_prepend_unwinder (gdbarch, &riscv_fbsd_sigframe);
+  if (riscv_abi_clen (gdbarch) != 0)
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_fbsd_sigframe_purecap);
+  else
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_fbsd_sigframe);
 
   set_gdbarch_iterate_over_regset_sections
     (gdbarch, riscv_fbsd_iterate_over_regset_sections);
