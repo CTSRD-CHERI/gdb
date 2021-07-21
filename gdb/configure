@@ -15801,9 +15801,9 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-  #include "bfd.h"
-  #include "elf-bfd.h"
-
+	   #include <string.h>
+	   #include "bfd.h"
+	   #include "elf-bfd.h"
 int
 main ()
 {
@@ -15912,9 +15912,9 @@ else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdlib.h>
-  #include "bfd.h"
-  #include "mach-o.h"
-
+	   #include <string.h>
+	   #include "bfd.h"
+	   #include "mach-o.h"
 int
 main ()
 {

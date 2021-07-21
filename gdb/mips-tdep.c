@@ -649,7 +649,7 @@ static const char *mips_cheri_reg_names[] = {
   "c24", "c25", "c26", "c27", "c28", "c29", "c30", "c31",
   "ddc", "pcc", "cap_cause", "cap_valid",
 };
-_Static_assert(ARRAY_SIZE (mips_cheri_reg_names) == 36, "");
+gdb_static_assert(ARRAY_SIZE (mips_cheri_reg_names) == 36);
 
 /* Names of tx39 registers.  */
 
