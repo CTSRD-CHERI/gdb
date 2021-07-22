@@ -27,6 +27,9 @@
 
 typedef uint64_t insn_t;
 
+#define RISCV_OPCODE_FLAG_CAPMODE_ENABLED 0x1
+#define RISCV_OPCODE_FLAG_CAPMODE_DISABLED 0x2
+
 static inline unsigned int riscv_insn_length (insn_t insn)
 {
   if ((insn & 0x3) != 0x3) /* RVC.  */
@@ -366,6 +369,10 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
+/* This instruction is only available in capability mode */
+#define INSN_CAPMODE		0x00000100
+/* This instruction is not available in capability mode */
+#define INSN_NOT_CAPMODE	0x00000200
 
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */

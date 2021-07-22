@@ -855,6 +855,16 @@ static reloc_howto_type howto_table[] =
 	 0,				/* src_mask */
 	 MINUS_ONE,			/* dst_mask */
 	 FALSE),			/* pcrel_offset */
+
+    /* Avoid crashing when we see CHERI relocations */
+    /* See llvm/include/llvm/BinaryFormat/ELFRelocs/RISCV.def */
+    [192] = EMPTY_HOWTO(192/* R_RISCV_CHERI_CAPTAB_PCREL_HI20 */),
+    [193] = EMPTY_HOWTO(193/* R_RISCV_CHERI_CAPABILITY */),
+    [194] = EMPTY_HOWTO(194/* R_RISCV_CHERI_CAPABILITY_CALL */),
+    [195] = EMPTY_HOWTO(195/* R_RISCV_CHERI_SIZE */),
+    [196] = EMPTY_HOWTO(196/* R_RISCV_CHERI_TPREL_CINCOFFSET */),
+    [197] = EMPTY_HOWTO(197/* R_RISCV_CHERI_TLS_IE_CAPTAB_PCREL_HI20 */),
+    [198] = EMPTY_HOWTO(198/* R_RISCV_CHERI_TLS_GD_CAPTAB_PCREL_HI20 */),
 };
 
 /* A mapping from BFD reloc types to RISC-V ELF reloc types.  */

@@ -346,7 +346,8 @@ const struct riscv_opcode riscv_opcodes[] =
 {"or",          0, {"C", 0},   "Cs,Ct,Cw",  MATCH_C_OR, MASK_C_OR, match_opcode, INSN_ALIAS },
 {"or",          0, {"I", 0},   "d,s,t",  MATCH_OR, MASK_OR, match_opcode, 0 },
 {"or",          0, {"I", 0},   "d,s,j",  MATCH_ORI, MASK_ORI, match_opcode, INSN_ALIAS },
-{"auipc",       0, {"I", 0},   "d,u",  MATCH_AUIPC, MASK_AUIPC, match_opcode, 0 },
+{"auipc",       0, {"I", 0},   "d,u",  MATCH_AUIPC, MASK_AUIPC, match_opcode, INSN_NOT_CAPMODE },
+{"auipcc",      0, {"I", "Xcheri", 0}, "d,u",  MATCH_AUIPC, MASK_AUIPC, match_opcode, INSN_CAPMODE },
 {"seqz",        0, {"I", 0},   "d,s",  MATCH_SLTIU | ENCODE_ITYPE_IMM (1), MASK_SLTIU | MASK_IMM, match_opcode, INSN_ALIAS },
 {"snez",        0, {"I", 0},   "d,t",  MATCH_SLTU, MASK_SLTU | MASK_RS1, match_opcode, INSN_ALIAS },
 {"sltz",        0, {"I", 0},   "d,s",  MATCH_SLT, MASK_SLT | MASK_RS2, match_opcode, INSN_ALIAS },
@@ -928,11 +929,15 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sc.c.cap",   32, {"Xcheri", 0}, "Xt,0(Xs)", MATCH_SC_D_CAP, MASK_SC_D_CAP, match_opcode, INSN_DREF|INSN_8_BYTE},
 {"sc.c.cap",   64, {"Xcheri", 0}, "Xt,0(Xs)", MATCH_SC_Q_CAP, MASK_SC_Q_CAP, match_opcode, INSN_DREF|INSN_16_BYTE},
 
-/* Memory-Access Instructions */  
-{"lc",         32, {"Xcheri", 0}, "Xd,o(s)", MATCH_LD, MASK_LD, match_opcode, INSN_DREF|INSN_8_BYTE},
-{"lc",         64, {"Xcheri", 0}, "Xd,o(s)", MATCH_LQ, MASK_LQ, match_opcode, INSN_DREF|INSN_16_BYTE},
-{"sc",         32, {"Xcheri", 0}, "Xt,q(s)", MATCH_SD, MASK_SD, match_opcode, INSN_DREF|INSN_8_BYTE},
-{"sc",         64, {"Xcheri", 0}, "Xt,q(s)", MATCH_SQ, MASK_SQ, match_opcode, INSN_DREF|INSN_16_BYTE},
+/* Memory-Access Instructions */
+{"clc",        32, {"Xcheri", 0}, "Xd,o(Xs)", MATCH_LD, MASK_LD, match_opcode, INSN_DREF|INSN_8_BYTE|INSN_CAPMODE},
+{"clc",        64, {"Xcheri", 0}, "Xd,o(Xs)", MATCH_LQ, MASK_LQ, match_opcode, INSN_DREF|INSN_16_BYTE|INSN_CAPMODE},
+{"csc",        32, {"Xcheri", 0}, "Xt,q(Xs)", MATCH_SD, MASK_SD, match_opcode, INSN_DREF|INSN_8_BYTE|INSN_CAPMODE},
+{"csc",        64, {"Xcheri", 0}, "Xt,q(Xs)", MATCH_SQ, MASK_SQ, match_opcode, INSN_DREF|INSN_16_BYTE|INSN_CAPMODE},
+{"lc",         32, {"Xcheri", 0}, "Xd,o(s)", MATCH_LD, MASK_LD, match_opcode, INSN_DREF|INSN_8_BYTE|INSN_NOT_CAPMODE},
+{"lc",         64, {"Xcheri", 0}, "Xd,o(s)", MATCH_LQ, MASK_LQ, match_opcode, INSN_DREF|INSN_16_BYTE|INSN_NOT_CAPMODE},
+{"sc",         32, {"Xcheri", 0}, "Xt,q(s)", MATCH_SD, MASK_SD, match_opcode, INSN_DREF|INSN_8_BYTE|INSN_NOT_CAPMODE},
+{"sc",         64, {"Xcheri", 0}, "Xt,q(s)", MATCH_SQ, MASK_SQ, match_opcode, INSN_DREF|INSN_16_BYTE|INSN_NOT_CAPMODE},
 
 /* Atomic Memory-Access Instructions */
 {"lr.b",        0, {"A", "Xcheri", 0}, "d,0(s)", MATCH_LR_B, MASK_LR_B | MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE},
