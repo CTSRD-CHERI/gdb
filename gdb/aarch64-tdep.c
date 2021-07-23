@@ -239,6 +239,34 @@ static const struct
   {"clr", AARCH64_CLR_REGNUM}
 };
 
+/* Implement the register_type gdbarch method.  This is installed as an
+   for the override setup by TDESC_USE_REGISTERS, for most registers we
+   delegate the type choice to the target description, but for a few
+   registers we try to improve the types if the target description has
+   taken a simplistic approach.  */
+
+static struct type *
+aarch64_register_type (struct gdbarch *gdbarch, int regnum)
+{
+  struct type *type = tdesc_register_type (gdbarch, regnum);
+
+  /* Force plain long types for pointer GPRs when using CheriABI.  */
+  if (gdbarch_tdep (gdbarch)->abi == AARCH64_ABI_C64
+      && regnum >= AARCH64_X0_REGNUM
+      && regnum < AARCH64_X0_REGNUM + ARRAY_SIZE (aarch64_r_register_names)
+      && TYPE_CODE (type) == TYPE_CODE_PTR)
+    return builtin_type (gdbarch)->builtin_long;
+
+  /* Force uint128_t type for capability registers when using hybrid.  */
+  if (gdbarch_tdep (gdbarch)->abi != AARCH64_ABI_C64
+      && regnum >= AARCH64_C0_REGNUM
+      && regnum < AARCH64_C0_REGNUM + ARRAY_SIZE (aarch64_cheri_register_names)
+      && TYPE_CODE (type) == TYPE_CODE_PTR)
+    return builtin_type (gdbarch)->builtin_uint128;
+
+  return type;
+}
+
 /* Test whether an ELF symbol corresponds to an address in Capability
    Mode, and set a "special" bit in a minimal symbol to indicate that
    it does.  */
@@ -3982,6 +4010,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_gen_return_address (gdbarch, aarch64_gen_return_address);
 
   tdesc_use_registers (gdbarch, tdesc, tdesc_data);
+
+  /* Override the register type callback setup by the target description
+     mechanism.  This allows us to fix up the type of pointer GPRs in
+     pure-capability code to be integers rather than capabilities.  */
+  set_gdbarch_register_type (gdbarch, aarch64_register_type);
 
   /* Add standard register aliases.  */
   for (i = 0; i < ARRAY_SIZE (aarch64_register_aliases); i++)
