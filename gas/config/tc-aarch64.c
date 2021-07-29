@@ -2384,6 +2384,9 @@ s_aarch64_capinit (int ignored ATTRIBUTE_UNUSED)
       return;
     }
 
+  /* align to 16 bytes. */
+  do_align (4, (char *) NULL, 0, 0);
+
   frag_grow (16);
   fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 16, &exp, 0,
 		   BFD_RELOC_MORELLO_CAPINIT);
@@ -2406,6 +2409,9 @@ s_aarch64_chericap (int ignored ATTRIBUTE_UNUSED)
 #ifdef md_flush_pending_output
   md_flush_pending_output ();
 #endif
+
+  /* align to 16 bytes. */
+  do_align (4, (char *) NULL, 0, 0);
 
   frag_grow (16);
   fix_new_aarch64 (frag_now, frag_more (0) - frag_now->fr_literal, 16, &exp, 0,
