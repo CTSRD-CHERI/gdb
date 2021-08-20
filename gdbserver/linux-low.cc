@@ -6445,32 +6445,7 @@ linux_process_target::supports_qxfer_libraries_svr4 ()
   return true;
 }
 
-struct link_map_offsets
-  {
-    /* Offset and size of r_debug.r_version.  */
-    int r_version_offset;
-
-    /* Offset and size of r_debug.r_map.  */
-    int r_map_offset;
-
-    /* Offset of r_debug_extended.r_next.  */
-    int r_next_offset;
-
-    /* Offset to l_addr field in struct link_map.  */
-    int l_addr_offset;
-
-    /* Offset to l_name field in struct link_map.  */
-    int l_name_offset;
-
-    /* Offset to l_ld field in struct link_map.  */
-    int l_ld_offset;
-
-    /* Offset to l_next field in struct link_map.  */
-    int l_next_offset;
-
-    /* Offset to l_prev field in struct link_map.  */
-    int l_prev_offset;
-  };
+/* Generic Linux 32-bit/64-bit linkmap offsets.  */
 
 static const link_map_offsets lmo_32bit_offsets =
   {
@@ -6495,6 +6470,12 @@ static const link_map_offsets lmo_64bit_offsets =
     24,    /* l_next offset in link_map.  */
     32     /* l_prev offset in link_map.  */
   };
+
+const struct link_map_offsets *
+linux_process_target::low_fetch_linkmap_offsets (int is_elf64)
+{
+  return is_elf64 ? &lmo_64bit_offsets : &lmo_32bit_offsets;
+}
 
 /* Get the loaded shared libraries from one namespace.  */
 
@@ -6568,15 +6549,14 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
   xsnprintf (filename, sizeof filename, "/proc/%d/exe", pid);
   is_elf64 = elf_64_file_p (filename, &machine);
   const link_map_offsets *lmo;
+  lmo = low_fetch_linkmap_offsets (is_elf64);
   int ptr_size;
   if (is_elf64)
     {
-      lmo = &lmo_64bit_offsets;
       ptr_size = 8;
     }
   else
     {
-      lmo = &lmo_32bit_offsets;
       ptr_size = 4;
     }
 
@@ -7028,6 +7008,16 @@ linux_get_auxv (int pid, int wordsize, CORE_ADDR match, CORE_ADDR *valp)
     }
 
   return 0;
+}
+
+/* See linux-low.h.  */
+
+CORE_ADDR
+linux_get_at_entry (int pid, int wordsize)
+{
+  CORE_ADDR entry = 0;
+  linux_get_auxv (pid, wordsize, AT_ENTRY, &entry);
+  return entry;
 }
 
 /* See linux-low.h.  */

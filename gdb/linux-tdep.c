@@ -2889,3 +2889,32 @@ linux_lp64_fetch_link_map_offsets ()
 
   return lmp;
 }
+
+link_map_offsets *
+linux_lp64_cheri_fetch_link_map_offsets ()
+{
+  static link_map_offsets lmo;
+  static link_map_offsets *lmp = nullptr;
+
+  if (lmp == nullptr)
+    {
+      lmp = &lmo;
+
+      lmo.r_version_offset = 0;
+      lmo.r_version_size = 4;
+      lmo.r_map_offset = 16;
+      lmo.r_brk_offset = 32;
+      lmo.r_ldsomap_offset = -1;
+      lmo.r_next_offset = 64;
+
+      /* Everything we need is in the first 80 bytes.  */
+      lmo.link_map_size = 80;
+      lmo.l_addr_offset = 0;
+      lmo.l_name_offset = 16;
+      lmo.l_ld_offset = 32;
+      lmo.l_next_offset = 48;
+      lmo.l_prev_offset = 64;
+    }
+
+  return lmp;
+}
