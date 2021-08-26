@@ -98,7 +98,7 @@ static bool
 is_cheri_kernel()
 {
 
-  return lookup_minimal_symbol ("userspace_cap", (const char *) NULL,
+  return lookup_minimal_symbol ("userspace_root_cap", (const char *) NULL,
 				(struct objfile *) NULL).minsym != NULL;
 }
 
