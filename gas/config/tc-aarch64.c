@@ -10785,6 +10785,11 @@ md_begin (void)
   aarch64_sframe_cfa_fp_reg = 29; /* x29.  */
   aarch64_sframe_cfa_ra_reg = 30;
 #endif
+
+#ifdef OBJ_ELF
+  if (IS_C64)
+    bfd_set_private_flags (stdoutput, EF_AARCH64_CHERI_PURECAP);
+#endif
 }
 
 /* Command line processing.  */
