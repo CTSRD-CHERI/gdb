@@ -3301,11 +3301,11 @@ riscv_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
     return;
 
   fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
-		    cap.cr_perms & CC128_PERM_LOAD ? "r" : "",
-		    cap.cr_perms & CC128_PERM_STORE ? "w" : "",
-		    cap.cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-		    cap.cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-		    cap.cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
+		    cc128_get_perms (&cap) & CC128_PERM_LOAD ? "r" : "",
+		    cc128_get_perms (&cap) & CC128_PERM_STORE ? "w" : "",
+		    cc128_get_perms (&cap) & CC128_PERM_EXECUTE ? "x" : "",
+		    cc128_get_perms (&cap) & CC128_PERM_LOAD_CAP ? "R" : "",
+		    cc128_get_perms (&cap) & CC128_PERM_STORE_CAP ? "W" : "",
 		    paddress (gdbarch, cap.base()),
 		    /*
 		     * Top is a 65-bit number for CHERI128 but we don't care
@@ -3313,9 +3313,9 @@ riscv_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
 		     * 0xff... instead of 0x10.....
 		     */
 		    paddress (gdbarch, cap.top64()),
-		    cap.cr_otype == CC128_OTYPE_SENTRY
+		    cc128_get_otype (&cap) == CC128_OTYPE_SENTRY
 		         ? " (sentry)"
-		         : (cc128_is_cap_sealed(&cap) ? " (sealed)" : ""));
+		         : (cc128_is_cap_sealed (&cap) ? " (sealed)" : ""));
 }
 
 /* Initialize the current architecture based on INFO.  If possible,

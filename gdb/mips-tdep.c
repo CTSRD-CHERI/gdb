@@ -64,6 +64,12 @@
 #undef CC128_OLD_FORMAT
 #include "cheri-compressed-cap/cheri_compressed_cap.h"
 
+typedef union
+{
+  cc128_cap_t cap128;
+  cc256_cap_t cap256;
+} cap_register_t;
+
 static const struct objfile_data *mips_pdr_data;
 
 static int is_cheri (struct gdbarch *gdbarch);
@@ -91,6 +97,7 @@ static void mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch,
 						 cap_register_t *cap,
 						 bool *valid);
 static void mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
+						  struct type *type,
 						  cap_register_t *cap,
 						  bool valid,
 						  struct ui_file *stream);
@@ -6925,6 +6932,7 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
   enum lval_type lval;
   gdb_byte buf[register_size (gdbarch, regnum)];
   bool attr_valid;
+  struct type *type;
 
   frame_register_unwind (frame, regnum, &optimized, &unavailable, &lval,
 			 &address, &realnum, buf);
@@ -6938,10 +6946,17 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
 
   cap_register_t cap;
   memset(&cap, 0, sizeof(cap));
-  mips_cheri_fetch_pointer_attributes (gdbarch, register_type (gdbarch, regnum),
-				       buf, &cap, &attr_valid);
-  address = cap.address();
-  if (cap.cr_perms & CC128_PERM_EXECUTE)
+  type = register_type (gdbarch, regnum);
+  mips_cheri_fetch_pointer_attributes (gdbarch, type, buf, &cap, &attr_valid);
+  if (type->length == 32)
+    address = cap.cap256.address();
+  else
+    address = cap.cap128.address();
+  /* TODO: Switch to CC256_PERM_* when defined */
+  if (attr_valid
+      && ((type->length == 32 && (cap.cap256.cr_perms & CC128_PERM_EXECUTE))
+	  || (type->length == 16
+	      && (cc128_get_perms (&cap.cap128) & CC128_PERM_EXECUTE))))
     {
       /* Try to print what function it points to.  */
       get_formatted_print_options (&opts, 'x');
@@ -6949,7 +6964,7 @@ mips_print_cheri_register (struct ui_file *file, struct frame_info *frame,
     }
   else
     fputs_filtered (print_core_address (gdbarch, address), file);
-  mips_cheri_print_pointer_attributes1 (gdbarch, &cap, attr_valid, file);
+  mips_cheri_print_pointer_attributes1 (gdbarch, type, &cap, attr_valid, file);
 }
 
 static void
@@ -7352,7 +7367,7 @@ mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
       mem.u64s[1] = extract_unsigned_integer (buffer + 8, 8, byte_order);
       mem.u64s[2] = extract_unsigned_integer (buffer + 16, 8, byte_order);
       mem.u64s[3] = extract_unsigned_integer (buffer + 24, 8, byte_order);
-      decompress_256cap(mem, cap, /*tagged=*/false);
+      decompress_256cap(mem, &cap->cap256, /*tagged=*/false);
       *valid = mem.u64s[0] != 0;
     }
   else if (type->length == 16)
@@ -7361,7 +7376,7 @@ mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 
       pesbt = extract_unsigned_integer (buffer, 8, byte_order);
       cursor = extract_unsigned_integer (buffer + 8, 8, byte_order);
-      cc128_decompress_mem(pesbt, cursor, 0, cap);
+      cc128_decompress_mem(pesbt, cursor, 0, &cap->cap128);
       *valid = pesbt != 0;
     }
 
@@ -7369,30 +7384,54 @@ mips_cheri_fetch_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 }
 
 static void
-mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
+mips_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch, struct type *type,
 				      cap_register_t *cap,
 				      bool valid,
 				      struct ui_file *stream)
 {
+  uint32_t perms;
+
   if (!valid)
     return;
 
-  fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
-		    cap->cr_perms & CC128_PERM_LOAD ? "r" : "",
-		    cap->cr_perms & CC128_PERM_STORE ? "w" : "",
-		    cap->cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-		    cap->cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-		    cap->cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-		    paddress (gdbarch, cap->base()),
-		    /*
-		     * Top is a 65-bit number for CHERI128 but we don't care
-		     * about the last byte of the address space so we report
-		     * 0xff... instead of 0x10.....
-		     */
-		    paddress (gdbarch, cap->top64()),
-		    cap->cr_otype == CC128_OTYPE_SENTRY
-		         ? " (sentry)"
-		         : (cc128_is_cap_sealed(cap) ? " (sealed)" : ""));
+  if (type->length == 32)
+    {
+      perms = cap->cap256.cr_perms;
+      /* TODO: Switch to CC256_PERM_* when defined */
+      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+			perms & CC128_PERM_LOAD ? "r" : "",
+			perms & CC128_PERM_STORE ? "w" : "",
+			perms & CC128_PERM_EXECUTE ? "x" : "",
+			perms & CC128_PERM_LOAD_CAP ? "R" : "",
+			perms & CC128_PERM_STORE_CAP ? "W" : "",
+			paddress (gdbarch, cap->cap256.base()),
+			paddress (gdbarch, cap->cap256.top64()),
+			cap->cap256.cr_otype == CC256_OTYPE_SENTRY
+			     ? " (sentry)"
+			     : (cc256_is_cap_sealed (&cap->cap256)
+				? " (sealed)" : ""));
+    }
+  else
+    {
+      perms = cc128_get_perms (&cap->cap128);
+      fprintf_filtered (stream, " [%s%s%s%s%s,%s-%s]%s",
+			perms & CC128_PERM_LOAD ? "r" : "",
+			perms & CC128_PERM_STORE ? "w" : "",
+			perms & CC128_PERM_EXECUTE ? "x" : "",
+			perms & CC128_PERM_LOAD_CAP ? "R" : "",
+			perms & CC128_PERM_STORE_CAP ? "W" : "",
+			paddress (gdbarch, cap->cap256.base()),
+			/*
+			 * Top is a 65-bit number for CHERI128 but we don't care
+			 * about the last byte of the address space so we report
+			 * 0xff... instead of 0x10.....
+			 */
+			paddress (gdbarch, cap->cap256.top64()),
+			cc128_get_otype (&cap->cap128) == CC128_OTYPE_SENTRY
+			     ? " (sentry)"
+			     : (cc128_is_cap_sealed (&cap->cap128)
+				? " (sealed)" : ""));
+    }
 }
 
 static void
@@ -7401,13 +7440,14 @@ mips_cheri_print_pointer_attributes (struct gdbarch *gdbarch, struct type *type,
 				     int embedded_offset,
 				     struct ui_file *stream)
 {
-  cc128_cap_t cap;
+  cap_register_t cap;
   bool attr_valid;
 
   memset(&cap, 0, sizeof(cap));
   mips_cheri_fetch_pointer_attributes (gdbarch, type, valaddr + embedded_offset,
 				       &cap, &attr_valid);
-  mips_cheri_print_pointer_attributes1 (gdbarch, &cap, attr_valid, stream);
+  mips_cheri_print_pointer_attributes1 (gdbarch, type, &cap, attr_valid,
+					stream);
 }
 
 static int

@@ -60,7 +60,7 @@
 #include "opcode/aarch64.h"
 #include <algorithm>
 
-#define	IS_MORELLO
+#define	CC_IS_MORELLO
 #include "cheri-compressed-cap/cheri_compressed_cap.h"
 
 /* Macros for setting and testing a bit in a minimal symbol that marks
@@ -3567,18 +3567,21 @@ aarch64_cheri_print_pointer_attributes1 (struct gdbarch *gdbarch,
 					 cc128_cap_t *cap,
 					 struct ui_file *stream)
 {
+  uint32_t perms;
+
+  perms = cc128_get_perms (cap);
   fprintf_filtered (stream, " [%s%s%s%s%s%s,%s-%s]%s",
-		    cap->cr_perms & CC128_PERM_LOAD ? "r" : "",
-		    cap->cr_perms & CC128_PERM_STORE ? "w" : "",
-		    cap->cr_perms & CC128_PERM_EXECUTE ? "x" : "",
-		    cap->cr_perms & CC128_PERM_LOAD_CAP ? "R" : "",
-		    cap->cr_perms & CC128_PERM_STORE_CAP ? "W" : "",
-		    cap->cr_perms & CC128_PERM_EXECUTIVE ? "E" : "",
+		    perms & CC128_PERM_LOAD ? "r" : "",
+		    perms & CC128_PERM_STORE ? "w" : "",
+		    perms & CC128_PERM_EXECUTE ? "x" : "",
+		    perms & CC128_PERM_LOAD_CAP ? "R" : "",
+		    perms & CC128_PERM_STORE_CAP ? "W" : "",
+		    perms & CC128_PERM_EXECUTIVE ? "E" : "",
 		    paddress (gdbarch, cap->base ()),
 		    paddress (gdbarch, cap->top64 ()),
-		    cap->cr_otype == CC128_OTYPE_SENTRY
+		    cc128_get_otype (cap) == CC128_OTYPE_SENTRY
 		         ? " (sentry)"
-		         : (cc128_is_cap_sealed(cap) ? " (sealed)" : ""));
+		         : (cc128_is_cap_sealed (cap) ? " (sealed)" : ""));
 }
 
 static void
