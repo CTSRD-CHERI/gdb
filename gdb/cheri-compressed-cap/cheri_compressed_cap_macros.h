@@ -61,18 +61,11 @@
 
 #define _CC_BITMASK64(nbits) ((UINT64_C(1) << (nbits)) - UINT64_C(1))
 
-#define _CC_MIN(a, b)                                                                                                  \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a < _b ? _a : _b;                                                                                             \
-    })
-#define _CC_MAX(a, b)                                                                                                  \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a > _b ? _a : _b;                                                                                             \
-    })
+// NB: Do not use GNU statement expressions as this is used by LLVM which warns
+// on any uses during its build. These are therefore unsafe if any arguments
+// have side-effects.
+#define _CC_MIN(a, b) ((a) < (b) ? (a) : (b))
+#define _CC_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define _CC_FIELD(name, last, start)                                                                                   \
     _CC_N(FIELD_##name##_START) = (start - _CC_N(ADDR_WIDTH)),                                                         \
@@ -90,8 +83,13 @@
 #define _CC_ENCODE_EBT_FIELD(value, name)                                                                              \
     ((uint64_t)((value)&_CC_N(FIELD_##name##_MAX_VALUE)) << (_CC_N(FIELD_##name##_START) + _CC_N(FIELD_EBT_START)))
 
+#ifdef CC_IS_MORELLO
+// Morello does not negate this field
+#define _CC_SPECIAL_OTYPE(name, val) _CC_N(name) = val, _CC_N(name##_SIGNED) = val
+#else
 #define _CC_SPECIAL_OTYPE(name, subtract)                                                                              \
     _CC_N(name) = (_CC_N(MAX_REPRESENTABLE_OTYPE) - subtract##u), _CC_N(name##_SIGNED) = (((int64_t)-1) - subtract##u)
+#endif
 
 #ifdef __cplusplus
 template <size_t a, size_t b> static constexpr bool check_same() {

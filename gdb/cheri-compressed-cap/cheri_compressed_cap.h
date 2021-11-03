@@ -42,17 +42,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#ifndef IS_MORELLO
+#ifndef CC_IS_MORELLO
 #include "cheri_compressed_cap_64.h"
 #endif
 
 #include "cheri_compressed_cap_128.h"
-
-// QEMU already provides cap_register_t but if used in other programs
-// we want to define it here:
-#ifndef HAVE_CAP_REGISTER_T
-typedef cc128_cap_t cap_register_t;
-#endif
 
 /* Legacy CHERI256 things: */
 
@@ -66,7 +60,7 @@ typedef cc128_cap_t cap_register_t;
 #define CC256_PERMS_MEM_SHFT CC256_FLAGS_COUNT                /* flags bit comes first */
 #define CC256_UPERMS_MEM_SHFT (CC256_PERMS_MEM_SHFT + CC256_HWPERMS_COUNT + CC256_HWPERMS_RESERVED_COUNT)
 #define CC256_UPERMS_SHFT             (15)
-#ifndef IS_MORELLO
+#ifndef CC_IS_MORELLO
 // Morello does not order permissions like this.
 _CC_STATIC_ASSERT(CC128_UPERMS_SHFT >=  CC256_HWPERMS_COUNT + CC256_HWPERMS_RESERVED_COUNT, "");
 #endif
@@ -91,31 +85,60 @@ _CC_STATIC_ASSERT_SAME(CC256_FLAGS_COUNT + CC256_HWPERMS_COUNT + CC256_HWPERMS_R
 // Reserve 16 otypes
 enum CC256_OTypes {
     CC256_MAX_REPRESENTABLE_OTYPE = ((1u << CC256_OTYPE_BITS) - 1u),
-    CC256_SPECIAL_OTYPE(FIRST_SPECIAL_OTYPE, 0),
     CC256_SPECIAL_OTYPE(OTYPE_UNSEALED, 0),
     CC256_SPECIAL_OTYPE(OTYPE_SENTRY, 1),
-    CC256_SPECIAL_OTYPE(LAST_SPECIAL_OTYPE, 15),
-    CC256_SPECIAL_OTYPE(LAST_NONRESERVED_OTYPE, 15),
+    CC256_SPECIAL_OTYPE(MAX_RESERVED_OTYPE, 0),
+    CC256_SPECIAL_OTYPE(MIN_RESERVED_OTYPE, 15),
 };
 
-#define LS_SPECIAL_OTYPES_COMMON(ITEM, ...)                     \
-    ITEM(OTYPE_UNSEALED, __VA_ARGS__)                           \
+#define LS_SPECIAL_OTYPES_COMMON(ITEM, ...)                                                                            \
+    ITEM(OTYPE_UNSEALED, __VA_ARGS__)                                                                                  \
     ITEM(OTYPE_SENTRY, __VA_ARGS__)
 
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 
-#define LS_SPECIAL_OTYPES(ITEM, ...)                            \
-    LS_SPECIAL_OTYPES_COMMON(ITEM, __VA_ARGS__)                 \
-    ITEM(OTYPE_LOAD_PAIR_BRANCH, __VA_ARGS__)\
+#define LS_SPECIAL_OTYPES(ITEM, ...)                                                                                   \
+    LS_SPECIAL_OTYPES_COMMON(ITEM, __VA_ARGS__)                                                                        \
+    ITEM(OTYPE_LOAD_PAIR_BRANCH, __VA_ARGS__)                                                                          \
     ITEM(OTYPE_LOAD_BRANCH, __VA_ARGS__)
 
 #else
 
-#define LS_SPECIAL_OTYPES(ITEM, ...)                            \
-    LS_SPECIAL_OTYPES_COMMON(ITEM, __VA_ARGS__)                 \
-    ITEM(OTYPE_RESERVED2, __VA_ARGS__)                          \
-    ITEM(OTYPE_RESERVED3, __VA_ARGS__)
+#define LS_SPECIAL_OTYPES(ITEM, ...)                                                                                   \
+    LS_SPECIAL_OTYPES_COMMON(ITEM, __VA_ARGS__)                                                                        \
+    ITEM(OTYPE_INDIRECT_PAIR, __VA_ARGS__)                                                                             \
+    ITEM(OTYPE_INDIRECT_SENTRY, __VA_ARGS__)
 #endif
+
+typedef struct cc256_cap {
+    uint64_t cr_cursor;
+    uint64_t cr_base;
+    uint64_t cr_length;
+    uint32_t cr_otype;
+    uint16_t cr_perms;
+    uint16_t cr_uperms;
+    uint8_t cr_tag;
+    uint8_t cr_flags;
+    uint8_t cr_reserved;
+#ifdef __cplusplus
+    inline uint64_t base() const { return cr_base; }
+    inline uint64_t address() const { return cr_cursor; }
+    inline int64_t offset() const { return cr_cursor - cr_base; }
+    inline cc128_length_t top() const { return (cc128_length_t)cr_base + cr_length; }
+    inline _cc_addr_t top64() const {
+        const _cc_length_t t = top();
+        return t > _CC_MAX_ADDR ? _CC_MAX_ADDR : (_cc_addr_t)t;
+    }
+    inline uint64_t length() const { return cr_length; }
+    inline uint64_t length64() const { return cr_length; }
+    inline uint32_t software_permissions() const { return cr_uperms; }
+    inline uint32_t permissions() const { return cr_perms; }
+    inline uint32_t type() const { return cr_otype; }
+    inline bool is_sealed() const { return type() != CC256_OTYPE_UNSEALED; }
+    inline uint8_t flags() const { return cr_flags; }
+    inline uint8_t reserved_bits() const { return cr_reserved; }
+#endif
+} cc256_cap_t;
 
 /* Also support decoding of the raw 256-bit capabilities */
 typedef union _inmemory_chericap256 {
@@ -124,9 +147,9 @@ typedef union _inmemory_chericap256 {
     uint64_t u64s[4];
 } inmemory_chericap256;
 
-static inline bool cc256_is_cap_sealed(const cap_register_t* cp) { return cp->cr_otype != CC256_OTYPE_UNSEALED; }
+static inline bool cc256_is_cap_sealed(const cc256_cap_t* cp) { return cp->cr_otype != CC256_OTYPE_UNSEALED; }
 
-static inline void decompress_256cap(inmemory_chericap256 mem, cap_register_t* cdp, bool tagged) {
+static inline void decompress_256cap(inmemory_chericap256 mem, cc256_cap_t* cdp, bool tagged) {
     /* See CHERI ISA: Figure 3.1: 256-bit memory representation of a capability */
     uint32_t hwperms_mask = tagged ? CC256_PERMS_ALL_BITS : CC256_PERMS_ALL_BITS_UNTAGGED;
     cdp->cr_flags = mem.u64s[0] & CC256_FLAGS_ALL_BITS;
@@ -137,13 +160,13 @@ static inline void decompress_256cap(inmemory_chericap256 mem, cap_register_t* c
     cdp->cr_base = mem.u64s[2];
     /* Length is xor'ed with -1 to ensure that NULL is all zeroes in memory */
     uint64_t length = mem.u64s[3] ^ CC256_NULL_LENGTH;
-    cdp->_cr_top = (cc128_length_t)cdp->cr_base + (cc128_length_t)length;
-    cdp->_cr_cursor = mem.u64s[1];
+    cdp->cr_length = length;
+    cdp->cr_cursor = mem.u64s[1];
     cdp->cr_tag = tagged;
     _cc_debug_assert(!(cdp->cr_tag && cdp->cr_reserved) && "Unknown reserved bits set it tagged capability");
 }
 
-static inline void compress_256cap(inmemory_chericap256* buffer, const cap_register_t* csp) {
+static inline void compress_256cap(inmemory_chericap256* buffer, const cc256_cap_t* csp) {
     _cc_debug_assert(!(csp->cr_tag && csp->cr_reserved) && "Unknown reserved bits set it tagged capability");
     bool flags_bits = csp->cr_flags & CC256_FLAGS_ALL_BITS;
     // When writing an untagged value, just write back the bits that were loaded (including the reserved HWPERMS)
@@ -153,11 +176,9 @@ static inline void compress_256cap(inmemory_chericap256* buffer, const cap_regis
         ((csp->cr_uperms & CC256_UPERMS_ALL_BITS) << CC256_UPERMS_MEM_SHFT) |
         ((uint64_t)((csp->cr_otype ^ CC256_OTYPE_UNSEALED) & CC256_OTYPE_ALL_BITS) << CC256_OTYPE_MEM_SHFT) |
         ((uint64_t)(csp->cr_reserved & CC256_RESERVED_ALL_BITS) << CC256_RESERVED_MEM_SHFT);
-    buffer->u64s[1] = csp->_cr_cursor;
+    buffer->u64s[1] = csp->cr_cursor;
     buffer->u64s[2] = csp->cr_base;
-    cc128_length_t length65 = csp->_cr_top - csp->cr_base;
-    uint64_t length64 = length65 > UINT64_MAX ? UINT64_MAX : (uint64_t)length65;
-    buffer->u64s[3] = length64 ^ CC256_NULL_LENGTH;
+    buffer->u64s[3] = csp->cr_length ^ CC256_NULL_LENGTH;
 }
 
 #endif /* CHERI_COMPRESSED_CAP_H */

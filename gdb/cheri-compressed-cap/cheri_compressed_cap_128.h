@@ -65,7 +65,7 @@
 #define CC128_ADDR_WIDTH 64
 #define CC128_LEN_WIDTH 65
 /* Max exponent is the largest exponent _required_, not that can be encoded. */
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 #define CC128_MANTISSA_WIDTH 16
 #define CC128_MAX_EXPONENT 50
 #define CC128_MAX_ENCODABLE_EXPONENT 63
@@ -92,7 +92,7 @@ typedef uint64_t cc128_addr_t;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 enum {
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
     // Morello HW perms actually 127..116, and 111...100. But seperating the fields is just a headache, and would make
     // other code more complex. Pretend that they are all HW Perms.
     _CC_FIELD(HWPERMS, 127, 110),
@@ -100,9 +100,9 @@ enum {
     // Should _CC_FIELD(UPERMS, 115, 112), if that wouldn't cause a double count because of above.
     _CC_FIELD(OTYPE, 109, 95),
     _CC_FIELD(EBT, 94, 64),
-    // This is a bit dodgy. This enum only really works for non-address bits.
-    // Just provide nonsense values that will make the length of the range 0.
-    // Should really be `_CC_FIELD(FLAGS, 63, 56)', if this stuff applied to the address
+// This is a bit dodgy. This enum only really works for non-address bits.
+// Just provide nonsense values that will make the length of the range 0.
+// Should really be `_CC_FIELD(FLAGS, 63, 56)', if this stuff applied to the address
 #define MORELLO_FLAG_BITS 8
     _CC_FIELD(FLAGS, 64, 65),
     _CC_FIELD(RESERVED, 64, 65),
@@ -150,7 +150,7 @@ enum {
 #define CC128_BOT_INTERNAL_EXP_WIDTH CC128_FIELD_EXP_NONZERO_BOTTOM_SIZE
 #define CC128_EXP_LOW_WIDTH CC128_FIELD_EXPONENT_LOW_PART_SIZE
 
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 
 #define CC128_PERM_GLOBAL (1 << 0)
 #define CC128_PERM_EXECUTIVE (1 << 1)
@@ -158,7 +158,7 @@ enum {
 #define CC128_PERM_MUTABLE_LOAD (1 << 6)
 #define CC128_PERM_SETCID (1 << 7)
 #define CC128_PERM_BRANCH_SEALED_PAIR (1 << 8)
-#define CC128_PERM_CCALL CC128_PERM_BRANCH_SEALED_PAIR
+#define CC128_PERM_CINVOKE CC128_PERM_BRANCH_SEALED_PAIR
 #define CC128_PERM_SYSTEM (1 << 9)
 #define CC128_PERM_ACCESS_SYS_REGS CC128_PERM_SYSTEM
 #define CC128_PERM_UNSEAL (1 << 10)
@@ -172,7 +172,7 @@ enum {
 
 #define CC128_HIGHEST_PERM CC128_PERM_LOAD
 
-#else // !IS_MORELLO
+#else // !CC_IS_MORELLO
 
 #define CC128_PERM_GLOBAL (1 << 0)
 #define CC128_PERM_EXECUTE (1 << 1)
@@ -182,7 +182,7 @@ enum {
 #define CC128_PERM_STORE_CAP (1 << 5)
 #define CC128_PERM_STORE_LOCAL (1 << 6)
 #define CC128_PERM_SEAL (1 << 7)
-#define CC128_PERM_CCALL (1 << 8)
+#define CC128_PERM_CINVOKE (1 << 8)
 #define CC128_PERM_UNSEAL (1 << 9)
 #define CC128_PERM_ACCESS_SYS_REGS (1 << 10)
 #define CC128_PERM_SETCID (1 << 11)
@@ -194,10 +194,10 @@ enum {
 _CC_STATIC_ASSERT(CC128_HIGHEST_PERM < CC128_FIELD_HWPERMS_MAX_VALUE, "permissions not representable?");
 _CC_STATIC_ASSERT((CC128_HIGHEST_PERM << 1) > CC128_FIELD_HWPERMS_MAX_VALUE, "all permission bits should be used");
 
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 
 #define CC128_PERMS_ALL (0x3FFFF) /* [0...1,6..17] */
-#define CC128_UPERMS_ALL (0x0)  /* [15...18] */
+#define CC128_UPERMS_ALL (0x0)    /* [15...18] */
 #define CC128_UPERMS_SHFT (0)
 #define CC128_MAX_UPERM (3)
 
@@ -221,63 +221,37 @@ _CC_STATIC_ASSERT((CC128_HIGHEST_PERM << 1) > CC128_FIELD_HWPERMS_MAX_VALUE, "al
 enum _CC_N(OTypes) {
     CC128_FIRST_NONRESERVED_OTYPE = 0,
     CC128_MAX_REPRESENTABLE_OTYPE = ((1u << CC128_OTYPE_BITS) - 1u),
-    _CC_SPECIAL_OTYPE(FIRST_SPECIAL_OTYPE, 0),
     _CC_SPECIAL_OTYPE(OTYPE_UNSEALED, 0),
     _CC_SPECIAL_OTYPE(OTYPE_SENTRY, 1),
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
     _CC_SPECIAL_OTYPE(OTYPE_LOAD_PAIR_BRANCH, 2),
     _CC_SPECIAL_OTYPE(OTYPE_LOAD_BRANCH, 3),
-    _CC_SPECIAL_OTYPE(LAST_SPECIAL_OTYPE, 3),
-    _CC_SPECIAL_OTYPE(LAST_NONRESERVED_OTYPE, 3),
+    _CC_N(MIN_RESERVED_OTYPE) = _CC_N(OTYPE_UNSEALED),
+    _CC_N(MAX_RESERVED_OTYPE) = _CC_N(OTYPE_LOAD_BRANCH),
 #else
-    _CC_SPECIAL_OTYPE(OTYPE_RESERVED2, 2),
-    _CC_SPECIAL_OTYPE(OTYPE_RESERVED3, 3),
-    _CC_SPECIAL_OTYPE(LAST_SPECIAL_OTYPE, 15),
-    _CC_SPECIAL_OTYPE(LAST_NONRESERVED_OTYPE, 15),
+    _CC_SPECIAL_OTYPE(OTYPE_INDIRECT_PAIR, 2),
+    _CC_SPECIAL_OTYPE(OTYPE_INDIRECT_SENTRY, 3),
+    _CC_SPECIAL_OTYPE(OTYPE_RESERVED_LAST, 15),
+    /*
+     * We allocate otypes subtracting from the maximum value, so the smallest is
+     * actually the one with the largest _CC_SPECIAL_OTYPE() argument.
+     * With 16 reserved otypes, this is currently -16, i.e. 0x3fff0.
+     */
+    _CC_N(MIN_RESERVED_OTYPE) = _CC_N(OTYPE_RESERVED_LAST),
+    _CC_N(MAX_RESERVED_OTYPE) = _CC_N(OTYPE_UNSEALED),
 #endif
 };
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-enum {
-#ifdef IS_MORELLO
-    CC128_RESET_EXP = CC128_MAX_ENCODABLE_EXPONENT,
-    CC128_RESET_TOP = 0,
-#else
-    CC128_RESET_EXP = 52, // bit 12 in top is set -> shift by 52 to get 1 << 64
-    // For a NULL capability we use the internal exponent and need bit 12 in top set
-    // to get to 2^65
-    // let resetT = 0b01 @ 0x000 /* bit 12 set */
-    CC128_RESET_TOP = 1u << (12 - CC128_FIELD_EXPONENT_HIGH_PART_SIZE),
-#endif
-    CC128_RESET_EBT =
-        _CC_ENCODE_EBT_FIELD(1, INTERNAL_EXPONENT) | _CC_ENCODE_EBT_FIELD(CC128_RESET_TOP, EXP_NONZERO_TOP) |
-        _CC_ENCODE_EBT_FIELD(0, EXP_NONZERO_BOTTOM) |
-        _CC_ENCODE_EBT_FIELD(CC128_RESET_EXP >> CC128_FIELD_EXPONENT_LOW_PART_SIZE, EXPONENT_HIGH_PART) |
-        _CC_ENCODE_EBT_FIELD(CC128_RESET_EXP & CC128_FIELD_EXPONENT_LOW_PART_MAX_VALUE, EXPONENT_LOW_PART),
-    CC128_NULL_PESBT = _CC_ENCODE_FIELD(0, UPERMS) | _CC_ENCODE_FIELD(0, HWPERMS) | _CC_ENCODE_FIELD(0, RESERVED) |
-                       _CC_ENCODE_FIELD(0, FLAGS) | _CC_ENCODE_FIELD(1, INTERNAL_EXPONENT) |
-                       _CC_ENCODE_FIELD(CC128_OTYPE_UNSEALED, OTYPE) |
-                       _CC_ENCODE_FIELD(CC128_RESET_TOP, EXP_NONZERO_TOP) | _CC_ENCODE_FIELD(0, EXP_NONZERO_BOTTOM) |
-                       _CC_ENCODE_FIELD(CC128_RESET_EXP >> CC128_FIELD_EXPONENT_LOW_PART_SIZE, EXPONENT_HIGH_PART) |
-                       _CC_ENCODE_FIELD(CC128_RESET_EXP & CC128_FIELD_EXPONENT_LOW_PART_MAX_VALUE, EXPONENT_LOW_PART)
-};
-// Whatever NULL would encode to is this constant. We mask on store/load so this
-// invisibly keeps null 0 whatever we choose it to be.
-// #define CC128_NULL_XOR_MASK 0x1ffff8000000
-
-#ifdef IS_MORELLO
-#define CC128_NULL_XOR_MASK (CC128_NULL_PESBT)
-#else
-#define CC128_NULL_XOR_MASK UINT64_C(0x00001ffffc018004)
-#endif
-
-#pragma GCC diagnostic pop
-
-_CC_STATIC_ASSERT_SAME(CC128_NULL_XOR_MASK, CC128_NULL_PESBT);
 _CC_STATIC_ASSERT_SAME(CC128_MANTISSA_WIDTH, CC128_FIELD_EXP_ZERO_BOTTOM_SIZE);
 
 #include "cheri_compressed_cap_common.h"
+
+// Sanity-check mask is the expected NULL encoding
+#ifdef CC_IS_MORELLO
+_CC_STATIC_ASSERT_SAME(CC128_NULL_XOR_MASK, UINT64_C(0x0000000040070007));
+#else
+_CC_STATIC_ASSERT_SAME(CC128_NULL_XOR_MASK, UINT64_C(0x00001ffffc018004));
+#endif
 
 __attribute__((deprecated("Use cc128_compress_raw"))) static inline uint64_t
 compress_128cap_without_xor(const cc128_cap_t* csp) {

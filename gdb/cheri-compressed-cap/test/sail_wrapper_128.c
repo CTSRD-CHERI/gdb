@@ -34,7 +34,7 @@
 
 /* Provide the 128-specific APIs for sail_wrapper_common.c */
 
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 
 #define MORELLO_SAIL_PREFIX sailgen_
 #define SAIL_COMPRESSION_GENERATED_C_FILE "sail_compression_morello.c"
@@ -81,7 +81,7 @@ static inline uint64_t extract_sail_cap_bits(sail_cap_bits* bits, uint64_t start
 
 #include "sail_wrapper_common.c"
 
-#ifndef IS_MORELLO
+#ifndef CC_IS_MORELLO
 
 static inline void set_top_base_from_sail(const struct zCapability* sail, _cc_cap_t* c) {
     // Would be nice to have a stable name for this tuple:
@@ -114,3 +114,8 @@ struct cc128_bounds_bits sail_extract_bounds_bits_128(uint64_t pesbt) {
 }
 uint64_t sail_compress_128_raw(const cc128_cap_t* csp) { return sail_compress_common_raw(csp); }
 uint64_t sail_compress_128_mem(const cc128_cap_t* csp) { return sail_compress_common_mem(csp); }
+
+#ifndef CC_IS_MORELLO
+cc128_addr_t sail_representable_mask_128(cc128_addr_t len) { return sailgen_getRepresentableAlignmentMask(len); }
+cc128_addr_t sail_representable_length_128(cc128_addr_t len) { return sailgen_getRepresentableLength(len); }
+#endif

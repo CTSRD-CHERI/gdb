@@ -33,7 +33,10 @@
 #include "sail_failure.h"
 #include "sail_wrapper.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsometimes-uninitialized"
 #include SAIL_COMPRESSION_GENERATED_C_FILE
+#pragma clang diagnostic pop
 #undef CC_BITS
 #define CC_BITS SAIL_WRAPPER_CC_BITS
 
@@ -55,7 +58,7 @@ static inline uint64_t extract_bits(lbits op, uint64_t start, uint64_t len) {
     return result;
 }
 
-#ifdef IS_MORELLO
+#ifdef CC_IS_MORELLO
 
 static inline uint64_t extract_low_bits(lbits bits) {
     fbits bits_low = CONVERT_OF(fbits, lbits)(bits, true);
@@ -95,7 +98,7 @@ void sail_decode_common_mem(uint64_t mem_pesbt, uint64_t mem_cursor, bool tag, c
     // Bounds (base and top)
     struct sail_bounds_tuple bounds;
     _CC_CONCAT(create_, sail_bounds_tuple)(&bounds);
-    _CC_CONCAT(MORELLO_SAIL_PREFIX,CapGetBounds)(&bounds, capbits);
+    _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetBounds)(&bounds, capbits);
 
     check_length(bounds.ztup0, 65);
     check_length(bounds.ztup1, 65);
@@ -106,19 +109,19 @@ void sail_decode_common_mem(uint64_t mem_pesbt, uint64_t mem_cursor, bool tag, c
     cdp->_cr_top = (((cc128_length_t)top_hi) << 64) | (cc128_length_t)top_lo;
     _CC_CONCAT(kill_, sail_bounds_tuple)(&bounds);
 
+    cdp->cr_bounds_valid = bounds.ztup2;
+
     // Address including flag bits
     cdp->_cr_cursor = _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetValue)(capbits);
-    cdp->cr_perms = _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetPermissions)(capbits);
-    cdp->cr_otype = _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetObjectType)(capbits);
+    _cc_N(update_perms)(cdp, _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetPermissions)(capbits));
+    _cc_N(update_otype)(cdp, _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetObjectType)(capbits));
     cdp->cr_tag = _CC_CONCAT(MORELLO_SAIL_PREFIX, CapGetTag)(capbits);
 
     // Fix these extra fields not really present in sail
-    cdp->cr_reserved = 0;
-    cdp->cr_flags = cdp->_cr_cursor >> 56;
-    cdp->cr_uperms = 0;
-
-    // Morello sail does not have this field explicitly
-    cdp->cr_ebt = (uint32_t)_CC_EXTRACT_FIELD(mem_pesbt, EBT);
+    _cc_N(update_reserved)(cdp, 0);
+    _cc_N(update_flags)(cdp, 0);
+    _cc_N(update_uperms)(cdp, 0);
+    cdp->cr_pesbt = mem_pesbt;
 
     // Destroy cap
     KILL(lbits)(&capbits);
@@ -129,17 +132,11 @@ void sail_decode_common_raw(uint64_t mem_pesbt, uint64_t mem_cursor, bool tag, c
     sail_decode_common_mem(mem_pesbt ^ CC128_NULL_XOR_MASK, mem_cursor, tag, cdp);
 }
 
-uint64_t sail_compress_common_raw(const cc128_cap_t* csp) {
-    assert(0);
-}
+uint64_t sail_compress_common_raw(const cc128_cap_t* csp) { assert(0); }
 
-uint64_t sail_compress_common_mem(const cc128_cap_t* csp) {
-    assert(0);
-}
+uint64_t sail_compress_common_mem(const cc128_cap_t* csp) { assert(0); }
 
-static _cc_bounds_bits sail_extract_bounds_bits_common(_cc_addr_t pesbt) {
-    assert(0);
-}
+static _cc_bounds_bits sail_extract_bounds_bits_common(_cc_addr_t pesbt) { assert(0); }
 
 #else
 
@@ -171,16 +168,16 @@ static void sail_cap_to_cap_t(const struct zCapability* sail, _cc_cap_t* c) {
     memset(c, 0, sizeof(*c));
     c->_cr_cursor = sail->zaddress;
     set_top_base_from_sail(sail, c);
-    c->cr_perms = sailgen_getCapHardPerms(*sail);
-    c->cr_uperms = sail->zuperms;
-    c->cr_otype = sail->zotype;
-    c->cr_flags = sailgen_getCapFlags(*sail);
-    c->cr_reserved = sail->zreserved;
+    _cc_N(update_perms)(c, sailgen_getCapHardPerms(*sail));
+    _cc_N(update_uperms)(c, sail->zuperms);
+    _cc_N(update_otype)(c, sail->zotype);
+    _cc_N(update_flags)(c, sailgen_getCapFlags(*sail));
+    _cc_N(update_reserved)(c, sail->zreserved);
     c->cr_tag = sail->ztag;
     // extract cc128 EBT field:
     // TODO: avoid roundtrip via sailgen_capToBits?
     uint64_t sail_pesbt = _compress_sailcap_raw(*sail);
-    c->cr_ebt = (uint32_t)_CC_EXTRACT_FIELD(sail_pesbt, EBT);
+    c->cr_pesbt = sail_pesbt;
 }
 
 static void sail_decode_common_mem(_cc_addr_t mem_pesbt, _cc_addr_t mem_cursor, bool tag, _cc_cap_t* cdp) {
@@ -211,26 +208,25 @@ static _cc_bounds_bits sail_extract_bounds_bits_common(_cc_addr_t pesbt) {
     result.E = sail_result.zE;
     result.B = sail_result.zB;
     result.T = sail_result.zT;
-    result.IE = sail_result.zinternal_e;
+    result.IE = sail_result.zinternal_E;
     return result;
 }
 
 static struct zCapability cap_t_to_sail_cap(const _cc_cap_t* c) {
     struct zCapability result;
     result = znull_cap;
-    result = sailgen_setCapPerms(result, c->cr_perms);
+    result = sailgen_setCapPerms(result, _cc_N(get_perms)(c));
     result.ztag = c->cr_tag;
-    result.zreserved = c->cr_reserved;
+    result.zreserved = _cc_N(get_reserved)(c);
     result.zaddress = c->_cr_cursor;
-    result.zuperms = c->cr_uperms;
-    result.zotype = c->cr_otype;
-    result.zflag_cap_mode = c->cr_flags;
-    result.zsealed = result.zotype != (uint64_t)zotype_unsealed;
+    result.zuperms = _cc_N(get_uperms)(c);
+    result.zotype = _cc_N(get_otype)(c);
+    result.zflag_cap_mode = _cc_N(get_flags)(c);
 
-    // Extract E,B,T,IE from the cr_ebt field:
-    _cc_addr_t fake_pesbt = _CC_ENCODE_FIELD(c->cr_ebt, EBT);
+    // Extract E,B,T,IE from the cr_pesbt field:
+    _cc_addr_t fake_pesbt = c->cr_pesbt;
     _cc_bounds_bits c_bounds = _cc_N(extract_bounds_bits)(fake_pesbt);
-    result.zinternal_e = c_bounds.IE;
+    result.zinternal_E = c_bounds.IE;
     result.zE = c_bounds.E;
     result.zT = c_bounds.T;
     result.zB = c_bounds.B;

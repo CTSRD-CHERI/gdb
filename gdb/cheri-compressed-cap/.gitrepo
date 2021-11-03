@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/CTSRD-CHERI/cheri-compressed-cap
 	branch = morello
-	commit = 6e61e97621caa2132385a357a40b07b1c9ddcda0
-	parent = 875e2b7bc7b67bba12a716c3a3dd6451d1681b99
+	commit = 1ccdd5000420e8a2aa8b244f46dd386bd1870353
+	parent = 8890dab0496ea34d6c743dcc29bf2d98f43a833c
 	method = merge
-	cmdver = 0.4.0
+	cmdver = 0.4.1

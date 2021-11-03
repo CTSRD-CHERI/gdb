@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(cheri_compressed_cap C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
-if(APPLE)
+if(APPLE AND NOT (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"))
     # XXX: ugly hack, would be nice if llvm could find this
-    include_directories(/Library/Developer/CommandLineTools/usr/include/c++/v1)
+    include_directories(SYSTEM /Library/Developer/CommandLineTools/usr/include/c++/v1)
 endif()
 
 include(CheckCXXCompilerFlag)
@@ -17,8 +17,8 @@ set(CMAKE_REQUIRED_LIBRARIES -fsanitize=memory)
 check_cxx_compiler_flag(-fsanitize=memory HAVE_MSAN)
 # XXX: needs instrumented system libraries
 set(HAVE_MSAN FALSE)
-set(CMAKE_REQUIRED_LIBRARIES -fsanitize=fuzzer-no-link)
-check_cxx_compiler_flag(-fsanitize=fuzzer-no-link HAVE_LIBFUZZER)
+set(CMAKE_REQUIRED_LIBRARIES -fsanitize=fuzzer)
+check_cxx_compiler_flag(-fsanitize=fuzzer HAVE_LIBFUZZER)
 
 if (HAVE_UBSAN)
     add_compile_options(-fsanitize=undefined)
@@ -42,7 +42,7 @@ install(TARGETS decompress_c128_cap RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 add_executable(decompress_c128_cap_morello decompress_c128_cap.c)
 include(GNUInstallDirs)
-target_compile_options(decompress_c128_cap_morello PRIVATE -DIS_MORELLO=1)
+target_compile_options(decompress_c128_cap_morello PRIVATE -DCC_IS_MORELLO=1)
 install(TARGETS decompress_c128_cap_morello RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 
@@ -83,7 +83,7 @@ function(add_sail_wrapper _suffix _sanitizer_flags)
     target_link_libraries(sail_wrapper128${_suffix} PUBLIC GMP::GMP)  # needs GMP, should propagate to all users
     target_compile_options(sail_wrapper128${_suffix} PRIVATE -Wno-unused-function -Wno-unused-parameter -Wno-sign-compare -Wno-unused-label -Wno-extra-semi -Wno-gnu-binary-literal)
     if(_suffix MATCHES "^_morello$")
-        target_compile_options(sail_wrapper128${_suffix} PRIVATE -DIS_MORELLO=1)
+        target_compile_options(sail_wrapper128${_suffix} PRIVATE -DCC_IS_MORELLO=1)
     endif()
 endfunction()
 
@@ -103,12 +103,17 @@ add_executable(test_sail_wrapper128 decompress_c128_cap.c)
 target_compile_definitions(test_sail_wrapper128 PRIVATE DECOMPRESS_WITH_SAIL_GENERATED_CODE=1)
 target_link_libraries(test_sail_wrapper128 PRIVATE sail_wrapper128)
 
+# For Morello too
+add_executable(test_morello_sail_wrapper128 decompress_c128_cap.c)
+target_compile_definitions(test_morello_sail_wrapper128 PRIVATE DECOMPRESS_WITH_SAIL_GENERATED_CODE=1 CC_IS_MORELLO=1)
+target_link_libraries(test_morello_sail_wrapper128 PRIVATE sail_wrapper128_morello)
+
 enable_testing()
 
 function(add_cc_test _tgt _src)
     if(_tgt MATCHES "^_morello$")
         set(M_SUFFIX "_morello")
-        set(M_OPTS "-DISMORELLO=1")
+        set(M_OPTS "-DCC_IS_MORELLO=1")
     endif()
     if (HAVE_ASAN)
         add_executable(${_tgt}-asan-ubsan ${_src})
