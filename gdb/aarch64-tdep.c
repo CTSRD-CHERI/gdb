@@ -3612,11 +3612,22 @@ aarch64_cheri_pointer_to_address (struct gdbarch *gdbarch, struct type *type,
 				  const gdb_byte *buf)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int nosign = TYPE_UNSIGNED (type);
 
   if (type->length <= 8)
-    return signed_pointer_to_address (gdbarch, type, buf);
+    {
+      if (nosign)
+	return unsigned_pointer_to_address (gdbarch, type, buf);
+      else
+	return signed_pointer_to_address (gdbarch, type, buf);
+    }
   else
-    return extract_signed_integer (buf, 8, byte_order);
+    {
+      if (nosign)
+	return extract_unsigned_integer (buf, 8, byte_order);
+      else
+	return extract_signed_integer (buf, 8, byte_order);
+    }
 }
 
 /* XXX: This does not generate a valid capability.  However, a
@@ -3628,13 +3639,22 @@ aarch64_cheri_address_to_pointer (struct gdbarch *gdbarch, struct type *type,
 				  gdb_byte *buf, CORE_ADDR addr)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int nosign = TYPE_UNSIGNED (type);
 
   if (type->length <= 8)
-    address_to_signed_pointer (gdbarch, type, buf, addr);
+    {
+      if (nosign)
+	unsigned_address_to_pointer (gdbarch, type, buf, addr);
+      else
+	address_to_signed_pointer (gdbarch, type, buf, addr);
+    }
   else
     {
       memset (buf, 0, type->length);
-      store_signed_integer (buf, 8, byte_order, addr);
+      if (nosign)
+	store_unsigned_integer (buf, 8, byte_order, addr);
+      else
+	store_signed_integer (buf, 8, byte_order, addr);
     }
 }
 
@@ -3666,10 +3686,16 @@ aarch64_cheri_cast_integer_to_pointer (struct gdbarch *gdbarch,
       if (TYPE_LENGTH (type2) <= 8)
 	{
 	  /* Construct a capability using the integer value as the cursor.  */
+	  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 	  struct value *v = allocate_value (type);
-	  store_signed_integer (value_contents_writeable (v), 8,
-				gdbarch_byte_order (gdbarch),
-				value_as_long (arg2));
+	  gdb_byte *buf = value_contents_writeable (v);
+	  int nosign = TYPE_UNSIGNED (type);
+	  LONGEST longest = value_as_long (arg2);
+
+	  if (nosign)
+	    store_unsigned_integer (buf, 8, byte_order, longest);
+	  else
+	    store_signed_integer (buf, 8, byte_order, longest);
 	  return v;
 	}
     }
@@ -3699,10 +3725,15 @@ aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
 	  /* Read the cursor and return that as an integer value.
 	     This will always return the address instead of the
 	     offset.  */
+	  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+	  const gdb_byte *buf = value_contents (arg2);
+	  int nosign = TYPE_UNSIGNED (type);
 	  LONGEST longest;
 
-	  longest = extract_signed_integer (value_contents (arg2) + 8,
-					    8, gdbarch_byte_order (gdbarch));
+	  if (nosign)
+	    longest = extract_signed_integer (buf, 8, byte_order);
+	  else
+	    longest = extract_signed_integer (buf, 8, byte_order);
 	  return value_from_longest (type, longest);
 	}
     }
