@@ -3505,6 +3505,7 @@ riscv_gdbarch_init (struct gdbarch_info info,
   if (riscv_has_cheriabi (gdbarch))
     {
       set_gdbarch_ptr_bit (gdbarch, riscv_abi_clen (gdbarch) * 8);
+      set_gdbarch_addr_bit (gdbarch, riscv_isa_xlen (gdbarch) * 8);
       set_gdbarch_dwarf2_addr_size (gdbarch, riscv_isa_xlen (gdbarch));
     }
   else
