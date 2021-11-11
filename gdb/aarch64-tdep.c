@@ -3731,7 +3731,7 @@ aarch64_cheri_cast_pointer_to_integer (struct gdbarch *gdbarch,
 	  LONGEST longest;
 
 	  if (nosign)
-	    longest = extract_signed_integer (buf, 8, byte_order);
+	    longest = extract_unsigned_integer (buf, 8, byte_order);
 	  else
 	    longest = extract_signed_integer (buf, 8, byte_order);
 	  return value_from_longest (type, longest);
