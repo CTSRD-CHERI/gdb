@@ -321,6 +321,17 @@ static const char *const aarch64_mte_register_names[] =
   "tag_ctl"
 };
 
+/* The capability pseudo registers.  These contain the same information
+   as the C registers, but broken up in 3 pieces.  */
+static const char *const aarch64_c_pseudo_register_names[] =
+{
+  "pc0", "pc1", "pc2", "pc3", "pc4", "pc5", "pc6", "pc7",
+  "pc8", "pc9", "pc10", "pc11", "pc12", "pc13", "pc14", "pc15",
+  "pc16", "pc17", "pc18", "pc19", "pc20", "pc21", "pc22", "pc23",
+  "pc24", "pc25", "pc26", "pc27", "pc28", "pc29", "pc30", "pcsp",
+  "ppcc", "pddc", "pctpidr", "prcsp", "prddc", "prctpidr", "pcid"
+};
+
 static int aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
 
 /* AArch64 prologue cache structure.  */
@@ -2091,7 +2102,7 @@ set_register_tag (struct gdbarch *gdbarch, struct regcache *regcache,
     regnum = tdep->cap_reg_pcc;
 
   int shift = regnum - tdep->cap_reg_base;
-  tag_map |= (1 << shift);
+  tag_map = _set_bit (tag_map, shift, tag ? 1 : 0);
   regcache->cooked_write (tdep->cap_reg_last - 1, (gdb_byte *) &tag_map);
 }
 
@@ -3481,6 +3492,39 @@ aarch64_vnv_type (struct gdbarch *gdbarch)
   return tdep->vnv_type;
 }
 
+/* Return the type for a capability pseudo register.  */
+
+static struct type *
+morello_capability_pseudo_type (struct gdbarch *gdbarch)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  if (tdep->morello_capability_pseudo_type == NULL)
+    {
+      struct type *t;
+      struct type *elem;
+
+      t = arch_composite_type (gdbarch, "__gdb_builtin_type_capability",
+			       TYPE_CODE_STRUCT);
+
+      /* Lower 64 bits of the capability.  */
+      elem = builtin_type (gdbarch)->builtin_uint64;
+      append_composite_type_field (t, "l", elem);
+
+      /* Upper 64 bits of the capability.  */
+      elem = builtin_type (gdbarch)->builtin_uint64;
+      append_composite_type_field (t, "u", elem);
+
+      /* Tag bit of the capability.  */
+      elem = builtin_type (gdbarch)->builtin_bool;
+      append_composite_type_field (t, "t", elem);
+
+      tdep->morello_capability_pseudo_type = t;
+    }
+
+  return tdep->morello_capability_pseudo_type;
+}
+
 /* Implement the "dwarf2_reg_to_regnum" gdbarch method.  */
 
 static int
@@ -4398,6 +4442,18 @@ aarch64_sme_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
     return aarch64_za_tile_type (gdbarch, encoding);
 }
 
+static bool
+is_capability_pseudo (gdbarch *gdbarch, int regnum)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  if (tdep->has_capability () && regnum >= tdep->cap_pseudo_base
+      && regnum < tdep->cap_pseudo_base + tdep->cap_pseudo_count)
+    return true;
+
+  return false;
+}
+
 /* Return the pseudo register name corresponding to register regnum.  */
 
 static const char *
@@ -4527,6 +4583,14 @@ aarch64_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return "";
 
+  /* Pseudo capability registers.  */
+  if (is_capability_pseudo (gdbarch, regnum))
+    {
+      int c_regnum = regnum - tdep->cap_pseudo_base;
+
+      return aarch64_c_pseudo_register_names[c_regnum];
+    }
+
   internal_error (_("aarch64_pseudo_register_name: bad register number %d"),
 		  p_regnum);
 }
@@ -4569,6 +4633,10 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return builtin_type (gdbarch)->builtin_uint64;
 
+  /* Pseudo capability registers.  */
+  if (is_capability_pseudo (gdbarch, regnum))
+    return morello_capability_pseudo_type (gdbarch);
+
   internal_error (_("aarch64_pseudo_register_type: bad register number %d"),
 		  p_regnum);
 }
@@ -4602,6 +4670,11 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return group == all_reggroup || group == vector_reggroup;
   /* RA_STATE is used for unwinding only.  Do not assign it to any groups.  */
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
+    return 0;
+
+  /* The capability pseudo registers are just helper.  They don't belong
+     to any group.  */
+  if (is_capability_pseudo (gdbarch, regnum))
     return 0;
 
   return group == all_reggroup;
@@ -4741,6 +4814,35 @@ aarch64_pseudo_read_value (gdbarch *gdbarch, frame_info_ptr next_frame,
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
+  /* Read the capability pseudo registers.  */
+  if (is_capability_pseudo (gdbarch, pseudo_reg_num))
+    {
+      gdb_byte lower_bytes[8];
+      gdb_byte upper_bytes[8];
+
+      int c_regnum = pseudo_reg_num - tdep->cap_pseudo_base;
+      /* Fetch the corresponding C register this pseudo register maps to.  */
+      int c_real_regnum = tdep->cap_reg_base + c_regnum;
+
+      value *pseudo_reg_val
+	= value::allocate_register (next_frame, pseudo_reg_num);
+      value *raw_reg_val = value_of_register (c_real_regnum, next_frame);
+
+      /* Copy the lower 128 bits.  */
+      raw_reg_val->contents_copy (pseudo_reg_val, 0, 0, 16);
+
+#ifdef notyet
+      bool tag = gdbarch_register_tag (gdbarch, regcache, c_real_regnum);
+#else
+      bool tag = false;
+#endif
+      memcpy (pseudo_reg_val->contents_raw ().data () + 16, &tag, 1);
+
+      /* If we are dealing with the tag pseudo register, we need to isolate the
+	 specific tag we're dealing with.  */
+      return pseudo_reg_val;
+    }
+
   if (is_w_pseudo_register (gdbarch, pseudo_reg_num))
     {
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -4874,6 +4976,27 @@ aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
 		      gdb::array_view<const gdb_byte> buf)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  /* Write the capability pseudo registers.  */
+  if (is_capability_pseudo (gdbarch, pseudo_reg_num))
+    {
+      gdb_byte tag;
+
+      tag = buf[16];
+
+      /* Fetch the capability pseudo register index.  */
+      int c_regnum = pseudo_reg_num - tdep->cap_pseudo_base;
+      /* Fetch the actual C register this pseudo register maps to.  */
+      int c_real_regnum = tdep->cap_reg_base + c_regnum;
+
+      put_frame_register (next_frame, c_real_regnum, buf);
+
+#ifdef notyet
+      set_register_tag (gdbarch, regcache, c_real_regnum,
+			(tag != 0)? true : false);
+#endif
+      return;
+    }
 
   if (is_w_pseudo_register (gdbarch, pseudo_reg_num))
     {
@@ -6285,6 +6408,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       = tdesc_find_feature (tdesc,"org.gnu.gdb.aarch64.capability");
   int first_cap_regnum = -1;
   int last_cap_regnum = -1;
+  int first_cap_pseudo = -1;
 
   if (feature_capability != nullptr)
     {
@@ -6298,6 +6422,18 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       last_cap_regnum = first_cap_regnum + i - 1;
       num_regs += i;
+
+      /* Also add pseudo registers to make it easier to set the whole 129
+	 bits of the C registers.  Each C register is broken into 3 fields:
+
+	 - lower 64 bits: Contains the value (pointer).
+	 - upper 64 bits: Contains the bounds/permissions/flags.
+	 - tag bit (1 bit): Contains the capability tag.
+      */
+
+      first_cap_pseudo = num_pseudo_regs;
+      /* 39 pseudo capability registers.  */
+      num_pseudo_regs += AARCH64_C_PSEUDO_COUNT;
     }
 
   if (!valid_p)
@@ -6601,6 +6737,12 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	user_reg_add (gdbarch, aarch64_morello_register_aliases[i].name,
 		      value_of_aarch64_user_reg,
 		      &aarch64_morello_register_aliases[i].regnum);
+
+      num_regs = gdbarch_num_regs (gdbarch);
+      tdep->cap_pseudo_base
+	= (first_cap_pseudo == -1)? -1 : num_regs + first_cap_pseudo;
+      tdep->cap_pseudo_count
+	= (first_cap_pseudo == -1)? 0 : AARCH64_C_PSEUDO_COUNT;
     }
 
   return gdbarch;
