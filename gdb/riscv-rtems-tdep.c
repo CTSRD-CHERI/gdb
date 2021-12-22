@@ -65,11 +65,13 @@ riscv_cherifreertos_tramp_init (const struct tramp_frame *self,
 static const struct tramp_frame riscv_cherifreertos_intercompartment_tramp  =
 {
   NORMAL_FRAME,
-  4,
+  2,
   {
-    { 0x0003230f, ULONGEST_MAX },
-    { 0xfec300db, ULONGEST_MAX },
-    { 0x03012d8f, ULONGEST_MAX },
+    { 0x9302, ULONGEST_MAX },
+    { 0x7e73, ULONGEST_MAX },
+    { 0x3004, ULONGEST_MAX },
+    { 0x035b, ULONGEST_MAX },
+    { 0x03e0, ULONGEST_MAX },
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
   },
   riscv_cherifreertos_tramp_init
