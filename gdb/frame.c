@@ -1429,6 +1429,68 @@ read_frame_register_unsigned (frame_info_ptr frame, int regnum,
 
 void
 put_frame_register (frame_info_ptr next_frame, int regnum,
+		    gdb::array_view<const gdb_byte> buf, struct value *fromval)
+{
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
+  int realnum;
+  int optim;
+  int unavail;
+  enum lval_type lval;
+  CORE_ADDR addr;
+  int size = register_size (gdbarch, regnum);
+
+  gdb_assert (buf.size () == size);
+
+  frame_register_unwind (next_frame, regnum, &optim, &unavail, &lval, &addr,
+			 &realnum, nullptr);
+  if (optim)
+    error (_("Attempt to assign to a register that was not saved."));
+
+  struct type *val_type = fromval->type ();
+
+  /* If this value is a capability, we need to handle the capability tag
+     as well.  */
+  bool tagged = ((val_type->code () == TYPE_CODE_CAPABILITY
+		  || (val_type->code () == TYPE_CODE_PTR
+		      && TYPE_CAPABILITY (val_type)))
+		 && fromval->tagged ());
+
+  switch (lval)
+    {
+    case lval_memory:
+      {
+	write_memory (addr, buf.data (), size);
+
+	if (tagged)
+	  gdbarch_set_cap_tag_from_address (gdbarch, addr, fromval->tag ());
+	break;
+      }
+    case lval_register:
+      /* Not sure if that's always true... but we have a problem if not.  */
+      gdb_assert (size == register_size (gdbarch, realnum));
+
+      if (realnum < gdbarch_num_regs (gdbarch)
+	  || !gdbarch_pseudo_register_write_p (gdbarch))
+	{
+	  get_thread_regcache (inferior_thread ())->cooked_write (realnum, buf);
+	  if (tagged)
+	    gdbarch_register_set_tag (gdbarch,
+				      get_thread_regcache (inferior_thread ()),
+				      regnum, fromval->tag ());
+	}
+      else
+	{
+	  gdbarch_pseudo_register_write (gdbarch, next_frame, realnum, buf);
+	  /* TODO: Handle tagged */
+	}
+      break;
+    default:
+      error (_("Attempt to assign to an unmodifiable value."));
+    }
+}
+
+void
+put_frame_register (frame_info_ptr next_frame, int regnum,
 		     gdb::array_view<const gdb_byte> buf)
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
@@ -1567,6 +1629,49 @@ get_frame_register_bytes (frame_info_ptr next_frame, int regnum,
   *unavailablep = 0;
 
   return true;
+}
+
+void
+put_frame_register_value (frame_info_ptr next_frame, int regnum,
+			  CORE_ADDR offset, struct value *fromval)
+{
+  gdbarch *gdbarch = frame_unwind_arch (next_frame);
+  gdb::array_view<const gdb_byte> buffer = fromval->contents ();
+
+  /* Skip registers wholly inside of OFFSET.  */
+  while (offset >= register_size (gdbarch, regnum))
+    {
+      offset -= register_size (gdbarch, regnum);
+      regnum++;
+    }
+
+  /* Copy the data.  */
+  while (!buffer.empty ())
+    {
+      int curr_len = std::min<int> (register_size (gdbarch, regnum) - offset,
+				    buffer.size ());
+
+      if (curr_len == register_size (gdbarch, regnum))
+	{
+	  put_frame_register (next_frame, regnum, buffer.slice (0, curr_len),
+			      fromval);
+	}
+      else
+	{
+	  value *value = frame_unwind_register_value (next_frame, regnum);
+	  gdb_assert (value != NULL);
+
+	  copy (buffer.slice (0, curr_len),
+		value->contents_writeable ().slice (offset, curr_len));
+	  put_frame_register (next_frame, regnum, value->contents_raw (),
+			      fromval);
+	  release_value (value);
+	}
+
+      buffer = buffer.slice (curr_len);
+      offset = 0;
+      regnum++;
+    }
 }
 
 void
