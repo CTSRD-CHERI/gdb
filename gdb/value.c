@@ -3902,7 +3902,6 @@ value::fetch_lazy_memory ()
 
   if (TYPE_CAPABILITY (type))
     {
-      set_tagged (true);
       bool tag = gdbarch_get_cap_tag_from_address (arch (), addr);
       set_tag (tag);
     }

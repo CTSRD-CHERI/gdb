@@ -23,6 +23,7 @@
 #include "frame.h"
 #include "extension.h"
 #include "gdbsupport/gdb_ref_ptr.h"
+#include "gdbtypes.h"
 #include "gmp-utils.h"
 
 struct block;
@@ -138,11 +139,14 @@ private:
       m_stack (false),
       m_is_zero (false),
       m_in_history (false),
-      m_tagged (false),
       m_type (type_),
       m_enclosing_type (type_),
       m_tag (false)
   {
+    if (type_ != nullptr
+	&& (type_->code () == TYPE_CODE_CAPABILITY
+	    || TYPE_CAPABILITY (type_)))
+      m_tagged = true;
   }
 
   /* Values can only be destroyed via the reference-counting
