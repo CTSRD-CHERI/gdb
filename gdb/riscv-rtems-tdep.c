@@ -103,11 +103,16 @@ riscv_rtems_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
                ? rtems_ilp32_fetch_link_map_offsets
                : rtems_lp64_fetch_link_map_offsets))));
 
-  tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intercompartment_tramp);
-  tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intracompartment_tramp);
-
-  set_solib_rtems_fetch_link_map_offsets
-    (gdbarch, rtems_c128_fetch_link_map_offsets);
+  if (riscv_abi_clen (gdbarch) == 16) {
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intercompartment_tramp);
+    //tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intracompartment_tramp);
+  } else if (riscv_abi_clen (gdbarch) == 8) {
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intercompartment_tramp);
+  } else if (riscv_isa_xlen (gdbarch) == 4) {
+    // TODO
+  } else {
+    // TODO
+  }
 }
 
 /* Provide a prototype to silence -Wmissing-prototypes.  */
