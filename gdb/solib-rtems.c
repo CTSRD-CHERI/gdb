@@ -185,20 +185,20 @@ rtems_lp64_fetch_link_map_offsets (void)
 
     lmo.r_version_offset = 0;
     lmo.r_version_size = 4;
-    lmo.r_map_offset = 4;
+    lmo.r_map_offset = 8;
 
-    lmo.link_map_size = 96;
+    lmo.link_map_size = 104;
 
     lmo.l_name_offset = 0;
     lmo.l_sec_num_offset = 8;
-    lmo.l_sec_detail_offset = 12;
-    lmo.l_base_sec_addr_offset = 20;
-    lmo.l_rpathlen_offset = 68;
-    lmo.l_rpath_offset = 72;
-    lmo.l_next_offset = 80;
-    lmo.l_prev_offset = 88;
+    lmo.l_sec_detail_offset = 16;
+    lmo.l_base_sec_addr_offset = 24;
+    lmo.l_rpathlen_offset = 72;
+    lmo.l_rpath_offset = 80;
+    lmo.l_next_offset = 88;
+    lmo.l_prev_offset = 96;
 
-    lmo.sec_map_size = 20;
+    lmo.sec_map_size = 24;
     lmo.s_name_offset = 0;
     lmo.s_addr_offset = 8;
     lmo.s_size_offset = 12;

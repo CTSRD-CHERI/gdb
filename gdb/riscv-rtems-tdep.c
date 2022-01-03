@@ -77,6 +77,21 @@ static const struct tramp_frame riscv_cherifreertos_intercompartment_tramp  =
   riscv_cherifreertos_tramp_init
 };
 
+static const struct tramp_frame riscv_cherifreertos_rv32_intercompartment_tramp  =
+{
+  NORMAL_FRAME,
+  2,
+  {
+    { 0x9302, ULONGEST_MAX },
+    { 0x7e73, ULONGEST_MAX },
+    { 0x3004, ULONGEST_MAX },
+    { 0x2373, ULONGEST_MAX },
+    { 0x3400, ULONGEST_MAX },
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  riscv_cherifreertos_tramp_init
+};
+
 static const struct tramp_frame riscv_cherifreertos_intracompartment_tramp =
 {
   NORMAL_FRAME,
@@ -109,9 +124,10 @@ riscv_rtems_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   } else if (riscv_abi_clen (gdbarch) == 8) {
     tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_intercompartment_tramp);
   } else if (riscv_isa_xlen (gdbarch) == 4) {
-    // TODO
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_rv32_intercompartment_tramp);
   } else {
-    // TODO
+    // RV64Same as rv32
+    tramp_frame_prepend_unwinder (gdbarch, &riscv_cherifreertos_rv32_intercompartment_tramp);
   }
 }
 
