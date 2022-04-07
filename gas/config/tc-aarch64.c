@@ -6884,10 +6884,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
       switch (operands[i])
 	{
-	case AARCH64_OPND_Wt:
-	  po_int_fp_reg_or_fail (REG_TYPE_R_32);
-	  break;
-
 	case AARCH64_OPND_Rsz:
 	case AARCH64_OPND_Rsz2:
 	case AARCH64_OPND_Rd:
