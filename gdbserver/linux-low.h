@@ -741,6 +741,13 @@ protected:
   /* Return the linkmap offsets based on IS_ELF64.  */
   virtual const struct link_map_offsets *low_fetch_linkmap_offsets (int is_elf64);
 
+public: /* Make these public because they are used from outside.  */
+  /* Determine auxv entry word size.  */
+  virtual int low_auxv_wordsize (int pid, const int is_elf64);
+
+  /* Retrieve a auxv entry.  */
+  virtual int low_get_auxv (int pid, int wordsize, CORE_ADDR match,
+			    CORE_ADDR *valp);
 };
 
 extern linux_process_target *the_linux_target;

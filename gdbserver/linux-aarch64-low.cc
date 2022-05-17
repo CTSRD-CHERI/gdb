@@ -154,6 +154,13 @@ protected:
   void low_get_syscall_trapinfo (regcache *regcache, int *sysno) override;
 
   const struct link_map_offsets *low_fetch_linkmap_offsets (int is_elf64) override;
+
+  /* AArch64 (Morello) implementations of low_auxv_wordsize and
+     low_get_auxv.  We need these overrides to handle Morello 16-byte
+     AUXV entries in the PCuABI.  */
+  int low_auxv_wordsize (int pid, const int is_elf64) override;
+
+  int low_get_auxv (int pid, int wordsize, CORE_ADDR match, CORE_ADDR *valp) override;
 };
 
 /* The singleton target ops object.  */
@@ -1081,20 +1088,21 @@ aarch64_target::low_arch_setup ()
     {
       struct aarch64_features features;
       int pid = current_thread->id.pid ();
+      int wordsize = low_auxv_wordsize (pid, is_elf64);
 
       features.vq = aarch64_sve_get_vq (tid);
       /* A-profile PAC is 64-bit only.  */
-      features.pauth = linux_get_hwcap (pid, 8) & AARCH64_HWCAP_PACA;
+      features.pauth = linux_get_hwcap (pid, wordsize) & AARCH64_HWCAP_PACA;
       /* A-profile MTE is 64-bit only.  */
-      features.mte = linux_get_hwcap2 (pid, 8) & HWCAP2_MTE;
+      features.mte = linux_get_hwcap2 (pid, wordsize) & HWCAP2_MTE;
       features.tls = aarch64_tls_register_count (tid);
 
       /* Scalable Matrix Extension feature and size check.  */
-      if (linux_get_hwcap2 (pid, 8) & HWCAP2_SME)
+      if (linux_get_hwcap2 (pid, wordsize) & HWCAP2_SME)
 	features.svq = aarch64_za_get_svq (tid);
 
       /* Scalable Matrix Extension 2 feature check.  */
-      CORE_ADDR hwcap2 = linux_get_hwcap2 (pid, 8);
+      CORE_ADDR hwcap2 = linux_get_hwcap2 (pid, wordsize);
       if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
 	{
 	  /* Make sure ptrace supports NT_ARM_ZT.  */
@@ -1102,7 +1110,7 @@ aarch64_target::low_arch_setup ()
 	}
 
       /* Morello is 64-bit only.  */
-      features.capability = linux_get_hwcap2 (pid, 8) & HWCAP2_MORELLO;
+      features.capability = linux_get_hwcap2 (pid, wordsize) & HWCAP2_MORELLO;
 
       current_process ()->tdesc = aarch64_linux_read_description (features);
 
@@ -1203,7 +1211,8 @@ aarch64_target::low_fetch_linkmap_offsets (int is_elf64)
   if (is_elf64)
     {
       int pid = current_thread->id.pid ();
-      CORE_ADDR entry_addr = linux_get_at_entry (pid, 8);
+      int wordsize = low_auxv_wordsize (pid, is_elf64);
+      CORE_ADDR entry_addr = linux_get_at_entry (pid, wordsize);
 
       /* If the LSB of AT_ENTRY is 1, then we have a pure capability Morello
 	 ELF.  */
@@ -1212,6 +1221,77 @@ aarch64_target::low_fetch_linkmap_offsets (int is_elf64)
     }
 
   return linux_process_target::low_fetch_linkmap_offsets (is_elf64);
+}
+
+int
+aarch64_target::low_auxv_wordsize (int pid, const int is_elf64)
+{
+   /* We're dealing with three different AUXV layouts:
+
+     A - The regular AArch64 format: Each type entry is 64-bit and each value
+	 is 64-bit.  This is also the case for Morello Hybrid binaries.
+     B - The Morello pure capability format with libshim: This is a compability
+	 layout and it keeps the 64-bit types and 64-bit values.
+     C - The Morello pure capability format without libshim: This layout has
+	 64-bit types followed by 64-bit padding.  The value is 128-bit.
+
+     We need to determine what layout we have, so we can read the data
+     correctly.
+
+     The easiest way to tell the difference is to assume 8-byte entries and
+     look for any types outside the range [AT_NULL, AT_MINSIGSTKSZ].  If we
+     find one such type, assume that we have layout C.  Otherwise we have
+     layouts A or B.  */
+
+  if (is_elf64)
+    {
+      bool layout_c = false;
+      gdb_byte data [2 * 8];
+      int offset = 0;
+
+      while (the_target->read_auxv (pid, offset, data, sizeof (data))
+	     == sizeof (data))
+	{
+	  CORE_ADDR *entry_type = (CORE_ADDR *) data;
+
+	  if (*entry_type > AT_MINSIGSTKSZ)
+	    {
+	      layout_c = true;
+	      break;
+	    }
+	}
+
+      if (layout_c)
+	return 16;
+    }
+
+  return linux_process_target::low_auxv_wordsize (pid, is_elf64);
+}
+
+int
+aarch64_target::low_get_auxv (int pid, int wordsize, CORE_ADDR match,
+			      CORE_ADDR *valp)
+{
+  if (wordsize == 16)
+    {
+      gdb_byte data [2 * 16];
+      int offset = 0;
+
+      while (the_target->read_auxv (pid, offset, data, sizeof (data))
+	     == sizeof (data))
+	{
+	  uint64_t *data_p = (uint64_t *) data;
+	  if (data_p[0] == match)
+	    {
+	      *valp = data_p[2];
+	      return 1;
+	    }
+	}
+
+      return 0;
+    }
+
+  return linux_process_target::low_get_auxv (pid, wordsize, match, valp);
 }
 
 /* List of condition codes that we need.  */
@@ -3638,7 +3718,8 @@ bool
 aarch64_target::supports_qxfer_capability ()
 {
   int pid = current_thread->id.pid ();
-  unsigned long hwcap2 = linux_get_hwcap2 (pid, 8);
+  int wordsize = low_auxv_wordsize (pid, 1);
+  unsigned long hwcap2 = linux_get_hwcap2 (pid, wordsize);
 
   return (hwcap2 & HWCAP2_MORELLO) != 0;
 }

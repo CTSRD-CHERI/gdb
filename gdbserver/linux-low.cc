@@ -6203,54 +6203,11 @@ static int
 get_phdr_phnum_from_proc_auxv (const int pid, const int is_elf64,
 			       CORE_ADDR *phdr_memaddr, int *num_phdr)
 {
-  char filename[PATH_MAX];
-  int fd;
-  const int auxv_size = is_elf64
-    ? sizeof (Elf64_auxv_t) : sizeof (Elf32_auxv_t);
-  char buf[sizeof (Elf64_auxv_t)];  /* The larger of the two.  */
-
-  xsnprintf (filename, sizeof filename, "/proc/%d/auxv", pid);
-
-  fd = open (filename, O_RDONLY);
-  if (fd < 0)
-    return 1;
-
-  *phdr_memaddr = 0;
-  *num_phdr = 0;
-  while (read (fd, buf, auxv_size) == auxv_size
-	 && (*phdr_memaddr == 0 || *num_phdr == 0))
-    {
-      if (is_elf64)
-	{
-	  Elf64_auxv_t *const aux = (Elf64_auxv_t *) buf;
-
-	  switch (aux->a_type)
-	    {
-	    case AT_PHDR:
-	      *phdr_memaddr = aux->a_un.a_val;
-	      break;
-	    case AT_PHNUM:
-	      *num_phdr = aux->a_un.a_val;
-	      break;
-	    }
-	}
-      else
-	{
-	  Elf32_auxv_t *const aux = (Elf32_auxv_t *) buf;
-
-	  switch (aux->a_type)
-	    {
-	    case AT_PHDR:
-	      *phdr_memaddr = aux->a_un.a_val;
-	      break;
-	    case AT_PHNUM:
-	      *num_phdr = aux->a_un.a_val;
-	      break;
-	    }
-	}
-    }
-
-  close (fd);
+  int wordsize = the_linux_target->low_auxv_wordsize (pid, is_elf64);
+  linux_get_auxv (pid, wordsize, AT_PHDR, phdr_memaddr);
+  CORE_ADDR value = 0;
+  linux_get_auxv (pid, wordsize, AT_PHNUM, &value);
+  *num_phdr = (int) value;
 
   if (*phdr_memaddr == 0 || *num_phdr == 0)
     {
@@ -7007,6 +6964,19 @@ linux_get_pc_64bit (struct regcache *regcache)
 
 int
 linux_get_auxv (int pid, int wordsize, CORE_ADDR match, CORE_ADDR *valp)
+{
+  return the_linux_target->low_get_auxv (pid, wordsize, match, valp);
+}
+
+int
+linux_process_target::low_auxv_wordsize (int pid, const int is_elf64)
+{
+  return is_elf64 ? 8 : 4;
+}
+
+int
+linux_process_target::low_get_auxv (int pid, int wordsize, CORE_ADDR match,
+				    CORE_ADDR *valp)
 {
   gdb_byte *data = (gdb_byte *) alloca (2 * wordsize);
   int offset = 0;
