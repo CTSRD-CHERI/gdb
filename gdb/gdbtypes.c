@@ -405,6 +405,8 @@ make_pointer_type (struct type *type, struct type **typeptr)
   /* FIXME!  Assumes the machine has only one representation for pointers!  */
 
   ntype->set_length (gdbarch_ptr_bit (type->arch ()) / TARGET_CHAR_BIT);
+  ntype->set_tagged (gdbarch_ptr_bit (type->arch ())
+		     == gdbarch_capability_bit (type->arch ()));
   ntype->set_code (TYPE_CODE_PTR);
 
   /* Mark pointers as unsigned.  The target converts between pointers
@@ -417,6 +419,7 @@ make_pointer_type (struct type *type, struct type **typeptr)
   while (chain != ntype)
     {
       chain->set_length (ntype->length ());
+      chain->set_tagged (ntype->is_tagged ());
       chain = TYPE_CHAIN (chain);
     }
 
@@ -802,6 +805,7 @@ make_capability_type (struct type *type)
 			       NULL);
 
   ntype->set_length (gdbarch_capability_bit (type->arch ()) / TARGET_CHAR_BIT);
+  ntype->set_tagged (true);
 
   return ntype;
 }
@@ -3538,6 +3542,7 @@ init_capability_type (type_allocator &alloc,
 
   t = alloc.new_type (TYPE_CODE_CAPABILITY, bit, name);
   t->set_is_unsigned (unsigned_p);
+  t->set_tagged (true);
 
   return t;
 }
@@ -5330,6 +5335,10 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_puts (" TYPE_CONTAINS_CAPABILITY");
     }
+  if (type->is_tagged ())
+    {
+      gdb_puts (" TYPE_TAGGED");
+    }
   if (type->is_stub ())
     {
       gdb_puts (" TYPE_STUB");
@@ -6155,9 +6164,11 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
   builtin_type->builtin_intcap_t
     = init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 0,
 			    "__intcap_t");
+  builtin_type->builtin_intcap_t->set_tagged (true);
   builtin_type->builtin_uintcap_t
     = init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 1,
 			    "__uintcap_t");
+  builtin_type->builtin_uintcap_t->set_tagged (true);
 
   /* Capability pointer types.  */
   builtin_type->builtin_data_capability
@@ -6166,6 +6177,7 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
   builtin_type->builtin_data_capability->set_instance_flags
     (builtin_type->builtin_data_capability->instance_flags ()
      | TYPE_INSTANCE_FLAG_CAPABILITY);
+  builtin_type->builtin_data_capability->set_tagged (true);
 
   builtin_type->builtin_code_capability
     = init_pointer_type (alloc, gdbarch_capability_bit (gdbarch), "",
@@ -6173,6 +6185,7 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
   builtin_type->builtin_code_capability->set_instance_flags
     (builtin_type->builtin_code_capability->instance_flags ()
      | TYPE_INSTANCE_FLAG_CAPABILITY);
+  builtin_type->builtin_code_capability->set_tagged (true);
 
   /* This type represents a GDB internal function.  */
   builtin_type->internal_fn
