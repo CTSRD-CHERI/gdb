@@ -325,21 +325,6 @@ extern enum return_value_convention default_gdbarch_return_value
       struct regcache *regcache, struct value **read_value,
       struct value *write_value);
 
-/* Default implementation of gdbarch_register_has_tag.  */
-extern bool default_register_has_tag (struct gdbarch *gdbarch,
-				      readable_regcache *regcache,
-				      int cookednum);
-
-/* Default implementation of gdbarch_register_tag.  */
-extern bool default_register_tag (struct gdbarch *gdbarch,
-				  readable_regcache *regcache,
-				  int cookednum);
-
-/* Default implementation of gdbarch_register_set_tag.  */
-extern void default_register_set_tag (struct gdbarch *gdbarch,
-				      regcache *regcache,
-				      int cookednum, bool tag);
-
 /* Default implementation of gdbarch_cap_tag_from_address.  */
 extern bool default_get_cap_tag_from_address (struct gdbarch *gdbarch,
 					      CORE_ADDR addr);

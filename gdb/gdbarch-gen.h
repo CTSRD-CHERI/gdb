@@ -1768,23 +1768,3 @@ extern void set_gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, gdbarc
 typedef bool (gdbarch_use_target_description_from_corefile_notes_ftype) (struct gdbarch *gdbarch, struct bfd *corefile_bfd);
 extern bool gdbarch_use_target_description_from_corefile_notes (struct gdbarch *gdbarch, struct bfd *corefile_bfd);
 extern void set_gdbarch_use_target_description_from_corefile_notes (struct gdbarch *gdbarch, gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes);
-
-/* Returns true if register COOKEDNUM has a tag and false otherwise.
-   The default is to always return false. */
-
-typedef bool (gdbarch_register_has_tag_ftype) (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
-extern bool gdbarch_register_has_tag (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
-extern void set_gdbarch_register_has_tag (struct gdbarch *gdbarch, gdbarch_register_has_tag_ftype *register_has_tag);
-
-/* Returns true if the register tag bit is 1 and false otherwise.
-   The default is to always return false. */
-
-typedef bool (gdbarch_register_tag_ftype) (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
-extern bool gdbarch_register_tag (struct gdbarch *gdbarch, readable_regcache *regcache, int cookednum);
-extern void set_gdbarch_register_tag (struct gdbarch *gdbarch, gdbarch_register_tag_ftype *register_tag);
-
-/* Sets the register tag to TAG. */
-
-typedef void (gdbarch_register_set_tag_ftype) (struct gdbarch *gdbarch, regcache *regcache, int cookednum, bool tag);
-extern void gdbarch_register_set_tag (struct gdbarch *gdbarch, regcache *regcache, int cookednum, bool tag);
-extern void set_gdbarch_register_set_tag (struct gdbarch *gdbarch, gdbarch_register_set_tag_ftype *register_set_tag);

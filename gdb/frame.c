@@ -1472,11 +1472,10 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
       if (realnum < gdbarch_num_regs (gdbarch)
 	  || !gdbarch_pseudo_register_write_p (gdbarch))
 	{
-	  get_thread_regcache (inferior_thread ())->cooked_write (realnum, buf);
+	  regcache *regcache = get_thread_regcache (inferior_thread ());
+	  regcache->cooked_write (realnum, buf);
 	  if (tagged)
-	    gdbarch_register_set_tag (gdbarch,
-				      get_thread_regcache (inferior_thread ()),
-				      regnum, fromval->tag ());
+	    regcache->raw_supply_tag (realnum, fromval->tag ());
 	}
       else
 	{

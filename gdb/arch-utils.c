@@ -1103,33 +1103,6 @@ default_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
 }
 
 /* See arch-utils.h.  */
-bool
-default_register_has_tag (struct gdbarch *gdbarch,
-			  readable_regcache *regcache,
-			  int cookednum)
-{
-  return false;
-}
-
-/* See arch-utils.h.  */
-bool
-default_register_tag (struct gdbarch *gdbarch,
-		      readable_regcache *regcache,
-		      int cookednum)
-{
-  return false;
-}
-
-/* See arch-utils.h.  */
-void
-default_register_set_tag (struct gdbarch *gdbarch,
-			  regcache *regcache,
-			  int cookednum, bool tag)
-{
-  return;
-}
-
-/* See arch-utils.h.  */
 bool default_get_cap_tag_from_address (struct gdbarch *gdbarch,
 				       CORE_ADDR addr)
 {
