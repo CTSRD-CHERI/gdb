@@ -96,6 +96,9 @@ struct reg_buffer_common
 				      regcache_register_size (this, regnum)));
   }
 
+  /* Supply tag for register REGNUM.  Only valid for tagged registers.  */
+  virtual void raw_supply_tag (int regnum, bool tag) = 0;
+
   /* Collect register REGNUM from this register buffer and store its contents in
      DST.  */
   virtual void raw_collect (int regnum, gdb::array_view<gdb_byte> dst) const
@@ -113,6 +116,9 @@ struct reg_buffer_common
 		 gdb::make_array_view (dst,
 				       regcache_register_size (this, regnum)));
   }
+
+  /* Return tag for register REGNUM.  Only valid for tagged registers.  */
+  virtual bool raw_collect_tag (int regnum) const = 0;
 
   /* Compare the contents of the register stored in the regcache (ignoring the
      first OFFSET bytes) to the contents of BUF (without any offset).  Returns

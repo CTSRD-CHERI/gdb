@@ -69,6 +69,12 @@ struct regcache_descr
   long *register_offset = nullptr;
   long *sizeof_register = nullptr;
 
+  /* Offset (in 8 bit bytes), of each register's tag in the register
+     cache.  All registers (including those in the range
+     [NR_RAW_REGISTERS .. NR_COOKED_REGISTERS) are given an
+     offset.  */
+  long *register_tag_offset;
+
   /* Cached table containing the type of each register.  */
   struct type **register_type = nullptr;
 };
@@ -116,11 +122,18 @@ init_regcache_descr (struct gdbarch *gdbarch)
       = GDBARCH_OBSTACK_CALLOC (gdbarch, descr->nr_cooked_registers, long);
     descr->register_offset
       = GDBARCH_OBSTACK_CALLOC (gdbarch, descr->nr_cooked_registers, long);
+    descr->register_tag_offset
+      = GDBARCH_OBSTACK_CALLOC (gdbarch, descr->nr_cooked_registers, long);
     for (i = 0; i < gdbarch_num_regs (gdbarch); i++)
       {
 	descr->sizeof_register[i] = descr->register_type[i]->length ();
 	descr->register_offset[i] = offset;
 	offset += descr->sizeof_register[i];
+	if (descr->register_type[i]->is_tagged ())
+	  {
+	    descr->register_tag_offset[i] = offset;
+	    offset++;
+	  }
       }
     /* Set the real size of the raw register cache buffer.  */
     descr->sizeof_raw_registers = offset;
@@ -130,6 +143,11 @@ init_regcache_descr (struct gdbarch *gdbarch)
 	descr->sizeof_register[i] = descr->register_type[i]->length ();
 	descr->register_offset[i] = offset;
 	offset += descr->sizeof_register[i];
+	if (descr->register_type[i]->is_tagged ())
+	  {
+	    descr->register_tag_offset[i] = offset;
+	    offset++;
+	  }
       }
     /* Set the real size of the readonly register cache buffer.  */
     descr->sizeof_cooked_registers = offset;
@@ -175,6 +193,12 @@ register_size (struct gdbarch *gdbarch, int regnum)
   gdb_assert (regnum >= 0 && regnum < gdbarch_num_cooked_regs (gdbarch));
   size = descr->sizeof_register[regnum];
   return size;
+}
+
+bool
+register_has_tag (struct gdbarch *gdbarch, int regnum)
+{
+  return register_type (gdbarch, regnum)->is_tagged ();
 }
 
 /* See gdbsupport/common-regcache.h.  */
@@ -261,6 +285,14 @@ reg_buffer::register_buffer (int regnum)
   return register_buffer<gdb_byte> (regnum);
 }
 
+/* Return a pointer to register REGNUM's tag buffer.  */
+
+gdb_byte *
+reg_buffer::register_tag (int regnum) const
+{
+  return m_registers.get () + m_descr->register_tag_offset[regnum];
+}
+
 void
 reg_buffer::save (register_read_ftype cooked_read)
 {
@@ -342,6 +374,13 @@ reg_buffer::assert_regnum (int regnum) const
     gdb_assert (regnum < m_descr->nr_cooked_registers);
   else
     gdb_assert (regnum < gdbarch_num_regs (arch ()));
+}
+
+void
+reg_buffer::assert_tagged (int regnum) const
+{
+  assert_regnum (regnum);
+  gdb_assert (m_descr->register_type[regnum]->is_tagged ());
 }
 
 /* Type to map a ptid to a list of regcaches (one thread may have multiple
@@ -804,11 +843,11 @@ readable_regcache::cooked_read_value (int regnum)
 	result->mark_bytes_unavailable (0,
 					result->type ()->length ());
 
-      if (gdbarch_register_has_tag (m_descr->gdbarch, this, regnum))
+      if (register_has_tag (m_descr->gdbarch, regnum))
 	{
 	  result->set_tagged (true);
 
-	  bool tag = gdbarch_register_tag (m_descr->gdbarch, this, regnum);
+	  bool tag = raw_collect_tag (regnum);
 	  result->set_tag (tag);
 	}
 
@@ -1177,6 +1216,19 @@ reg_buffer::raw_supply (int regnum, gdb::array_view<const gdb_byte> src)
     }
 }
 
+/* See gdbsupport/common-regcache.h.  */
+
+void
+reg_buffer::raw_supply_tag (int regnum, bool tag)
+{
+  gdb_byte *tagbuf;
+
+  assert_tagged (regnum);
+
+  tagbuf = register_tag (regnum);
+  *tagbuf = tag;
+}
+
 /* See regcache.h.  */
 
 void
@@ -1230,6 +1282,19 @@ reg_buffer::raw_collect (int regnum, void *dst) const
 
   int size = m_descr->sizeof_register[regnum];
   return raw_collect (regnum, gdb::make_array_view ((gdb_byte *) dst, size));
+}
+
+/* See gdbsupport/common-regcache.h.  */
+
+bool
+reg_buffer::raw_collect_tag (int regnum) const
+{
+  const gdb_byte *tagbuf;
+
+  assert_tagged (regnum);
+
+  tagbuf = register_tag (regnum);
+  return (*tagbuf != 0);
 }
 
 /* See regcache.h.  */

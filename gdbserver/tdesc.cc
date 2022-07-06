@@ -76,9 +76,17 @@ init_target_desc (struct target_desc *tdesc,
 	if (regnum != 0)
 	  tdesc->reg_defs.resize (regnum, gdb::reg (offset));
 
+	bool tagged = false;
+	if (treg->tdesc_type != nullptr && treg->tdesc_type->tagged ())
+	  tagged = true;
+
+	int bitsize = treg->bitsize;
+	if (tagged)
+	  bitsize += 8;
+
 	tdesc->reg_defs.emplace_back (treg->name.c_str (), offset,
-				      treg->bitsize);
-	offset += treg->bitsize;
+				      bitsize, tagged);
+	offset += bitsize;
       }
 
   tdesc->registers_size = offset / 8;

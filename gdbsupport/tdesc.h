@@ -212,6 +212,13 @@ struct tdesc_type : tdesc_element
   {
     return !(*this == other);
   }
+
+  bool tagged () const
+  {
+    return kind == TDESC_TYPE_CODE_CAPABILITY ||
+      kind == TDESC_TYPE_DATA_CAPABILITY || kind == TDESC_TYPE_INTCAP ||
+      kind == TDESC_TYPE_UINTCAP;
+  }
 };
 
 typedef std::unique_ptr<tdesc_type> tdesc_type_up;

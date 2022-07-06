@@ -29,10 +29,11 @@ struct reg
       size (0)
   {}
 
-  reg (const char *_name, int _offset, int _size)
+  reg (const char *_name, int _offset, int _size, bool _tagged = false)
     : name (_name),
       offset (_offset),
-      size (_size)
+      size (_size),
+      tagged (_tagged)
   {}
 
   /* The name of this register - NULL for pad entries.  */
@@ -48,6 +49,9 @@ struct reg
 
   /* The size (in bits) of the value of this register, as transmitted.  */
   int size;
+
+  /* Does this register contain a 1-bit tag. */
+  bool tagged;
 
   bool operator== (const reg &other) const
   {

@@ -173,6 +173,10 @@ extern struct type *register_type (struct gdbarch *gdbarch, int regnum);
    
 extern int register_size (struct gdbarch *gdbarch, int regnum);
 
+/* Return true if register REGNUM is tagged.  */
+
+extern bool register_has_tag (struct gdbarch *gdbarch, int regnum);
+
 using register_read_ftype
   = gdb::function_view<register_status (int, gdb::array_view<gdb_byte>)>;
 
@@ -205,6 +209,9 @@ public:
   /* Deprecated overload of the above.  */
   void raw_collect (int regnum, void *dst) const;
 
+  /* See gdbsupport/common-regcache.h.  */
+  bool raw_collect_tag (int regnum) const override;
+
   /* Collect register REGNUM from REGCACHE.  Store collected value as an integer
      at address ADDR, in target endian, with length ADDR_LEN and sign IS_SIGNED.
      If ADDR_LEN is greater than the register size, then the integer will be
@@ -230,6 +237,9 @@ public:
 
   void raw_supply (int regnum, const reg_buffer &src)
   { raw_supply (regnum, src.register_buffer (regnum)); }
+
+  /* See gdbsupport/common-regcache.h.  */
+  void raw_supply_tag (int regnum, bool tag) override;
 
   /* Supply register REGNUM to REGCACHE.  Value to supply is an integer stored
      at address ADDR, in target endian, with length ADDR_LEN and sign IS_SIGNED.
@@ -261,6 +271,9 @@ protected:
   /* Assert on the range of REGNUM.  */
   void assert_regnum (int regnum) const;
 
+  /* Assert that register REGNUM is tagged.  */
+  void assert_tagged (int regnum) const;
+
   int num_raw_registers () const;
 
   /* Return a view on register REGNUM's buffer cache.  */
@@ -268,6 +281,8 @@ protected:
   gdb::array_view<ElemType> register_buffer (int regnum) const;
   gdb::array_view<const gdb_byte> register_buffer (int regnum) const;
   gdb::array_view<gdb_byte> register_buffer (int regnum);
+
+  gdb_byte *register_tag (int regnum) const;
 
   /* Save a register cache.  The set of registers saved into the
      regcache determined by the save_reggroup.  COOKED_READ returns
