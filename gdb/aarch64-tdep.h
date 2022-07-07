@@ -226,7 +226,7 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
   int cap_pseudo_count;
 
   /* Types for Morello.  */
-  struct type *morello_capability_pseudo_type;
+  struct type *morello_capability_pseudo_type = nullptr;
 
   /* Returns true if the target supports capabilities.  */
   bool has_capability () const
