@@ -3975,6 +3975,9 @@ value::fetch_lazy_register ()
   new_val->contents_copy (this, embedded_offset (),
 			  new_val->embedded_offset (),
 			  type_length_units (type));
+  set_tagged (new_val->tagged ());
+  if (tagged ())
+    set_tag (new_val->tag ());
 
   if (frame_debug)
     {
