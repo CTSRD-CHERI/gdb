@@ -1767,7 +1767,10 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
 		   "ignored"));
     }
 
-  features.capability = hwcap2 & HWCAP2_MORELLO;
+  /* We cannot use HWCAP2_MORELLO to check for Morello support.  Check if
+     we have a NT_ARM_MORELLO register set dump instead.  */
+  features.capability =
+    (bfd_get_section_by_name (abfd, ".reg-aarch-morello") != nullptr);
 
   return aarch64_read_description (features);
 }

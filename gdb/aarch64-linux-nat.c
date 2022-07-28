@@ -1025,7 +1025,8 @@ aarch64_linux_nat_target::read_description ()
   if ((hwcap2 & HWCAP2_SME2) || (hwcap2 & HWCAP2_SME2P1))
     features.sme2 = supports_zt_registers (tid);
 
-  features.capability = hwcap2 & HWCAP2_MORELLO;
+  /* We cannot use HWCAP2_MORELLO to check for Morello support.  */
+  features.capability = aarch64_supports_morello (tid);
 
   return aarch64_read_description (features);
 }
