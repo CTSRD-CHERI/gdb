@@ -555,8 +555,13 @@ generic_value_print_capability (struct value *val, struct ui_file *stream,
 	break;
       case lval_memory:
 	{
-	  struct gdbarch *gdbarch = type->arch ();
-	  tag = gdbarch_get_cap_tag_from_address (gdbarch, val->address ());
+	  if (!val->lazy () && val->tagged ())
+	    tag = val->tag ();
+	  else
+	    {
+	      struct gdbarch *gdbarch = type->arch ();
+	      tag = gdbarch_get_cap_tag_from_address (gdbarch, val->address ());
+	    }
 	}
 	break;
       default:

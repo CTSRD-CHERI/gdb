@@ -1638,7 +1638,10 @@ value_equal_contents (struct value *arg1, struct value *arg2)
 	  && type1->length () == type2->length ()
 	  && memcmp (arg1->contents ().data (),
 		     arg2->contents ().data (),
-		     type1->length ()) == 0);
+		     type1->length ()) == 0
+	  && ((!arg1->tagged () && !arg2->tagged ())
+	      || (arg1->tagged () && arg2->tagged ()
+		  && arg1->tag () == arg2->tag ())));
 }
 
 /* Simulate the C operator < by returning 1
