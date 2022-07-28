@@ -1123,6 +1123,24 @@ default_get_return_buf_addr (struct type *val_type, frame_info_ptr cur_frame)
   return 0;
 }
 
+/* See arch-utils.h.  */
+
+void
+default_print_cap (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag,
+		   bool compact, struct ui_file *stream)
+{
+  return;
+}
+
+/* See arch-utils.h.  */
+
+void
+default_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents,
+			      bool tag, struct ui_file *stream)
+{
+  return;
+}
+
 bool
 default_dwarf2_omit_typedef_p (struct type *target_type, const char *producer,
 			       const char *name)
