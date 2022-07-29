@@ -46,8 +46,6 @@
 #include "gdbsupport/selftest.h"
 #include "selftest-arch.h"
 
-#include "gdbsupport/capability.h"
-
 /* Maximum number of wchars returned from wchar_iterate.  */
 #define MAX_WCHARS 4
 
@@ -509,6 +507,13 @@ generic_val_print_array (struct value *val,
       /* Array of unspecified length: treat like pointer to first elt.  */
       print_unpacked_pointer (type, elttype, val->address (),
 			      stream, options);
+      if (TYPE_CAPABILITY (type))
+	{
+	  const gdb_byte *valaddr = val->contents_for_printing ().data ();
+
+	  gdbarch_print_cap_attributes (type->arch (), valaddr,
+					val->tag (), stream);
+	}
     }
 
 }
@@ -530,6 +535,9 @@ generic_value_print_ptr (struct value *val, struct ui_file *stream,
       CORE_ADDR addr = unpack_pointer (type, valaddr);
 
       print_unpacked_pointer (type, elttype, addr, stream, options);
+      if (TYPE_CAPABILITY (type))
+	gdbarch_print_cap_attributes (type->arch (), valaddr, val->tag (),
+				      stream);
     }
 }
 
@@ -542,44 +550,14 @@ generic_value_print_capability (struct value *val, struct ui_file *stream,
   struct type *type = check_typedef (val->type ());
   int length = type->length ();
   const gdb_byte *contents = val->contents_for_printing ().data ();
+  bool tag = val->tag ();
   enum bfd_endian byte_order = type_byte_order (type);
-  bool tag = false;
-
-  switch (val->lval ())
-    {
-      case not_lval:
-      case lval_register:
-      case lval_internalvar:
-	if (val->tagged ())
-	  tag = val->tag ();
-	break;
-      case lval_memory:
-	{
-	  if (!val->lazy () && val->tagged ())
-	    tag = val->tag ();
-	  else
-	    {
-	      struct gdbarch *gdbarch = type->arch ();
-	      tag = gdbarch_get_cap_tag_from_address (gdbarch, val->address ());
-	    }
-	}
-	break;
-      default:
-	break;
-    }
 
   if (options->format && options->format == 'x')
     print_hex_chars (stream, contents, length, byte_order, 0);
   else
-    {
-      uint128_t dummy_cap;
-      memcpy (&dummy_cap, contents, length);
-      capability cap (dummy_cap, tag);
-      gdb_printf (stream, "%s ",
-			cap.to_str (options->compact_capabilities).c_str ());
-    }
-
-  return;
+    gdbarch_print_cap (type->arch (), contents, tag,
+		       options->compact_capabilities, stream);
 }
 
 /* Print '@' followed by the address contained in ADDRESS_BUFFER.  */
