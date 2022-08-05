@@ -6000,7 +6000,7 @@ aarch64_tls_transition_without_check (bfd_reloc_code_real_type r_type,
   switch (r_type)
     {
     case BFD_RELOC_MORELLO_TLSDESC_ADR_PAGE20:
-      return (local_exec || !bfd_link_pic (info)
+      return (local_exec
 	      ? BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1
 	      : r_type);
 
@@ -6036,8 +6036,8 @@ aarch64_tls_transition_without_check (bfd_reloc_code_real_type r_type,
 	      : BFD_RELOC_AARCH64_TLSIE_MOVW_GOTTPREL_G1);
 
     case BFD_RELOC_MORELLO_TLSDESC_LD128_LO12:
-      return ((local_exec || !bfd_link_pie (info)
-	       ? BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC : r_type));
+      return (local_exec
+	      ? BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC : r_type);
 
     case BFD_RELOC_AARCH64_TLSDESC_LDNN_LO12_NC:
     case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
@@ -6060,11 +6060,11 @@ aarch64_tls_transition_without_check (bfd_reloc_code_real_type r_type,
 	      : BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_PREL19);
 
     case BFD_RELOC_MORELLO_TLSDESC_CALL:
-      return ((local_exec || !bfd_link_pie (info))
+      return (local_exec
 	      ? BFD_RELOC_AARCH64_NONE : r_type);
 
     case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12:
-      if (morello_reloc && !local_exec && bfd_link_pie (info))
+      if (morello_reloc && !local_exec)
 	return r_type;
       /* Fall through.  */
     case BFD_RELOC_AARCH64_TLSDESC_ADD:
@@ -6212,12 +6212,6 @@ aarch64_tls_transition (bfd *input_bfd,
   bool morello_reloc = (bfd_r_type == BFD_RELOC_AARCH64_TLSDESC_ADD_LO12
 			&& (ELFNN_R_TYPE (rel[1].r_info)
 			    == MORELLO_R (TLSDESC_CALL)));
-
-  /* GD -> IE is not supported for Morello TLSDESC yet.  We do however allow
-     lowering of GD -> LE for static non-pie executables.  XXX It ought to be
-     safe to do this for A64 as well but it is not implemented yet.  */
-  if (h != NULL && morello_reloc && bfd_link_pie (info))
-    return bfd_r_type;
 
   return aarch64_tls_transition_without_check (bfd_r_type, h, info,
 					       morello_reloc);
@@ -8024,7 +8018,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
 
   BFD_ASSERT (globals && input_bfd && contents && rel);
 
-  if (local_exec || !bfd_link_pic (info))
+  if (local_exec)
     {
       if (h != NULL)
 	sym_size = h->size;
@@ -8042,7 +8036,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
   switch (elfNN_aarch64_bfd_reloc_from_type (input_bfd, r_type))
     {
     case BFD_RELOC_MORELLO_TLSDESC_ADR_PAGE20:
-      if (local_exec || !bfd_link_pic (info))
+      if (local_exec)
 	{
 	  /* GD->LE relaxation:
 	     nop                     =>   movz x1, objsize_hi16
@@ -8229,7 +8223,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
       return bfd_reloc_continue;
 
     case BFD_RELOC_MORELLO_TLSDESC_LD128_LO12:
-      if (local_exec || !bfd_link_pic (info))
+      if (local_exec)
 	{
 	  /* GD->LE relaxation:
 	     ldr xd, [x0, #:tlsdesc_lo12:var] => movk x0, :tprel_g0_nc:var  */
@@ -8308,7 +8302,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
     case BFD_RELOC_MORELLO_TLSDESC_CALL:
       /* GD->LE relaxation:
 	 blr cd				  =>   add c0, c2, x0  */
-      if (local_exec || !bfd_link_pic (info))
+      if (local_exec)
 	{
 	  bfd_putl32 (0xc2a06040, contents + rel->r_offset);
 	  return bfd_reloc_ok;
@@ -8319,7 +8313,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
     case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12:
       /* GD->LE relaxation:
 	 ldr cd, [c0, #:tlsdesc_lo12:var] => movk x1, objsize_lo16  */
-      if ((local_exec || !bfd_link_pic (info))
+      if (local_exec
 	  && ELFNN_R_TYPE (rel[1].r_info) == MORELLO_R (TLSDESC_CALL))
 	{
 	  bfd_putl32 (BUILD_MOVK(1, sym_size), contents + rel->r_offset);
