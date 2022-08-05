@@ -3353,7 +3353,7 @@ static struct reloc_table_entry reloc_table[] =
   {"gottprel", 0,
    0,				/* adr_type */
    BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21,
-   0,
+   BFD_RELOC_MORELLO_TLSIE_ADR_GOTTPREL_PAGE20,
    0,
    0,
    0,
@@ -3365,7 +3365,7 @@ static struct reloc_table_entry reloc_table[] =
    0,
    0,
    0,
-   0,
+   BFD_RELOC_MORELLO_TLSIE_ADD_LO12,
    BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_LO12_NC,
    0},
 
@@ -3478,6 +3478,77 @@ static struct reloc_table_entry reloc_table[] =
    0,
    BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14,
    0},
+
+  /* Most significant bits 0-15 of the size of a symbol: MOVZ */
+  {"size_g0", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G0,
+   0,
+   0,
+   0},
+
+  /* Less significant bits 0-15 of the size of a symbol: MOVK, no check */
+  {"size_g0_nc", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G0_NC,
+   0,
+   0,
+   0},
+
+  /* Most significant bits 16-31 of the size of a symbol: MOVZ */
+  {"size_g1", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G1,
+   0,
+   0,
+   0},
+
+  /* Less significant bits 16-31 of the size of a symbol: MOVK, no check */
+  {"size_g1_nc", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G1_NC,
+   0,
+   0,
+   0},
+
+  /* Most significant bits 32-47 of the size of a symbol: MOVZ */
+  {"size_g2", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G2,
+   0,
+   0,
+   0},
+
+  /* Less significant bits 32-47 of the size of a symbol: MOVK, no check */
+  {"size_g2_nc", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G2_NC,
+   0,
+   0,
+   0},
+
+  /* Most significant bits 48-63 of the size of a symbol: MOVZ */
+  {"size_g3", 0,
+   0,				/* adr_type */
+   0,
+   0,
+   BFD_RELOC_MORELLO_MOVW_SIZE_G3,
+   0,
+   0,
+   0},
+
 };
 
 /* Given the address of a pointer pointing to the textual name of a
@@ -3561,6 +3632,8 @@ aarch64_force_reloc (struct fix *fixp)
     case BFD_RELOC_AARCH64_TLSGD_ADR_PREL21:
     case BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
+    case BFD_RELOC_MORELLO_TLSIE_ADR_GOTTPREL_PAGE20:
+    case BFD_RELOC_MORELLO_TLSIE_ADD_LO12:
     case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -3979,6 +4052,12 @@ parse_shifter_operand_reloc (char **str, aarch64_opnd_info *operand,
 	{
 	  set_syntax_error
 	    (_("this relocation modifier is not allowed on this instruction"));
+	  return false;
+	}
+      if (entry->add_type == BFD_RELOC_MORELLO_TLSIE_ADD_LO12 && !IS_C64)
+	{
+	  set_syntax_error
+	    (_("this relocation modifier is not allowed in non-C64 mode"));
 	  return false;
 	}
 
@@ -4491,6 +4570,26 @@ parse_half (char **str, int *internal_fixup_p)
 
   if (! aarch64_get_expression (&inst.reloc.exp, &p, GE_NO_PREFIX, REJECT_ABSENT))
     return false;
+
+  bool is_morello_size_reloc
+    = (inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G0
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G0_NC
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G1
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G1_NC
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G2
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G2_NC
+       || inst.reloc.type == BFD_RELOC_MORELLO_MOVW_SIZE_G3);
+  if (inst.reloc.exp.X_add_symbol == 0 && is_morello_size_reloc)
+    {
+      set_syntax_error
+	(_("size relocation is not allowed on non-symbol expression"));
+      return false;
+    }
+  if (is_morello_size_reloc && !IS_C64)
+    {
+      set_syntax_error (_("size relocation is not allowed in non-C64 mode"));
+      return false;
+    }
 
   *str = p;
   return true;
@@ -6589,6 +6688,8 @@ process_movw_reloc_info (void)
 
   switch (inst.reloc.type)
     {
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G0:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0:
     case BFD_RELOC_AARCH64_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0_S:
@@ -6604,6 +6705,8 @@ process_movw_reloc_info (void)
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
       shift = 0;
       break;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G1:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1:
     case BFD_RELOC_AARCH64_MOVW_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1_S:
@@ -6619,6 +6722,8 @@ process_movw_reloc_info (void)
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
       shift = 16;
       break;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G2:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G2_NC:
     case BFD_RELOC_AARCH64_MOVW_G2:
     case BFD_RELOC_AARCH64_MOVW_G2_NC:
     case BFD_RELOC_AARCH64_MOVW_G2_S:
@@ -6635,6 +6740,7 @@ process_movw_reloc_info (void)
 	}
       shift = 32;
       break;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G3:
     case BFD_RELOC_AARCH64_MOVW_G3:
     case BFD_RELOC_AARCH64_MOVW_PREL_G3:
       if (is32)
@@ -9999,6 +10105,8 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 	}
       break;
 
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G0:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0:
     case BFD_RELOC_AARCH64_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_MOVW_G0_S:
@@ -10007,6 +10115,8 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_MOVW_PREL_G0_NC:
       scale = 0;
       goto movw_common;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G1:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1:
     case BFD_RELOC_AARCH64_MOVW_G1_NC:
     case BFD_RELOC_AARCH64_MOVW_G1_S:
@@ -10031,6 +10141,8 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       gas_assert (!fixP->fx_done);
       gas_assert (seg->use_rela_p);
       goto movw_common;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G2:
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G2_NC:
     case BFD_RELOC_AARCH64_MOVW_G2:
     case BFD_RELOC_AARCH64_MOVW_G2_NC:
     case BFD_RELOC_AARCH64_MOVW_G2_S:
@@ -10038,6 +10150,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_MOVW_PREL_G2_NC:
       scale = 32;
       goto movw_common;
+    case BFD_RELOC_MORELLO_MOVW_SIZE_G3:
     case BFD_RELOC_AARCH64_MOVW_G3:
     case BFD_RELOC_AARCH64_MOVW_PREL_G3:
       scale = 48;
@@ -10058,6 +10171,10 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 	      /* Check for overflow and scale. */
 	      switch (fixP->fx_r_type)
 		{
+		case BFD_RELOC_MORELLO_MOVW_SIZE_G0:
+		case BFD_RELOC_MORELLO_MOVW_SIZE_G1:
+		case BFD_RELOC_MORELLO_MOVW_SIZE_G2:
+		case BFD_RELOC_MORELLO_MOVW_SIZE_G3:
 		case BFD_RELOC_AARCH64_MOVW_G0:
 		case BFD_RELOC_AARCH64_MOVW_G1:
 		case BFD_RELOC_AARCH64_MOVW_G2:
@@ -10142,6 +10259,8 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_TLSGD_ADR_PREL21:
     case BFD_RELOC_AARCH64_TLSGD_MOVW_G0_NC:
     case BFD_RELOC_AARCH64_TLSGD_MOVW_G1:
+    case BFD_RELOC_MORELLO_TLSIE_ADR_GOTTPREL_PAGE20:
+    case BFD_RELOC_MORELLO_TLSIE_ADD_LO12:
     case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
     case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
