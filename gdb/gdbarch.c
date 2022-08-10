@@ -328,8 +328,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if (gdbarch->dwarf2_addr_size == 0)
     gdbarch->dwarf2_addr_size = gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT;
   /* Skip verify of dwarf2_addr_size, invalid_p == 0 */
-  if (gdbarch->capability_bit == 0)
-    gdbarch->capability_bit = gdbarch_ptr_bit (gdbarch);
   /* Skip verify of capability_bit, invalid_p == 0 */
   if (gdbarch->char_signed == -1)
     gdbarch->char_signed = 1;
@@ -1810,8 +1808,7 @@ int
 gdbarch_capability_bit (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
-  /* Check variable changed from its initial value.  */
-  gdb_assert (gdbarch->capability_bit != 0);
+  /* Skip verify of capability_bit, invalid_p == 0 */
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_capability_bit called\n");
   return gdbarch->capability_bit;

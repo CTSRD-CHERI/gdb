@@ -6160,32 +6160,35 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
   builtin_type->builtin_func_func
     = lookup_function_type (builtin_type->builtin_func_ptr);
 
-  /* Capability types.  */
-  builtin_type->builtin_intcap_t
-    = init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 0,
-			    "__intcap_t");
-  builtin_type->builtin_intcap_t->set_tagged (true);
-  builtin_type->builtin_uintcap_t
-    = init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 1,
-			    "__uintcap_t");
-  builtin_type->builtin_uintcap_t->set_tagged (true);
+  if (gdbarch_capability_bit (gdbarch) != 0)
+    {
+      /* Capability types.  */
+      builtin_type->builtin_intcap_t
+	= init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 0,
+				"__intcap_t");
+      builtin_type->builtin_intcap_t->set_tagged (true);
+      builtin_type->builtin_uintcap_t
+	= init_capability_type (alloc, gdbarch_capability_bit (gdbarch), 1,
+				"__uintcap_t");
+      builtin_type->builtin_uintcap_t->set_tagged (true);
 
-  /* Capability pointer types.  */
-  builtin_type->builtin_data_capability
-    = init_pointer_type (alloc, gdbarch_capability_bit (gdbarch), "",
-			 builtin_type->builtin_void);
-  builtin_type->builtin_data_capability->set_instance_flags
-    (builtin_type->builtin_data_capability->instance_flags ()
-     | TYPE_INSTANCE_FLAG_CAPABILITY);
-  builtin_type->builtin_data_capability->set_tagged (true);
+      /* Capability pointer types.  */
+      builtin_type->builtin_data_capability
+	= init_pointer_type (alloc, gdbarch_capability_bit (gdbarch), "",
+			     builtin_type->builtin_void);
+      builtin_type->builtin_data_capability->set_instance_flags
+	(builtin_type->builtin_data_capability->instance_flags ()
+	 | TYPE_INSTANCE_FLAG_CAPABILITY);
+      builtin_type->builtin_data_capability->set_tagged (true);
 
-  builtin_type->builtin_code_capability
-    = init_pointer_type (alloc, gdbarch_capability_bit (gdbarch), "",
-			 lookup_function_type (builtin_type->builtin_void));
-  builtin_type->builtin_code_capability->set_instance_flags
-    (builtin_type->builtin_code_capability->instance_flags ()
-     | TYPE_INSTANCE_FLAG_CAPABILITY);
-  builtin_type->builtin_code_capability->set_tagged (true);
+      builtin_type->builtin_code_capability
+	= init_pointer_type (alloc, gdbarch_capability_bit (gdbarch), "",
+			     lookup_function_type (builtin_type->builtin_void));
+      builtin_type->builtin_code_capability->set_instance_flags
+	(builtin_type->builtin_code_capability->instance_flags ()
+	 | TYPE_INSTANCE_FLAG_CAPABILITY);
+      builtin_type->builtin_code_capability->set_tagged (true);
+    }
 
   /* This type represents a GDB internal function.  */
   builtin_type->internal_fn
