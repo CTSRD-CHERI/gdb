@@ -3882,6 +3882,18 @@ value::fetch_lazy_memory ()
   CORE_ADDR addr = address ();
   struct type *type = check_typedef (enclosing_type ());
 
+  if (TYPE_CAPABILITY (type))
+    {
+      gdb::byte_vector cap = target_read_capability (addr);
+      if (cap.size () == type->length () + 1)
+	{
+	  memcpy (contents_all_raw ().data (), cap.data () + 1,
+		  type->length ());
+	  set_tag (cap[0] != 0);
+	  return;
+	}
+    }
+
   /* Figure out how much we should copy from memory.  Usually, this is just
      the size of the type, but, for arrays, we might only be loading a
      small part of the array (this is only done for very large arrays).  */
@@ -3901,10 +3913,7 @@ value::fetch_lazy_memory ()
 		       contents_all_raw ().data (), len);
 
   if (TYPE_CAPABILITY (type))
-    {
-      bool tag = gdbarch_get_cap_tag_from_address (arch (), addr);
-      set_tag (tag);
-    }
+    set_tag (false);
 }
 
 /* See value.h.  */
