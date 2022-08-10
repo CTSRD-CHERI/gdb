@@ -1465,10 +1465,19 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
     {
     case lval_memory:
       {
-	write_memory (addr, buf.data (), size);
-
+	/* If this value is a capability, we need to handle the capability tag
+	   as an atomic write.  */
 	if (tagged)
-	  gdbarch_set_cap_tag_from_address (gdbarch, addr, fromval->tag ());
+	  {
+	    gdb::byte_vector cap (size + 1);
+
+	    cap[0] = fromval->tag () ? 1 : 0;
+	    gdb::array_view<gdb_byte> dst (cap);
+	    copy (buf, dst.slice (1));
+	    if (target_write_capability (addr, cap))
+	      break;
+	  }
+	write_memory (addr, buf.data (), size);
 	break;
       }
     case lval_register:
