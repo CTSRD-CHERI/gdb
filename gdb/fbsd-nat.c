@@ -52,6 +52,10 @@
 #define	PT_SETREGSET	43	/* Set a target register set */
 #endif
 
+#ifndef PIOD_READ_CHERI_CAP
+#define	PIOD_READ_CHERI_CAP	7	/* Read CHERI capabilities */
+#endif
+
 /* Information stored about each inferior.  */
 struct fbsd_inferior : public private_inferior
 {
@@ -2555,6 +2559,25 @@ fbsd_nat_target::supports_disable_randomization ()
   return false;
 #endif
 }
+
+#if __has_feature(capabilities)
+gdb::byte_vector
+fbsd_nat_target::read_capability (CORE_ADDR addr)
+{
+  struct ptrace_io_desc piod;
+  gdb::byte_vector cap_vec (sizeof (uintcap_t) + 1);
+
+  piod.piod_op = PIOD_READ_CHERI_CAP;
+  piod.piod_offs = (void *) (uintptr_t) addr;
+  piod.piod_addr = cap_vec.data ();
+  piod.piod_len = cap_vec.size ();
+  if (ptrace (PT_IO, get_ptrace_pid (inferior_ptid), (PTRACE_TYPE_ARG3) &piod,
+	      0) == -1)
+    return {};
+
+  return cap_vec;
+}
+#endif
 
 /* See fbsd-nat.h.  */
 bool
