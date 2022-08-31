@@ -3882,8 +3882,10 @@ value::fetch_lazy_memory ()
 
   CORE_ADDR addr = address ();
   struct type *type = check_typedef (enclosing_type ());
+  bool has_capability = TYPE_CAPABILITY (type)
+    || type->code () == TYPE_CODE_CAPABILITY;
 
-  if (TYPE_CAPABILITY (type))
+  if (has_capability)
     {
       gdb::byte_vector cap = target_read_capability (addr);
       if (cap.size () == type->length () + 1)
@@ -3913,7 +3915,7 @@ value::fetch_lazy_memory ()
     read_value_memory (this, 0, stack (), addr,
 		       contents_all_raw ().data (), len);
 
-  if (TYPE_CAPABILITY (type))
+  if (has_capability)
     set_tag (false);
 }
 
