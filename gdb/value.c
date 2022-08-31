@@ -3018,7 +3018,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       else
 	boffset = arg_type->field (fieldno).loc_bitpos () / 8;
 
-      if (lazy ())
+      if (lazy () || type->contains_capability ())
 	v = value::allocate_lazy (enclosing_type ());
       else
 	{
@@ -3050,7 +3050,8 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       if (this->lval () == lval_register && lazy ())
 	fetch_lazy ();
 
-      if (lazy ())
+      if (lazy () || type->code () == TYPE_CODE_CAPABILITY
+	  || TYPE_CAPABILITY (type))
 	v = value::allocate_lazy (type);
       else
 	{
