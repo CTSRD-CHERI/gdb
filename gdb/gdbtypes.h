@@ -1463,8 +1463,7 @@ struct type
   /* Return true if this is a pointer or reference type.  */
   bool is_pointer_or_reference () const
   {
-    return this->code () == TYPE_CODE_PTR
-      || this->code () == TYPE_CODE_CAPABILITY || TYPE_IS_REFERENCE (this);
+    return this->code () == TYPE_CODE_PTR || TYPE_IS_REFERENCE (this);
   }
 
   /* Return true if this type is "string-like", according to its
