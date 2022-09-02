@@ -133,8 +133,6 @@ struct gdbarch
   CORE_ADDR decr_pc_after_break = 0;
   CORE_ADDR deprecated_function_start_offset = 0;
   gdbarch_remote_register_number_ftype *remote_register_number = default_remote_register_number;
-  gdbarch_get_cap_tag_from_address_ftype *get_cap_tag_from_address = default_get_cap_tag_from_address;
-  gdbarch_set_cap_tag_from_address_ftype *set_cap_tag_from_address = default_set_cap_tag_from_address;
   gdbarch_print_cap_ftype *print_cap = default_print_cap;
   gdbarch_print_cap_attributes_ftype *print_cap_attributes = default_print_cap_attributes;
   gdbarch_fetch_tls_load_module_address_ftype *fetch_tls_load_module_address = nullptr;
@@ -402,8 +400,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of decr_pc_after_break, invalid_p == 0 */
   /* Skip verify of deprecated_function_start_offset, invalid_p == 0 */
   /* Skip verify of remote_register_number, invalid_p == 0 */
-  /* Skip verify of get_cap_tag_from_address, invalid_p == 0 */
-  /* Skip verify of set_cap_tag_from_address, invalid_p == 0 */
   /* Skip verify of print_cap, invalid_p == 0 */
   /* Skip verify of print_cap_attributes, invalid_p == 0 */
   /* Skip verify of fetch_tls_load_module_address, has predicate.  */
@@ -877,12 +873,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: remote_register_number = <%s>\n",
 	      host_address_to_string (gdbarch->remote_register_number));
-  gdb_printf (file,
-	      "gdbarch_dump: get_cap_tag_from_address = <%s>\n",
-	      host_address_to_string (gdbarch->get_cap_tag_from_address));
-  gdb_printf (file,
-	      "gdbarch_dump: set_cap_tag_from_address = <%s>\n",
-	      host_address_to_string (gdbarch->set_cap_tag_from_address));
   gdb_printf (file,
 	      "gdbarch_dump: print_cap = <%s>\n",
 	      host_address_to_string (gdbarch->print_cap));
@@ -3022,40 +3012,6 @@ set_gdbarch_remote_register_number (struct gdbarch *gdbarch,
 				    gdbarch_remote_register_number_ftype remote_register_number)
 {
   gdbarch->remote_register_number = remote_register_number;
-}
-
-bool
-gdbarch_get_cap_tag_from_address (struct gdbarch *gdbarch, CORE_ADDR addr)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->get_cap_tag_from_address != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_get_cap_tag_from_address called\n");
-  return gdbarch->get_cap_tag_from_address (gdbarch, addr);
-}
-
-void
-set_gdbarch_get_cap_tag_from_address (struct gdbarch *gdbarch,
-				      gdbarch_get_cap_tag_from_address_ftype get_cap_tag_from_address)
-{
-  gdbarch->get_cap_tag_from_address = get_cap_tag_from_address;
-}
-
-void
-gdbarch_set_cap_tag_from_address (struct gdbarch *gdbarch, CORE_ADDR addr, bool tag)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->set_cap_tag_from_address != NULL);
-  if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_set_cap_tag_from_address called\n");
-  gdbarch->set_cap_tag_from_address (gdbarch, addr, tag);
-}
-
-void
-set_gdbarch_set_cap_tag_from_address (struct gdbarch *gdbarch,
-				      gdbarch_set_cap_tag_from_address_ftype set_cap_tag_from_address)
-{
-  gdbarch->set_cap_tag_from_address = set_cap_tag_from_address;
 }
 
 void

@@ -1102,21 +1102,6 @@ default_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
   return true;
 }
 
-/* See arch-utils.h.  */
-bool default_get_cap_tag_from_address (struct gdbarch *gdbarch,
-				       CORE_ADDR addr)
-{
-  return false;
-}
-
-/* See arch-utils.h.  */
-void
-default_set_cap_tag_from_address (struct gdbarch *gdbarch,
-				  CORE_ADDR addr, bool tag)
-{
-  return;
-}
-
 CORE_ADDR
 default_get_return_buf_addr (struct type *val_type, frame_info_ptr cur_frame)
 {
