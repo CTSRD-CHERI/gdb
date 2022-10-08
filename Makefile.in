@@ -136,7 +136,7 @@ POSTSTAGE1_LIBS = @poststage1_libs@
 BASE_EXPORTS = \
 	FLEX="$(FLEX)"; export FLEX; \
 	LEX="$(LEX)"; export LEX; \
-	BISON="$(BISON)"; export BISON; \
+	BISON="$(BISON) --color=never"; export BISON; \
 	YACC="$(YACC)"; export YACC; \
 	M4="$(M4)"; export M4; \
 	SED="$(SED)"; export SED; \

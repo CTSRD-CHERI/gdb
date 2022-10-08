@@ -122,6 +122,7 @@ COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(COMPILE.post)
 POSTCOMPILE = @true
 
 YACC = @YACC@
+YFLAGS = --color=never
 
 # This is used to rebuild ada-lex.c from ada-lex.l.  If the program is
 # not defined, but ada-lex.c is present, compilation will continue,
