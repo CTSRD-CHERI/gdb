@@ -985,6 +985,8 @@ riscv_register_reggroup_p (struct gdbarch  *gdbarch, int regnum,
     {
       if (regnum < RISCV_FIRST_CSR_REGNUM || regnum > RISCV_LAST_CSR_REGNUM)
 	return 1;
+      if (regnum >= RISCV_FIRST_CHERI_REGNUM && regnum <= RISCV_LAST_CHERI_REGNUM)
+	return 1;
       if (riscv_is_regnum_a_named_csr (regnum))
         return 1;
       return 0;
