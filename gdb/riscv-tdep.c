@@ -3350,6 +3350,10 @@ riscv_cheri_print_pointer_attributes (struct gdbarch *gdbarch,
 		    cap.cr_otype == CC128_OTYPE_SENTRY
 		         ? " (sentry)"
 		         : (cc128_is_cap_sealed(&cap) ? " (sealed)" : ""));
+  /* Also highlight capabilities that are out-of-bounds to make invalid
+     values more obvious in backtraces. */
+  if (cap.address () < cap.base () || cap.address () >= cap.top ())
+    fprintf_filtered (stream, " (out-of-bounds)");
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
