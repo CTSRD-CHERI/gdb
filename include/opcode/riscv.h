@@ -265,6 +265,12 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_FUNCT2		0x3
 #define OP_SH_FUNCT2		25
 
+/* CHERI fields */
+#define OP_MASK_IMM16           0xffff
+#define OP_SH_IMM16             16
+#define OP_MASK_SCR		0x1f
+#define OP_SH_SCR		20
+
 /* RVC fields.  */
 
 #define OP_MASK_OP2		0x3
@@ -332,8 +338,13 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define X_T2 7
 #define X_T3 28
 
+/* ABI names for selected c-registers.  */
+
+#define C_CRA 1
+
 #define NGPR 32
 #define NFPR 32
+#define NGPCR 32
 
 /* These fake label defines are use by both the assembler, and
    libopcodes.  The assembler uses this when it needs to generate a fake
@@ -456,6 +467,8 @@ enum riscv_insn_class
   INSN_CLASS_XTHEADMEMPAIR,
   INSN_CLASS_XTHEADSYNC,
   INSN_CLASS_XVENTANACONDOPS,
+  INSN_CLASS_XCHERI,
+  INSN_CLASS_XCHERI_AND_A,
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -576,12 +589,14 @@ enum riscv_seg_mstate
   MAP_INSN,		/* Instructions.  */
 };
 
-#define NRC (4 + 1)     /* Max characters in register names, incl nul.  */
+#define NRC (5 + 1)     /* Max characters in register names, incl nul.  */
 
 extern const char riscv_gpr_names_numeric[NGPR][NRC];
 extern const char riscv_gpr_names_abi[NGPR][NRC];
 extern const char riscv_fpr_names_numeric[NFPR][NRC];
 extern const char riscv_fpr_names_abi[NFPR][NRC];
+extern const char riscv_gpcr_names_numeric[NGPCR][NRC];
+extern const char riscv_gpcr_names_abi[NGPCR][NRC];
 extern const char * const riscv_rm[8];
 extern const char * const riscv_pred_succ[16];
 extern const char riscv_vecr_names_numeric[NVECR][NRC];

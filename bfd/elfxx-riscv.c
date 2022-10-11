@@ -2578,6 +2578,11 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xtheadsync");
     case INSN_CLASS_XVENTANACONDOPS:
       return riscv_subset_supports (rps, "xventanacondops");
+    case INSN_CLASS_XCHERI:
+      return riscv_subset_supports (rps, "xcheri");
+    case INSN_CLASS_XCHERI_AND_A:
+      return (riscv_subset_supports (rps, "xcheri")
+	      && riscv_subset_supports (rps, "a"));
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2816,6 +2821,16 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadmempair";
     case INSN_CLASS_XTHEADSYNC:
       return "xtheadsync";
+    case INSN_CLASS_XCHERI:
+      return "xcheri";
+    case INSN_CLASS_XCHERI_AND_A:
+      if (!riscv_subset_supports (rps, "xcheri")
+	  && !riscv_subset_supports (rps, "a"))
+	return "xcheri' and `a";
+      else if (!riscv_subset_supports (rps, "xcheri"))
+	return "xcheri";
+      else
+	return "a";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
