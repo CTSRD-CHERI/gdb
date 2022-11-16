@@ -219,7 +219,7 @@ elf64_c64_pad_section (asection *osec, bfd_vma padding)
       lang_add_assignment_internal (&list,
 	    exp_assign (".",
 		exp_binop ('+', exp_nameop (NAME, "."), exp_intop (padding)),
-		FALSE));
+		false));
 
       if (list.head == NULL)
         {
@@ -337,7 +337,7 @@ gld${EMULATION_NAME}_finish (void)
     return;
 
   h = bfd_link_hash_lookup (link_info.hash, entry_symbol.name,
-			    FALSE, FALSE, TRUE);
+			    false, false, true);
   eh = (struct elf_link_hash_entry *)h;
   if (!h || !(eh->target_internal & ST_BRANCH_TO_C64))
     return;
