@@ -15329,6 +15329,11 @@ read_base_type (struct die_info *die, struct dwarf2_cu *cu)
 	/* Turn DW_ATE_address into a void * pointer.  */
 	type = alloc.new_type (TYPE_CODE_VOID, TARGET_CHAR_BIT, NULL);
 	type = init_pointer_type (alloc, bits, name, type);
+	if (bits == gdbarch_capability_bit (objfile->arch ()))
+	  {
+	    type->set_tagged (true);
+	    type->set_instance_flags (TYPE_INSTANCE_FLAG_CAPABILITY);
+	  }
 	break;
       case DW_ATE_boolean:
 	type = init_boolean_type (alloc, bits, 1, name);
