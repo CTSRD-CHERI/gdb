@@ -418,6 +418,37 @@ class instruction_reader : public abstract_instruction_reader
 
 } // namespace
 
+static bool
+morello_frame_is_executive (struct gdbarch *gdbarch,
+			    struct frame_info *this_frame)
+{
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  struct value *clr = frame_unwind_register_value (this_frame,
+						   tdep->cap_reg_clr);
+  uint128_t dummy_cap;
+  memcpy (&dummy_cap, value_contents_all (clr).data (), sizeof(dummy_cap));
+  capability cap (dummy_cap, value_tag (clr));
+  return cap.check_permissions (CAP_PERM_EXECUTIVE);
+}
+
+static int
+morello_purecap_csp_regnum (struct gdbarch *gdbarch,
+			    struct frame_info *this_frame)
+{
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  if (morello_frame_is_executive (gdbarch, this_frame))
+    return tdep->cap_reg_csp;
+  else
+    return tdep->cap_reg_rcsp;
+}
+
+static CORE_ADDR
+morello_unwind_sp (struct gdbarch *gdbarch, struct frame_info *next_frame)
+{
+  int csp_regnum = morello_purecap_csp_regnum (gdbarch, next_frame);
+  return frame_unwind_register_unsigned (next_frame, csp_regnum);
+}
+
 /* If address signing is enabled, mask off the signature bits from the link
    register, which is passed by value in ADDR, using the register values in
    THIS_FRAME.  */
@@ -1716,7 +1747,8 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
       return;
     }
 
-  if (regnum == AARCH64_SP_REGNUM || regnum == tdep->cap_reg_csp)
+  if (regnum == AARCH64_SP_REGNUM
+      || regnum == morello_purecap_csp_regnum (gdbarch, this_frame))
     {
       reg->how = DWARF2_FRAME_REG_CFA;
       return;
@@ -5663,6 +5695,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	  set_gdbarch_dwarf2_addr_size (gdbarch, 8);
 	  set_gdbarch_sp_regnum (gdbarch, tdep->cap_reg_csp);
 	  set_gdbarch_pc_regnum (gdbarch, tdep->cap_reg_pcc);
+	  set_gdbarch_unwind_sp (gdbarch, morello_unwind_sp);
 
 	  /* Hook to adjust the PCC bounds.  */
 	  set_gdbarch_write_pc (gdbarch, morello_write_pc);
