@@ -426,11 +426,11 @@ morello_frame_is_executive (struct gdbarch *gdbarch,
 			    struct frame_info *this_frame)
 {
   aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
-  struct value *clr = frame_unwind_register_value (this_frame,
-						   tdep->cap_reg_clr);
+  struct value *pcc = frame_unwind_register_value (this_frame,
+						   tdep->cap_reg_pcc);
   uint128_t dummy_cap;
-  memcpy (&dummy_cap, value_contents_all (clr).data (), sizeof(dummy_cap));
-  capability cap (dummy_cap, value_tag (clr));
+  memcpy (&dummy_cap, value_contents_all (pcc).data (), sizeof(dummy_cap));
+  capability cap (dummy_cap, value_tag (pcc));
   return cap.check_permissions (CAP_PERM_EXECUTIVE);
 }
 
