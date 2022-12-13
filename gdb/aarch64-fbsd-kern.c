@@ -81,6 +81,34 @@ static const struct regset aarch64_fbsd_pcbregset =
     regcache_supply_regset, regcache_collect_regset
   };
 
+static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri[] =
+  {
+    { 11, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c29 */
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 1, AARCH64_CSP_REGNUM(0), 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd_pcbregset_cheri =
+  {
+    aarch64_fbsd_pcbmap_cheri,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri_alias[] =
+  {
+    { 11, AARCH64_X0_REGNUM + 19, 16 }, /* x19 ... x29 */
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd_pcbregset_cheri_alias =
+  {
+    aarch64_fbsd_pcbmap_cheri_alias,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
 /* In kernels prior to __FreeBSD_version 1400084, struct pcb used an
    alternate layout.  */
 
@@ -96,6 +124,36 @@ static const struct regcache_map_entry aarch64_fbsd13_pcbmap[] =
 static const struct regset aarch64_fbsd13_pcbregset =
   {
     aarch64_fbsd13_pcbmap,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static const struct regcache_map_entry aarch64_fbsd13_pcbmap_cheri[] =
+  {
+    { 30, AARCH64_C0_REGNUM(0), 16 }, /* c0 ... c29 */
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },
+    { 1, AARCH64_CSP_REGNUM(0), 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd13_pcbregset_cheri =
+  {
+    aarch64_fbsd13_pcbmap_cheri,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static const struct regcache_map_entry aarch64_fbsd13_pcbmap_cheri_alias[] =
+  {
+    { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd13_pcbregset_cheri_alias =
+  {
+    aarch64_fbsd13_pcbmap_cheri_alias,
     regcache_supply_regset, regcache_collect_regset
   };
 
@@ -115,6 +173,50 @@ aarch64_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 			    sizeof (buf));
 }
 
+static void
+aarch64_fbsd_supply_cheriabi_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+  const struct regset *pcbregset_cheri, *pcbregset_cheri_alias;
+  struct aarch64_fbsd_kern_info *info = get_aarch64_fbsd_kern_info();
+  size_t len;
+
+  if (info->osreldate >= 1400084)
+    {
+      pcbregset_cheri = &aarch64_fbsd_pcbregset_cheri;
+      pcbregset_cheri_alias = &aarch64_fbsd_pcbregset_cheri_alias;
+      len = regcache_map_entry_size (aarch64_fbsd_pcbmap_cheri);
+    }
+  else
+    {
+      pcbregset_cheri = &aarch64_fbsd13_pcbregset_cheri;
+      pcbregset_cheri_alias = &aarch64_fbsd13_pcbregset_cheri_alias;
+      len = regcache_map_entry_size (aarch64_fbsd13_pcbmap_cheri);
+    }
+  regcache->supply_regset (pcbregset_cheri, tdep->cap_reg_base, -1, pcb_addr,
+			   len);
+  regcache->supply_regset (pcbregset_cheri_alias, -1, pcb_addr, len);
+}
+
+static bool
+is_cheri_kernel()
+{
+  return lookup_minimal_symbol ("userspace_root_cap", (const char *) NULL,
+				(struct objfile *) NULL).minsym != NULL;
+}
+
+static const struct target_desc *
+aarch64_fbsd_read_description()
+{
+  aarch64_features features;
+
+  features.tls = true;
+  features.capability = is_cheri_kernel ();
+
+  return aarch64_read_description (features);
+}
+
 static const struct regcache_map_entry aarch64_fbsd_trapframe_map[] =
   {
     { 1, AARCH64_SP_REGNUM, 8 },
@@ -124,6 +226,34 @@ static const struct regcache_map_entry aarch64_fbsd_trapframe_map[] =
     { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
     { 30, AARCH64_X0_REGNUM, 8 }, /* x0 ... x29 */
+    { 0 }
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri[] =
+  {
+    { 1, AARCH64_CSP_REGNUM (0), 16 },
+    { 1, AARCH64_CLR_REGNUM (0), 16 },
+    { 1, AARCH64_PCC_REGNUM (0), 16 },
+    { 1, AARCH64_DDC_REGNUM (0), 16 },
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* cpsr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_C0_REGNUM (0), 16 }, /* c0 ... c29 */
+    { 0 }
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri_alias[] =
+  {
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 1, AARCH64_LR_REGNUM, 16 },
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* ddc */
+    { 1, AARCH64_CPSR_REGNUM, 8 },
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
     { 0 }
   };
 
@@ -141,10 +271,37 @@ static const struct regcache_map_entry aarch64_fbsd13_trapframe_map[] =
     { 0 }
   };
 
+static const struct regcache_map_entry aarch64_fbsd13_trapframe_map_cheri[] =
+  {
+    { 1, AARCH64_CSP_REGNUM (0), 16 },
+    { 1, AARCH64_CLR_REGNUM (0), 16 },
+    { 1, AARCH64_PCC_REGNUM (0), 16 },
+    { 1, AARCH64_DDC_REGNUM (0), 16 },
+    { 1, REGCACHE_MAP_SKIP, 4 },	/* cpsr */
+    { 1, REGCACHE_MAP_SKIP, 4 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_C0_REGNUM (0), 16 }, /* c0 ... c29 */
+    { 0 }
+  };
+
+static const struct regcache_map_entry aarch64_fbsd13_trapframe_map_cheri_alias[] =
+  {
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 1, AARCH64_LR_REGNUM, 16 },
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* ddc */
+    { 1, AARCH64_CPSR_REGNUM, 4 },
+    { 1, REGCACHE_MAP_SKIP, 4 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
+    { 0 }
+  };
+
 static struct trad_frame_cache *
 aarch64_fbsd_trapframe_cache (frame_info_ptr this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct aarch64_fbsd_kern_info *info = get_aarch64_fbsd_kern_info();
   struct trad_frame_cache *cache;
@@ -156,23 +313,53 @@ aarch64_fbsd_trapframe_cache (frame_info_ptr this_frame, void **this_cache)
     return ((struct trad_frame_cache *)*this_cache);
 
   const struct regcache_map_entry *trapframe_map;
+  const struct regcache_map_entry *trapframe_map_cheri;
+  const struct regcache_map_entry *trapframe_map_cheri_alias;
   if (info->osreldate >= 1400084)
-    trapframe_map = aarch64_fbsd_trapframe_map;
+    {
+      trapframe_map = aarch64_fbsd_trapframe_map;
+      trapframe_map_cheri = aarch64_fbsd_trapframe_map_cheri;
+      trapframe_map_cheri_alias = aarch64_fbsd_trapframe_map_cheri_alias;
+    }
   else
-    trapframe_map = aarch64_fbsd13_trapframe_map;
+    {
+      trapframe_map = aarch64_fbsd13_trapframe_map;
+      trapframe_map_cheri = aarch64_fbsd13_trapframe_map_cheri;
+      trapframe_map_cheri_alias = aarch64_fbsd13_trapframe_map_cheri_alias;
+    }
 
   cache = trad_frame_cache_zalloc (this_frame);
   *this_cache = cache;
 
-  sp = get_frame_register_unsigned (this_frame, AARCH64_SP_REGNUM);
+  if (tdep->abi == AARCH64_ABI_AAPCS64_CAP)
+    sp = get_frame_register_unsigned (this_frame,
+				      AARCH64_CSP_REGNUM (tdep->cap_reg_base));
+  else
+    sp = get_frame_register_unsigned (this_frame, AARCH64_SP_REGNUM);
 
-  tf_size = regcache_map_entry_size (trapframe_map);
-  trad_frame_set_reg_regmap (cache, trapframe_map, sp, tf_size);
+  if (tdep->has_capability ())
+    {
+      tf_size = regcache_map_entry_size (trapframe_map_cheri);
+      trad_frame_set_reg_regmap (cache, trapframe_map_cheri, sp,
+				 tf_size, tdep->cap_reg_base);
+      trad_frame_set_reg_regmap (cache, trapframe_map_cheri_alias,
+				 sp, tf_size);
+    }
+  else
+    {
+      tf_size = regcache_map_entry_size (trapframe_map);
+      trad_frame_set_reg_regmap (cache, trapframe_map, sp,
+				 tf_size);
+    }
 
   /* Read $PC from trap frame.  */
   func = get_frame_func (this_frame);
   find_pc_partial_function (func, &name, NULL, NULL);
-  offset = regcache_map_offset (trapframe_map, AARCH64_PC_REGNUM, gdbarch);
+  if (tdep->has_capability ())
+    offset = regcache_map_offset (trapframe_map, AARCH64_PCC_REGNUM(0),
+				  gdbarch);
+  else
+    offset = regcache_map_offset (trapframe_map, AARCH64_PC_REGNUM, gdbarch);
   pc = read_memory_unsigned_integer (sp + offset, 8, byte_order);
 
   if (pc == 0 && strcmp(name, "fork_trampoline") == 0)
@@ -249,8 +436,12 @@ aarch64_fbsd_kernel_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   /* Enable longjmp.  */
   tdep->jb_pc = 13;
 
-  fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_pcb);
+  if (tdep->abi == AARCH64_ABI_AAPCS64_CAP)
+    fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_cheriabi_pcb);
+  else
+    fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_pcb);
   fbsd_vmcore_set_cpu_pcb_addr (gdbarch, kgdb_trgt_stop_pcb);
+  fbsd_vmcore_set_read_description (gdbarch, aarch64_fbsd_read_description);
 }
 
 void _initialize_aarch64_kgdb_tdep ();
