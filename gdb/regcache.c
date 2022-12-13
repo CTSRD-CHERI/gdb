@@ -1130,6 +1130,29 @@ reg_buffer::raw_supply (int regnum, const void *buf)
     }
 }
 
+void
+reg_buffer::raw_supply (int regnum, CORE_ADDR addr)
+{
+  size_t size = m_descr->sizeof_register[regnum];
+  if (register_has_tag (m_descr->gdbarch, regnum))
+    {
+      gdb::byte_vector cap = target_read_capability (addr);
+      if (cap.size () == size + 1)
+	{
+	  raw_supply (regnum, cap.data () + 1);
+	  raw_supply_tag (regnum, cap[0] != 0);
+	  return;
+	}
+      raw_supply_tag (regnum, false);
+    }
+
+  gdb_byte buf[size];
+  if (target_read_memory (addr, buf, sizeof (buf)) == 0)
+    raw_supply (regnum, buf);
+  else
+    raw_supply (regnum, nullptr);
+}
+
 /* See gdbsupport/common-regcache.h.  */
 
 void
@@ -1388,6 +1411,147 @@ regcache::collect_regset (const struct regset *regset, int regbase,
 {
   transfer_regset (regset, regbase, nullptr, regnum, nullptr, (gdb_byte *) buf,
 		   size);
+}
+
+/* See regcache.h.  */
+
+void
+regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
+				    CORE_ADDR in_addr, CORE_ADDR out_addr,
+				    int slot_size, int offs) const
+{
+  struct gdbarch *gdbarch = arch ();
+  int reg_size = std::min (register_size (gdbarch, regnum), slot_size);
+  gdb_byte buf[slot_size];
+  bool have_tag;
+
+  have_tag = (reg_size == register_size (gdbarch, regnum)
+	      && register_has_tag (gdbarch, regnum));
+
+  /* Use part versions and reg_size to prevent possible buffer overflows when
+     accessing the regcache.  */
+
+  if (out_addr != 0)
+    {
+      raw_collect_part (regnum, 0, reg_size, buf);
+
+      /* Ensure any additional space is cleared.  */
+      if (slot_size > reg_size)
+	memset (buf + reg_size, 0, slot_size - reg_size);
+
+      if (have_tag)
+	{
+	  gdb_byte cap[reg_size + 1];
+
+	  cap[0] = raw_collect_tag (regnum);
+	  memcpy (cap + 1, buf, reg_size);
+	  target_write_capability (out_addr + offs, {cap, sizeof (cap)});
+	  if (slot_size > reg_size)
+	    target_write_memory (out_addr + offs + reg_size, buf + reg_size,
+				 slot_size - reg_size);
+	}
+      else
+	target_write_memory (out_addr + offs, buf, slot_size);
+    }
+  else if (in_addr != 0)
+    {
+      bool tag;
+
+      if (have_tag)
+	{
+	  gdb::byte_vector cap = target_read_capability (in_addr + offs);
+	  if (cap.size () != reg_size + 1)
+	    goto invalid;
+	  memcpy(buf, cap.data () + 1, reg_size);
+	  tag = cap[0] != 0;
+	}
+      else
+	{
+	  if (target_read_memory (in_addr + offs, buf, reg_size) != 0)
+	    goto invalid;
+	  tag = false;
+	}
+      /* Zero-extend the register value if the slot is smaller than the register.  */
+      if (slot_size < register_size (gdbarch, regnum))
+	out_regcache->raw_supply_zeroed (regnum);
+      out_regcache->raw_supply_part (regnum, 0, reg_size, buf);
+      if (register_has_tag (gdbarch, regnum))
+	out_regcache->raw_supply_tag (regnum, tag);
+    }
+  else
+    {
+    invalid:
+      /* Invalidate the register.  */
+      out_regcache->raw_supply (regnum, nullptr);
+    }
+}
+
+/* See regcache.h.  */
+
+void
+regcache::transfer_regset (const struct regset *regset, int regbase,
+			   struct regcache *out_regcache,
+			   int regnum, CORE_ADDR in_addr,
+			   CORE_ADDR out_addr, size_t size) const
+{
+  const struct regcache_map_entry *map;
+  int offs = 0, count;
+
+  for (map = (const struct regcache_map_entry *) regset->regmap;
+       (count = map->count) != 0;
+       map++)
+    {
+      int regno = map->regno;
+      int slot_size = map->size;
+
+      if (regno != REGCACHE_MAP_SKIP)
+	regno += regbase;
+
+      if (slot_size == 0 && regno != REGCACHE_MAP_SKIP)
+	slot_size = m_descr->sizeof_register[regno];
+
+      if (regno == REGCACHE_MAP_SKIP
+	  || (regnum != -1
+	      && (regnum < regno || regnum >= regno + count)))
+	  offs += count * slot_size;
+
+      else if (regnum == -1)
+	for (; count--; regno++, offs += slot_size)
+	  {
+	    if (offs + slot_size > size)
+	      break;
+
+	    transfer_regset_register (out_regcache, regno, in_addr, out_addr,
+				      slot_size, offs);
+	  }
+      else
+	{
+	  /* Transfer a single register and return.  */
+	  offs += (regnum - regno) * slot_size;
+	  if (offs + slot_size > size)
+	    return;
+
+	  transfer_regset_register (out_regcache, regnum, in_addr, out_addr,
+				    slot_size, offs);
+	  return;
+	}
+    }
+}
+
+/* See regcache.h.  */
+
+void
+regcache::supply_regset (const struct regset *regset, int regbase,
+			 int regnum, CORE_ADDR addr, size_t size)
+{
+  transfer_regset (regset, regbase, this, regnum, addr, 0, size);
+}
+
+void
+regcache::supply_regset (const struct regset *regset,
+			 int regnum, CORE_ADDR addr, size_t size)
+{
+  transfer_regset (regset, 0, this, regnum, addr, 0, size);
 }
 
 bool

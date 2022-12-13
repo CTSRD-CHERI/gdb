@@ -237,6 +237,8 @@ public:
     raw_supply (regnum, src.register_buffer (regnum));
   }
 
+  void raw_supply (int regnum, CORE_ADDR addr);
+
   /* See gdbsupport/common-regcache.h.  */
   void raw_supply_tag (int regnum, bool tag) override;
 
@@ -421,6 +423,15 @@ public:
   void collect_regset (const struct regset *regset, int regnum,
 		       void *buf, size_t size) const;
 
+  /* Similar to above, but the registers are identified by a target
+     address.  */
+
+  void supply_regset (const struct regset *regset, int regbase,
+		      int regnum, CORE_ADDR addr, size_t size);
+
+  void supply_regset (const struct regset *regset,
+		      int regnum, CORE_ADDR addr, size_t size);
+
   /* Return REGCACHE's ptid.  */
 
   ptid_t ptid () const
@@ -462,6 +473,17 @@ private:
 			struct regcache *out_regcache,
 			int regnum, const gdb_byte *in_buf,
 			gdb_byte *out_buf, size_t size) const;
+
+  /* Similar to the above, but uses target addresses instead of a
+     local buffer.  */
+  void transfer_regset_register (struct regcache *out_regcache, int regnum,
+				 CORE_ADDR in_addr, CORE_ADDR out_addr,
+				 int slot_size, int offs) const;
+
+  void transfer_regset (const struct regset *regset, int regbase,
+			struct regcache *out_regcache,
+			int regnum, CORE_ADDR in_addr,
+			CORE_ADDR out_addr, size_t size) const;
 
   /* Perform a partial register transfer using a read, modify, write
      operation.  */
