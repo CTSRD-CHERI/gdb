@@ -66,6 +66,11 @@
 # define DIAGNOSTIC_ERROR_SWITCH \
   DIAGNOSTIC_ERROR ("-Wswitch")
 
+# if __has_warning ("-Wenum-constexpr-conversion")
+#  define DIAGNOSTIC_IGNORE_ENUM_CONSTEXPR_CONVERSION \
+   DIAGNOSTIC_IGNORE ("-Wenum-constexpr-conversion")
+# endif
+
 #elif defined (__GNUC__) /* GCC */
 
 # if __GNUC__ >= 7
@@ -114,6 +119,10 @@
 
 #ifndef DIAGNOSTIC_ERROR_SWITCH
 # define DIAGNOSTIC_ERROR_SWITCH
+#endif
+
+#ifndef DIAGNOSTIC_IGNORE_ENUM_CONSTEXPR_CONVERSION
+# define DIAGNOSTIC_IGNORE_ENUM_CONSTEXPR_CONVERSION
 #endif
 
 #endif /* DIAGNOSTICS_H */
