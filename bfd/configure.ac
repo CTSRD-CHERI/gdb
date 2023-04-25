@@ -214,7 +214,7 @@ BFD_HOST_64BIT_LONG_LONG=0
 BFD_HOST_64_BIT_DEFINED=0
 BFD_HOST_64_BIT=
 BFD_HOST_U_64_BIT=
-BFD_HOSTPTR_T="unsigned long"
+BFD_HOSTPTR_T="uintptr_t"
 
 AC_CHECK_SIZEOF(long long)
 AC_CHECK_SIZEOF(void *)
@@ -233,9 +233,6 @@ elif test "x${ac_cv_sizeof_long_long}" = "x8"; then
   BFD_HOST_64BIT_LONG_LONG=1
   test -n "${HOST_64BIT_TYPE}" || HOST_64BIT_TYPE="long long"
   test -n "${HOST_U_64BIT_TYPE}" || HOST_U_64BIT_TYPE="unsigned long long"
-  if test "x${ac_cv_sizeof_void_p}" = "x8"; then
-    BFD_HOSTPTR_T="unsigned long long"
-  fi
 fi
 
 if test -n "${HOST_64BIT_TYPE}" -a -n "${HOST_U_64BIT_TYPE}"; then
