@@ -622,7 +622,7 @@ pe_ILF_make_a_section (pe_ILF_vars * vars,
 {
   asection_ptr sec;
   flagword     flags;
-  intptr_t alignment;
+  size_t alignment;
 
   sec = bfd_make_section_old_way (vars->abfd, name);
   if (sec == NULL)
@@ -788,7 +788,7 @@ pe_ILF_build_a_bfd (bfd *	    abfd,
   asection_ptr		   id4, id5, id6 = NULL, text = NULL;
   coff_symbol_type **	   imp_sym;
   unsigned int		   imp_index;
-  intptr_t alignment;
+  size_t alignment;
 
   /* Decode and verify the types field of the ILF structure.  */
   import_type = types & 0x3;
