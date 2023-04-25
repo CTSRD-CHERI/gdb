@@ -221,7 +221,7 @@ AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(int)
 
-if test "x${ac_cv_sizeof_void_p}" = "x8"; then
+if test "${ac_cv_sizeof_void_p}" -ge "8"; then
   host64=true
 fi
 
