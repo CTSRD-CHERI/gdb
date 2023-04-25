@@ -3681,7 +3681,11 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
 {
   struct value *v;
 
-  if (whole->lval () == lval_memory && whole->lazy ())
+  /* Capabilities must be fetched explicitly and not copied from the
+     containing value.  */
+  if (TYPE_CAPABILITY (type))
+    v = value::allocate_lazy (type);
+  else if (whole->lval () == lval_memory && whole->lazy ())
     v = value::allocate_lazy (type);
   else
     {
