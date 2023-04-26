@@ -806,7 +806,7 @@ ctf_hash_insert_type (ctf_hash_t *hp, ctf_dict_t *fp, uint32_t type,
     return 0;		   /* Just ignore empty strings on behalf of caller.  */
 
   if (ctf_hashtab_insert ((struct htab *) hp, (char *) str,
-			  (void *) (ptrdiff_t) type, NULL, NULL) != NULL)
+			  (void *) (uintptr_t) type, NULL, NULL) != NULL)
     return 0;
   return errno;
 }
