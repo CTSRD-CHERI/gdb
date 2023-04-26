@@ -137,9 +137,14 @@
    relative to B.  Otherwise, use the faster strategy of computing the
    alignment relative to 0.  */
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#define __PTR_ALIGN(B, P, A)						\
+   (char *) (((intptr_t) (P) + (A)) & ~(A))
+#else
 #define __PTR_ALIGN(B, P, A)						\
   (sizeof (ptrdiff_t) < sizeof (void *) ? __BPTR_ALIGN (B, P, A)	\
    : (char *) (((ptrdiff_t) (P) + (A)) & ~(A)))
+#endif
 
 #ifndef __attribute_pure__
 # if defined __GNUC_MINOR__ && __GNUC__ * 1000 + __GNUC_MINOR__ >= 2096
