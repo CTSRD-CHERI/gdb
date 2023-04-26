@@ -282,7 +282,7 @@
 # define CTF_DEDUP_GID_TO_TYPE(id) packed_id_to_type (id)
 #else
 # define CTF_DEDUP_GID(fp, input, type)	\
-  (void *) (((uint64_t) input) << 32 | (type))
+  (void *) (uintptr_t)(((uint64_t) input) << 32 | (type))
 # define CTF_DEDUP_GID_TO_INPUT(id) ((int) (((uint64_t) id) >> 32))
 # define CTF_DEDUP_GID_TO_TYPE(id) (ctf_id_t) (((uint64_t) id) & ~(0xffffffff00000000ULL))
 #endif
