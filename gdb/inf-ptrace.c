@@ -446,7 +446,7 @@ inf_ptrace_target::xfer_partial (enum target_object object,
 	   inserting breakpoints, so we use PIOD_WRITE_I instead.  */
 	piod.piod_op = writebuf ? PIOD_WRITE_I : PIOD_READ_D;
 	piod.piod_addr = writebuf ? (void *) writebuf : readbuf;
-	piod.piod_offs = (void *) (long) offset;
+	piod.piod_offs = (void *) (intptr_t) offset;
 	piod.piod_len = len;
 
 	errno = 0;
