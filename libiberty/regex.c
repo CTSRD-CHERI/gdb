@@ -2032,7 +2032,7 @@ static reg_errcode_t byte_compile_range (unsigned int range_start,
 	SET_HIGH_BOUND (pending_exact);		\
     }
 #  else
-#   define MOVE_BUFFER_POINTER(P) (P) += incr
+#   define MOVE_BUFFER_POINTER(P) (P) = COMPILED_BUFFER_VAR + ((P) - old_buffer)
 #   define ELSE_EXTEND_BUFFER_HIGH_BOUND
 #  endif
 # endif /* not DEFINED_ONCE */
@@ -2059,7 +2059,6 @@ static reg_errcode_t byte_compile_range (unsigned int range_start,
     /* If the buffer moved, move all the pointers into it.  */		\
     if (old_buffer != COMPILED_BUFFER_VAR)				\
       {									\
-	PTR_INT_TYPE incr = COMPILED_BUFFER_VAR - old_buffer;		\
 	MOVE_BUFFER_POINTER (b);					\
 	MOVE_BUFFER_POINTER (begalt);					\
 	if (fixup_alt_jump)						\
@@ -2087,7 +2086,6 @@ static reg_errcode_t byte_compile_range (unsigned int range_start,
     /* If the buffer moved, move all the pointers into it.  */		\
     if (old_buffer != COMPILED_BUFFER_VAR)				\
       {									\
-	PTR_INT_TYPE incr = COMPILED_BUFFER_VAR - old_buffer;		\
 	MOVE_BUFFER_POINTER (b);					\
 	MOVE_BUFFER_POINTER (begalt);					\
 	if (fixup_alt_jump)						\
