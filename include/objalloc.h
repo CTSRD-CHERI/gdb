@@ -50,7 +50,7 @@ struct objalloc
 
 /* Work out the required alignment.  */
 
-struct objalloc_align { char x; union { double d; void *p } d; };
+struct objalloc_align { char x; union { double d; void *p; } d; };
 
 #if defined (__STDC__) && __STDC__
 #ifndef offsetof
