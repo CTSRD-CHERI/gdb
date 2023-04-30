@@ -268,6 +268,7 @@ public:
   bool has_stack () override;
   bool has_registers () override;
   bool has_execution (inferior *inf) override { return false; }
+  gdb::byte_vector read_capability (CORE_ADDR addr) override;
 };
 
 /* Target ops for libkvm interface.  */
@@ -602,6 +603,12 @@ fbsd_kvm_target::xfer_partial(enum target_object object,
 	default:
 		return TARGET_XFER_E_IO;
 	}
+}
+
+gdb::byte_vector
+fbsd_kvm_target::read_capability (CORE_ADDR addr)
+{
+  return {};
 }
 
 #if 0
