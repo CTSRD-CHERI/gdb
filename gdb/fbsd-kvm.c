@@ -265,6 +265,7 @@ public:
   bool has_stack () override;
   bool has_registers () override;
   bool has_execution (inferior *inf) override { return false; }
+  gdb::byte_vector read_capability (CORE_ADDR addr) override;
 };
 
 /* Target ops for libkvm interface.  */
@@ -583,6 +584,23 @@ fbsd_kvm_target::xfer_partial(enum target_object object,
 	default:
 		return TARGET_XFER_E_IO;
 	}
+}
+
+gdb::byte_vector
+fbsd_kvm_target::read_capability (CORE_ADDR addr)
+{
+#ifdef HAVE_KVM_READCAP
+  gdbarch *gdbarch = target_gdbarch ();
+  if (gdbarch_capability_bit (gdbarch) != 0) {
+    gdb::byte_vector cap_vec (gdbarch_capability_bit (gdbarch)
+			      / TARGET_CHAR_BIT + 1);
+
+    if (kvm_readcap (kvm, addr, cap_vec.data (), cap_vec.size ())
+	== cap_vec.size ())
+      return cap_vec;
+  }
+#endif
+  return {};
 }
 
 static void
