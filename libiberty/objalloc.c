@@ -43,6 +43,10 @@ extern void free (PTR);
 
 #endif
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include "cheriintrin.h"
+#endif
+
 /* These routines allocate space for an object.  Freeing allocated
    space may or may not free all more recently allocated space.
 
@@ -103,8 +107,9 @@ objalloc_create (void)
   chunk->next = NULL;
   chunk->current_ptr = NULL;
 
-  ret->current_ptr = (char *) chunk + CHUNK_HEADER_SIZE;
   ret->current_space = CHUNK_SIZE - CHUNK_HEADER_SIZE;
+  ret->current_ptr = cheri_bounds_set_exact ((char *) chunk + CHUNK_HEADER_SIZE,
+					     ret->current_space);
 
   return ret;
 }
@@ -132,7 +137,7 @@ _objalloc_alloc (struct objalloc *o, unsigned long original_len)
     {
       o->current_ptr += len;
       o->current_space -= len;
-      return (PTR) (o->current_ptr - len);
+      return (PTR) cheri_bounds_set_exact (o->current_ptr - len, len);
     }
 
   if (len >= BIG_REQUEST)
@@ -150,7 +155,11 @@ _objalloc_alloc (struct objalloc *o, unsigned long original_len)
 
       o->chunks = (PTR) chunk;
 
-      return (PTR) (ret + CHUNK_HEADER_SIZE);
+      /* Because CHUNK_HEADER_SIZE is a fixed size, this can't use
+         CRRL/CRAM to get exact bounds on the returned pointer.  Do a
+         best-effort at trimming the bounds, but for large allocations
+         the chunk header might still be in bounds.  */
+      return (PTR) cheri_bounds_set (ret + CHUNK_HEADER_SIZE, len);
     }
   else
     {
@@ -162,8 +171,10 @@ _objalloc_alloc (struct objalloc *o, unsigned long original_len)
       chunk->next = (struct objalloc_chunk *) o->chunks;
       chunk->current_ptr = NULL;
 
-      o->current_ptr = (char *) chunk + CHUNK_HEADER_SIZE;
       o->current_space = CHUNK_SIZE - CHUNK_HEADER_SIZE;
+      o->current_ptr = cheri_bounds_set_exact ((char *) chunk
+					       + CHUNK_HEADER_SIZE,
+					       o->current_space);
 
       o->chunks = (PTR) chunk;
 
@@ -260,8 +271,14 @@ objalloc_free_block (struct objalloc *o, PTR block)
       o->chunks = (PTR) first;
 
       /* Now start allocating from this small block again.  */
-      o->current_ptr = b;
       o->current_space = ((char *) p + CHUNK_SIZE) - b;
+#ifdef __CHERI_PURE_CAPABILITY__
+      /* b might have narrow bounds, so re-derive from p */
+      o->current_ptr = cheri_bounds_set_exact ((char *) p + (b - (char *) p),
+					       o->current_space);
+#else
+      o->current_ptr = b;
+#endif
     }
   else
     {
