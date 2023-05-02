@@ -75,13 +75,20 @@ extern void *_objalloc_alloc (struct objalloc *, unsigned long);
    gcc, because otherwise we would have to evaluate the arguments
    multiple times, or use a temporary field as obstack.h does.  */
 
-#if defined (__GNUC__) && defined (__STDC__) && __STDC__
+#if defined (__GNUC__) && defined (__STDC__) && __STDC__ && \
+  !defined(__CHERI_PURE_CAPABILITY__)
 
 /* NextStep 2.0 cc is really gcc 1.93 but it defines __GNUC__ = 2 and
    does not implement __extension__.  But that compiler doesn't define
    __GNUC_MINOR__.  */
 #if __GNUC__ < 2 || (__NeXT__ && !__GNUC_MINOR__)
 #define __extension__
+#endif
+
+#ifdef __CHERI_PURE_CAPABILITY__
+#include "cheriintrin.h"
+#else
+#define cheri_bounds_set_exact(p, l) (p)
 #endif
 
 #define objalloc_alloc(o, l)						\
@@ -94,7 +101,8 @@ extern void *_objalloc_alloc (struct objalloc *, unsigned long);
      (__len != 0 && __len <= __o->current_space				\
       ? (__o->current_ptr += __len,					\
 	 __o->current_space -= __len,					\
-	 (void *) (__o->current_ptr - __len))				\
+	 (void *) cheri_bounds_set_exact ((__o->current_ptr - __len),	\
+					  __len)			\
       : _objalloc_alloc (__o, __len)); })
 
 #else /* ! __GNUC__ */
