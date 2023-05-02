@@ -90,6 +90,12 @@ extern void *_objalloc_alloc (struct objalloc *, unsigned long);
 #define __extension__
 #endif
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include "cheriintrin.h"
+#else
+#define cheri_bounds_set_exact(p, l) (p)
+#endif
+
 #define objalloc_alloc(o, l)						\
   __extension__								\
   ({ struct objalloc *__o = (o);					\
@@ -100,7 +106,8 @@ extern void *_objalloc_alloc (struct objalloc *, unsigned long);
      (__len != 0 && __len <= __o->current_space				\
       ? (__o->current_ptr += __len,					\
 	 __o->current_space -= __len,					\
-	 (void *) (__o->current_ptr - __len))				\
+	 (void *) cheri_bounds_set_exact ((__o->current_ptr - __len),	\
+					  __len))			\
       : _objalloc_alloc (__o, __len)); })
 
 #else /* ! __GNUC__ */
