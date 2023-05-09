@@ -23,6 +23,13 @@
 #include "gdbsupport/gdb_obstack.h"
 #include "bcache.h"
 
+#ifdef __CHERI_PURE_CAPABILITY__
+#include "cheriintrin.h"
+#else
+#define cheri_bounds_set(p, l) (p)
+#define cheri_perms_clear(p, m) (p)
+#endif
+
 #include <algorithm>
 
 namespace gdb {
@@ -182,7 +189,8 @@ bcache::insert (const void *addr, int length, bool *added)
 	{
 	  if (s->length == length
 	      && this->compare (&s->d.data, addr, length))
-	    return &s->d.data;
+	    return cheri_perms_clear (cheri_bounds_set (&s->d.data, length),
+				      CHERI_PERM_STORE | CHERI_PERM_STORE_CAP);
 	  else
 	    m_half_hash_miss_count++;
 	}
@@ -207,7 +215,8 @@ bcache::insert (const void *addr, int length, bool *added)
     if (added != nullptr)
       *added = true;
 
-    return &newobj->d.data;
+    return cheri_perms_clear (cheri_bounds_set (&newobj->d.data, length),
+			      CHERI_PERM_STORE | CHERI_PERM_STORE_CAP);
   }
 }
 
