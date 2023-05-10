@@ -191,21 +191,23 @@ aarch64_fbsd_supply_cheriabi_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
     = (aarch64_gdbarch_tdep *) gdbarch_tdep (regcache->arch ());
   const struct regset *pcbregset_cheri, *pcbregset_cheri_alias;
   struct aarch64_fbsd_info *info = get_aarch64_fbsd_info();
+  size_t len;
 
   if (info->osreldate >= 1400084)
     {
       pcbregset_cheri = &aarch64_fbsd_pcbregset_cheri;
       pcbregset_cheri_alias = &aarch64_fbsd_pcbregset_cheri_alias;
+      len = regcache_map_entry_size (aarch64_fbsd_pcbmap_cheri);
     }
   else
     {
       pcbregset_cheri = &aarch64_fbsd13_pcbregset_cheri;
       pcbregset_cheri_alias = &aarch64_fbsd13_pcbregset_cheri_alias;
+      len = regcache_map_entry_size (aarch64_fbsd13_pcbmap_cheri);
     }
-  regcache->supply_regset (pcbregset_cheri, -1,
-			   tdep->cap_reg_base, pcb_addr, 16 * 33);
-  regcache->supply_regset (pcbregset_cheri_alias, -1, pcb_addr,
-			   16 * 33);
+  regcache->supply_regset (pcbregset_cheri, tdep->cap_reg_base, -1, pcb_addr,
+			   len);
+  regcache->supply_regset (pcbregset_cheri_alias, -1, pcb_addr, len);
 }
 
 static bool
