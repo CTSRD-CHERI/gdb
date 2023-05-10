@@ -1461,12 +1461,13 @@ regcache::transfer_regset_register (struct regcache *out_regcache, int regnum,
 	{
 	  gdb::byte_vector cap = target_read_capability (in_addr + offs);
 	  if (cap.size () != reg_size + 1)
-	    goto invalid;
+	    goto tag_fallback;
 	  memcpy(buf, cap.data () + 1, reg_size);
 	  tag = cap[0] != 0;
 	}
       else
 	{
+	tag_fallback:
 	  if (target_read_memory (in_addr + offs, buf, reg_size) != 0)
 	    goto invalid;
 	  tag = false;
