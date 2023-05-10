@@ -608,6 +608,17 @@ fbsd_kvm_target::xfer_partial(enum target_object object,
 gdb::byte_vector
 fbsd_kvm_target::read_capability (CORE_ADDR addr)
 {
+#ifdef HAVE_KVM_READCAP
+  gdbarch *gdbarch = target_gdbarch ();
+  if (gdbarch_capability_bit (gdbarch) != 0) {
+    gdb::byte_vector cap_vec (gdbarch_capability_bit (gdbarch)
+			      / TARGET_CHAR_BIT + 1);
+
+    if (kvm_readcap (kvm, addr, cap_vec.data (), cap_vec.size ())
+	== cap_vec.size ())
+      return cap_vec;
+  }
+#endif
   return {};
 }
 

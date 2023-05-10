@@ -491,6 +491,11 @@ AC_SEARCH_LIBS(kvm_kerndisp, kvm,
   [AC_DEFINE(HAVE_KVM_DISP, 1,
             [Define to 1 if your system has the kvm_kerndisp function. ])])
 
+# Does libkvm support kvm_readcap for fetching tagged CHERI capabilities
+AC_SEARCH_LIBS(kvm_readcap, kvm,
+  [AC_DEFINE(HAVE_KVM_READCAP, 1,
+            [Define to 1 if your system has the kvm_readcap function. ])])
+
 AM_ICONV
 
 # GDB may fork/exec the iconv program to get the list of supported character
