@@ -4434,6 +4434,48 @@ riscv_cheri_print_cap_attributes (struct gdbarch *gdbarch,
     }
 }
 
+/* Purecap hook to write the PC.  */
+
+static void
+riscv_cheriabi_write_pc (struct regcache *regcache, CORE_ADDR pc)
+{
+  gdbarch *gdbarch = regcache->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int xlen = riscv_isa_xlen (gdbarch);
+  gdb_byte buf[xlen * 2];
+  bool tag;
+
+  regcache->raw_collect (RISCV_PCC_REGNUM, buf);
+
+  ULONGEST address = extract_unsigned_integer (buf, xlen, byte_order);
+  if (address == pc)
+    return;
+
+  /* If tagged, determine if the new PC is representable.  */
+  tag = regcache->raw_collect_tag (RISCV_PCC_REGNUM);
+  if (tag)
+    {
+      ULONGEST pesbt = extract_unsigned_integer (buf + xlen, xlen, byte_order);
+      if (xlen == 8)
+	{
+	  cc128_cap_t cap;
+	  cc128_decompress_mem(pesbt, address, tag, &cap);
+	  tag = cc128_is_representable_with_addr(&cap, pc);
+	}
+      else
+	{
+	  cc64_cap_t cap;
+	  cc64_decompress_mem(pesbt, address, tag, &cap);
+	  tag = cc64_is_representable_with_addr(&cap, pc);
+	}
+      if (!tag)
+	regcache->raw_supply_tag (RISCV_PCC_REGNUM, tag);
+    }
+
+  store_unsigned_integer (buf, xlen, byte_order, pc);
+  regcache->raw_supply (RISCV_PCC_REGNUM, buf);
+}
+
 /* Implement the gcc_target_options method.  We have to select the arch and abi
    from the feature info.  We have enough feature info to select the abi, but
    not enough info for the arch given all of the possible architecture
@@ -4783,6 +4825,7 @@ riscv_gdbarch_init (struct gdbarch_info info,
     {
       set_gdbarch_sp_regnum (gdbarch, RISCV_CSP_REGNUM);
       set_gdbarch_pc_regnum (gdbarch, RISCV_PCC_REGNUM);
+      set_gdbarch_write_pc (gdbarch, riscv_cheriabi_write_pc);
     }
   else
     {
