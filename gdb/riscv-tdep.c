@@ -3908,6 +3908,12 @@ riscv_cheri_print_compact_attributes (struct gdbarch *gdbarch, Cap *cap,
 	attr += ",";
       attr += "sealed";
     }
+  if (cap->permissions () & CC128_PERM_EXECUTE && cap->flags() == 1)
+    {
+      if (!attr.empty ())
+	attr += ",";
+      attr += "capmode";
+    }
 
   fprintf_filtered (stream, " [%s,%s-%s]", perms.c_str (),
 		    paddress (gdbarch, cap->base()),
