@@ -73,7 +73,7 @@ riscv_fbsd_nat_target::store_registers (struct regcache *regcache,
 				  &riscv_fbsd_gregset);
   store_register_set<struct fpreg> (regcache, regnum, PT_GETFPREGS,
 				    PT_SETFPREGS, &riscv_fbsd_fpregset);
-#ifdef notyet
+#if __has_feature(capabilities)
   if (riscv_isa_clen (regcache->arch ()) != 0)
     store_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       PT_SETCAPREGS, &riscv_fbsd_capregset);
