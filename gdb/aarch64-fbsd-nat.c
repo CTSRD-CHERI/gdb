@@ -121,13 +121,11 @@ aarch64_fbsd_nat_target::store_registers (struct regcache *regcache,
     store_regset<uint64_t> (regcache, regnum, NT_ARM_TLS,
 			    &aarch64_fbsd_tls_regset, tdep->tls_regnum);
 
-#ifdef notyet
 #if __has_feature(capabilities)
   if (tdep->has_capability ())
     store_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       PT_SETCAPREGS, &aarch64_fbsd_capregset,
 				       tdep->cap_reg_base);
-#endif
 #endif
 }
 
