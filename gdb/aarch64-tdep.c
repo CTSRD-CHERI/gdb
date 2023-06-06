@@ -5279,7 +5279,10 @@ aarch64_record_special_symbol (struct gdbarch *gdbarch, struct objfile *objfile,
 }
 
 /* Morello-specific hook to write the PC.  This is mostly used when calling
-   a function by hand.  Different DSO's have different bounds for PCC, so GDB
+   a function by hand, but is also invoked during run to set the PC to its
+   current value.  If the requested PC is in bounds of the current PCC,
+   simply adjust the address.  However, if the PC is out of bounds, that
+   doesn't work.  Different DSO's have different bounds for PCC, so GDB
    would need to figure out those bounds.
 
    Given that information is not currently available, we set maximum bounds
@@ -5289,20 +5292,30 @@ static void
 morello_write_pc (struct regcache *regs, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = regs->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  gdb_byte buf[16];
 
-  regs->cooked_write_part (tdep->cap_reg_pcc, 0, sizeof (pc),
-			   (const gdb_byte *) &pc);
+  regs->raw_collect (tdep->cap_reg_pcc, buf);
 
-  /* Upper 64 bits of the capability with maximum bounds and reasonable
-     permissions.  We only adjust this if we are using the purecap ABI.  */
-  pc = 0xffffc00000010005;
-  regs->cooked_write_part (tdep->cap_reg_pcc, 8, sizeof (pc),
-			   (const gdb_byte *) &pc);
+  ULONGEST lower = extract_unsigned_integer (buf, 8, byte_order);
+  if (lower == pc)
+    return;
 
-  /* We may need to set the tag of the PCC here, but we don't do so at the
-     moment.  If this turns out to be a problem in the future, we should
-     force the tag to 1.  */
+  ULONGEST upper = extract_unsigned_integer (buf + 8, 8, byte_order);
+
+  capability cap (upper, lower);
+  cap.set_tag (regs->raw_collect_tag (tdep->cap_reg_pcc));
+
+  /* If untagged or if the new PC is in bounds, keep the current
+     bounds.  Otherwise, fall back to maximum bounds and reasonable
+     permissions.  We only adjust this if we are using the purecap
+     ABI.  */
+  if (cap.get_tag () && !cap.is_range_in_bounds(pc, 4))
+    store_unsigned_integer (buf + 8, 8, byte_order, 0xffffc00000010005);
+
+  store_unsigned_integer (buf, 8, byte_order, pc);
+  regs->raw_supply (tdep->cap_reg_pcc, buf);
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
