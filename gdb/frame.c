@@ -1418,17 +1418,19 @@ put_frame_register (struct frame_info *frame, int regnum,
       }
     case lval_register:
       {
-	get_current_regcache ()->cooked_write (realnum, buf);
-	/* If this value is a capability, we need to handle the capability tag
-	   as well.  */
-	if ((val_type->code () == TYPE_CODE_CAPABILITY
-	    || (val_type->code () == TYPE_CODE_PTR
-		&& TYPE_CAPABILITY (val_type)))
-	    && value_tagged (fromval))
+	/* If this register is tagged, we need to set the tag first
+	   since cooked_write pushes the new value to the target.  */
+	if (register_has_tag (get_current_regcache ()->arch (), realnum))
 	  {
-	    get_current_regcache ()->raw_supply_tag (realnum,
-						     value_tag (fromval));
+	    bool tag;
+
+	    if (value_tagged (fromval))
+	      tag = value_tag (fromval);
+	    else
+	      tag = false;
+	    get_current_regcache ()->raw_supply_tag (realnum, tag);
 	  }
+	get_current_regcache ()->cooked_write (realnum, buf);
       }
       break;
     default:
