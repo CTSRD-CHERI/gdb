@@ -1488,9 +1488,20 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
 	  || !gdbarch_pseudo_register_write_p (gdbarch))
 	{
 	  regcache *regcache = get_thread_regcache (inferior_thread ());
+
+	  /* If this register is tagged, we need to set the tag first
+	     since cooked_write pushes the new value to the target.  */
+	  if (register_has_tag (regcache->arch (), realnum))
+	    {
+	      bool tag;
+
+	      if (fromval->tagged ())
+		tag = fromval->tag ();
+	      else
+		tag = false;
+	      regcache->raw_supply_tag (realnum, tag);
+	  }
 	  regcache->cooked_write (realnum, buf);
-	  if (tagged)
-	    regcache->raw_supply_tag (realnum, fromval->tag ());
 	}
       else
 	{
