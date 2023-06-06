@@ -2569,8 +2569,8 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       /* For now, assume BP_ADDR is within the bounds of the CLR
 	 capability.  */
       struct value *clr = regcache->cooked_read_value (regnum);
-      regcache->cooked_write (regnum, value_contents (clr).data ());
       regcache->raw_supply_tag (regnum, value_tag (clr));
+      regcache->cooked_write (regnum, value_contents (clr).data ());
     }
 
   if (aarch64_debug)
@@ -2600,8 +2600,8 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  /* For now, assume STRUCT_ADDR is within the bounds of the CSP
 	     capability.  */
 	  struct value *csp = regcache->cooked_read_value (regnum);
-	  regcache->cooked_write (regnum, value_contents (csp).data ());
 	  regcache->raw_supply_tag (regnum, value_tag (csp));
+	  regcache->cooked_write (regnum, value_contents (csp).data ());
 	}
 
       if (aarch64_debug)
@@ -2798,8 +2798,8 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       regnum = tdep->cap_reg_csp;
 
       struct value *csp = regcache->cooked_read_value (regnum);
-      regcache->cooked_write (regnum, value_contents (csp).data ());
       regcache->raw_supply_tag (regnum, value_tag (csp));
+      regcache->cooked_write (regnum, value_contents (csp).data ());
     }
 
     if (aarch64_debug)
@@ -3739,11 +3739,11 @@ morello_store_return_value (struct value *value, struct regcache *regs,
       else
 	regno = AARCH64_X0_REGNUM;
 
-      regs->cooked_write (regno, valbuf);
-
       /* Also store the tag if we are dealing with a capability.  */
       if (aapcs64_cap || type->code () == TYPE_CODE_CAPABILITY)
 	regs->raw_supply_tag (regno, value_tag (value));
+
+      regs->cooked_write (regno, valbuf);
     }
   else if (type->code () == TYPE_CODE_INT
 	   || type->code () == TYPE_CODE_CHAR
@@ -3811,11 +3811,6 @@ morello_store_return_value (struct value *value, struct regcache *regs,
 
       while (len > 0)
 	{
-	  memset (tmpbuf, 0, buffer_size);
-	  memcpy (tmpbuf, valbuf,
-		  len > buffer_size ? buffer_size : len);
-	  regs->cooked_write (regno++, tmpbuf);
-
 	  if (aapcs64_cap || type->contains_capability ())
 	    {
 	      /* We need to read the tags from memory.  */
@@ -3829,6 +3824,11 @@ morello_store_return_value (struct value *value, struct regcache *regs,
 			      paddress (gdbarch, address));
 	      address += buffer_size;
 	    }
+
+	  memset (tmpbuf, 0, buffer_size);
+	  memcpy (tmpbuf, valbuf,
+		  len > buffer_size ? buffer_size : len);
+	  regs->cooked_write (regno++, tmpbuf);
 
 	  len -= buffer_size;
 	  valbuf += buffer_size;
