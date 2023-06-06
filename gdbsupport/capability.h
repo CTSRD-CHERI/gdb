@@ -506,8 +506,7 @@ public:
   void clear_perms (uint32_t mask);
 
   /* Returns whether a range of addresses is within capability bounds.  */
-  inline bool is_range_in_bounds (uint64_t start_address,
-				  uint64_t length);
+  bool is_range_in_bounds (uint64_t start_address, uint64_t length);
 
   /* Return a mask that can be used to align down addresses to a value
      that is sufficiently aligned to set precise bounds for the given
