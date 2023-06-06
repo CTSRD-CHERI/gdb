@@ -6045,7 +6045,10 @@ aarch64_record_special_symbol (struct gdbarch *gdbarch, struct objfile *objfile,
 }
 
 /* Morello-specific hook to write the PC.  This is mostly used when calling
-   a function by hand.  Different DSO's have different bounds for PCC, so GDB
+   a function by hand, but is also invoked during run to set the PC to its
+   current value.  If the requested PC is in bounds of the current PCC,
+   simply adjust the address.  However, if the PC is out of bounds, that
+   doesn't work.  Different DSO's have different bounds for PCC, so GDB
    would need to figure out those bounds.
 
    Given that information is not currently available, we set maximum bounds
@@ -6055,41 +6058,34 @@ static void
 morello_write_pc (struct regcache *regs, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = regs->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  gdb_byte buf[16];
 
-  CORE_ADDR current_pc = 0;
+  regs->raw_collect (tdep->cap_reg_pcc, buf);
 
   /* Read the lower 64 bits of the PCC and check if the PC we want to set it
      to is the same or not.  If it is the same, gdb is likely moving the
      inferior.  In that case we don't need to adjust the upper 64 bits and
      tag of the PCC.  Just return.  */
-  regs->cooked_read_part (tdep->cap_reg_pcc, 0, sizeof (pc),
-			  (gdb_byte *) &current_pc);
-
-  if (pc == current_pc)
+  ULONGEST lower = extract_unsigned_integer (buf, 8, byte_order);
+  if (lower == pc)
     return;
 
-  /* Otherwise gdb is trying to do some other more complex operation, like
-     trying to do displaced stepping or a manual function call.  In that case,
-     we do need to update the upper 64 bits of PCC and force the tag to 1.
+  ULONGEST upper = extract_unsigned_integer (buf + 8, 8, byte_order);
 
-     The strategy here is to rely on the bounds used by the CSP register, as
-     that gives us a broad range we can use.  The PCC may have narrower
-     bounds, but at the moment there isn't a good way for gdb to find out
-     the precise bounds to use.  */
-  regs->cooked_write_part (tdep->cap_reg_pcc, 0, sizeof (pc),
-			   (const gdb_byte *) &pc);
+  capability cap (upper, lower);
+  cap.set_tag (regs->raw_collect_tag (tdep->cap_reg_pcc));
 
-  /* Read the upper 64 bits of CSP.  */
-  CORE_ADDR bounds = 0;
-  regs->cooked_read_part (tdep->cap_reg_csp, 8, sizeof (bounds),
-			  (gdb_byte *) &bounds);
+  /* If untagged or if the new PC is in bounds, keep the current
+     bounds.  Otherwise, fall back to maximum bounds and reasonable
+     permissions.  We only adjust this if we are using the purecap
+     ABI.  */
+  if (cap.get_tag () && !cap.is_range_in_bounds(pc, 4))
+    store_unsigned_integer (buf + 8, 8, byte_order, 0xffffc00000010005);
 
-  /* Set the upper 64 bits of PCC to the upper bits of CSP.  */
-  regs->cooked_write_part (tdep->cap_reg_pcc, 8, sizeof (pc),
-			   (const gdb_byte *) &bounds);
-
-  regs->raw_supply_tag (tdep->cap_reg_pcc, true);
+  store_unsigned_integer (buf, 8, byte_order, pc);
+  regs->raw_supply (tdep->cap_reg_pcc, buf);
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
