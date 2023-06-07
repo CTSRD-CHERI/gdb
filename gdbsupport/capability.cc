@@ -445,7 +445,6 @@ capability::is_range_in_bounds (uint64_t start_address,
   get_bounds (base, limit);
 
   uint128_t start_ext = start_address;
-  start_address = _bits (start_address, CAP_VALUE_HI_BIT + 1, 0);
   uint128_t limit_ext = start_ext + length;
 
   return (start_ext >= base) && (limit_ext <= limit);
