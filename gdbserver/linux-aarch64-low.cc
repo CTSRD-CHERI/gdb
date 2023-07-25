@@ -3511,7 +3511,7 @@ aarch64_target::supports_memory_tagging ()
 #endif
     }
 
-  return (linux_get_hwcap2 (8) & HWCAP2_MTE) != 0;
+  return (linux_get_hwcap2 () & HWCAP2_MTE) != 0;
 }
 
 bool
