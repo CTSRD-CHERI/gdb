@@ -492,6 +492,20 @@ store_tlsregs_to_thread (struct regcache *regcache)
     perror_with_name (_("unable to store TLS register."));
 }
 
+static int
+tag_map_regno(aarch64_gdbarch_tdep *tdep, int idx)
+{
+  switch (idx)
+    {
+    case 31:
+      return (tdep->cap_reg_csp);
+    case 32:
+      return (tdep->cap_reg_pcc);
+    default:
+      return (tdep->cap_reg_base + idx);
+    }
+}
+
 /* Fill GDB's register array with the capability register values
    from the current thread.  */
 
@@ -511,7 +525,8 @@ fetch_cregs_from_thread (struct regcache *regcache)
   if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_MORELLO, &iovec) < 0)
     perror_with_name (_("Unable to fetch capability registers."));
 
-  struct gdbarch_tdep *tdep = gdbarch_tdep (regcache->arch ());
+  aarch64_gdbarch_tdep *tdep
+    = (aarch64_gdbarch_tdep *) gdbarch_tdep (regcache->arch ());
 
   /* Fetch the C registers.  */
   int regno, i;
@@ -529,8 +544,16 @@ fetch_cregs_from_thread (struct regcache *regcache)
   regcache->raw_supply (regno++, &cregset.rddc);
   regcache->raw_supply (regno++, &cregset.rctpidr);
   regcache->raw_supply (regno++, &cregset.cid);
-  regcache->raw_supply (regno++, &cregset.tag_map);
   regcache->raw_supply (regno++, &cregset.cctlr);
+
+  /* Supply the tags for capability registers.  */
+  uint64_t tag_map = cregset.tag_map;
+  for (i = 0; i < 39; i++)
+    {
+      regno = tag_map_regno(tdep, i);
+      regcache->raw_supply_tag (regno, tag_map & 1);
+      tag_map >>= 1;
+    }
 }
 
 /* Store to the current thread the valid capability register
@@ -552,7 +575,8 @@ store_cregs_to_thread (const struct regcache *regcache)
   if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_MORELLO, &iovec) < 0)
     perror_with_name (_("Unable to fetch capability registers."));
 
-  struct gdbarch_tdep *tdep = gdbarch_tdep (regcache->arch ());
+  aarch64_gdbarch_tdep *tdep
+    = (aarch64_gdbarch_tdep *) gdbarch_tdep (regcache->arch ());
 
   /* Stored the C registers.  */
   int regno, i;
@@ -570,8 +594,16 @@ store_cregs_to_thread (const struct regcache *regcache)
   regcache->raw_collect (regno++, &cregset.rddc);
   regcache->raw_collect (regno++, &cregset.rctpidr);
   regcache->raw_collect (regno++, &cregset.cid);
-  regcache->raw_collect (regno++, &cregset.tag_map);
   regcache->raw_collect (regno++, &cregset.cctlr);
+
+  /* Collect the tags for capability registers.  */
+  uint64_t tag_map = 0;
+  for (i = 0; i < 39; i++)
+    {
+      regno = tag_map_regno(tdep, i);
+      if (regcache->raw_collect_tag (regno))
+	tag_map |= (uint64_t)1 << i;
+    }
 
   if (ptrace (PTRACE_SETREGSET, tid, NT_ARM_MORELLO, &iovec) < 0)
     perror_with_name (_("Unable to store capability registers.\n"
