@@ -2438,11 +2438,10 @@ convert_pointer_to_capability (struct gdbarch *gdbarch, struct value *source,
 
   memcpy (&cap.m_cap, value_contents (source).data (), sizeof (cap.m_cap));
 
-  if (value_tagged (source))
+  if (value_tagged (source) && cap.is_representable (pointer))
     cap.set_tag (value_tag (source));
 
-  /* Adjust the capability value to that of the pointer.  This assumes the
-     capability has enough bounds to honor this value.  */
+  /* Adjust the capability value to that of the pointer.  */
   cap.set_value (pointer);
 
   struct value *result = value_copy (source);
