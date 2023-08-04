@@ -2622,16 +2622,18 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       /* For now, assume BP_ADDR is within the bounds of the CLR
 	 capability.  */
       struct value *clr = regcache->cooked_read_value (regnum);
+      clr = convert_pointer_to_capability (gdbarch, clr, bp_addr);
       regcache->raw_supply_tag (regnum, clr->tag ());
       regcache->cooked_write (regnum, clr->contents ().data ());
     }
+  else
+    regcache_cooked_write_unsigned (regcache, AARCH64_LR_REGNUM, bp_addr);
 
   if (aarch64_debug)
     debug_printf ("aarch64: Breakpoint address in %s is %s\n",
 		  gdbarch_register_name (gdbarch, regnum),
 		  paddress (gdbarch, bp_addr));
 
-  regcache_cooked_write_unsigned (regcache, AARCH64_LR_REGNUM, bp_addr);
 
   /* If we were given an initial argument for the return slot, lose it.  */
   if (return_method == return_method_hidden_param)
@@ -2653,9 +2655,14 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  /* For now, assume STRUCT_ADDR is within the bounds of the CSP
 	     capability.  */
 	  struct value *csp = regcache->cooked_read_value (regnum);
-	  regcache->raw_supply_tag (regnum, csp->tag ());
-	  regcache->cooked_write (regnum, csp->contents ().data ());
+	  struct value *c8 = convert_pointer_to_capability (gdbarch, csp,
+							    struct_addr);
+	  regcache->raw_supply_tag (regnum, c8->tag ());
+	  regcache->cooked_write (regnum, c8->contents ().data ());
 	}
+      else
+	regcache_cooked_write_unsigned (regcache, AARCH64_STRUCT_RETURN_REGNUM,
+					struct_addr);
 
       if (aarch64_debug)
 	{
@@ -2664,9 +2671,6 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 					       regnum),
 			paddress (gdbarch, struct_addr));
 	}
-
-      regcache_cooked_write_unsigned (regcache, AARCH64_STRUCT_RETURN_REGNUM,
-				      struct_addr);
     }
 
   for (argnum = 0; argnum < nargs; argnum++)
@@ -2851,16 +2855,17 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       regnum = tdep->cap_reg_csp;
 
       struct value *csp = regcache->cooked_read_value (regnum);
+      csp = convert_pointer_to_capability (gdbarch, csp, sp);
       regcache->raw_supply_tag (regnum, csp->tag ());
       regcache->cooked_write (regnum, csp->contents ().data ());
     }
+  else
+    regcache_cooked_write_unsigned (regcache, AARCH64_SP_REGNUM, sp);
 
-    if (aarch64_debug)
-      debug_printf ("aarch64: Adjusting stack pointer in %s to %s\n",
-		    gdbarch_register_name (gdbarch, regnum),
-		    paddress (gdbarch, sp));
-
-  regcache_cooked_write_unsigned (regcache, AARCH64_SP_REGNUM, sp);
+  if (aarch64_debug)
+    debug_printf ("aarch64: Adjusting stack pointer in %s to %s\n",
+		  gdbarch_register_name (gdbarch, regnum),
+		  paddress (gdbarch, sp));
 
   if (aarch64_debug)
     debug_printf ("aarch64: Exiting %s\n", __func__);
