@@ -854,6 +854,8 @@ regcache::cooked_write (int regnum, T val)
   buf = (gdb_byte *) alloca (m_descr->sizeof_register[regnum]);
   store_integer (buf, m_descr->sizeof_register[regnum],
 		 gdbarch_byte_order (m_descr->gdbarch), val);
+  if (m_descr->register_type[regnum]->is_tagged ())
+    *register_tag (regnum) = 0;
   cooked_write (regnum, buf);
 }
 
