@@ -2477,6 +2477,8 @@ convert_pointer_to_capability (struct gdbarch *gdbarch, struct value *source,
 	  sizeof (cap.m_cap));
   result->set_tag (cap.get_tag ());
 
+  aarch64_debug_printf ("returning cap %s", cap.to_str (true).c_str ());
+
   return result;
 }
 
