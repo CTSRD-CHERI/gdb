@@ -2748,7 +2748,7 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       regnum = tdep->cap_reg_clr;
 
       struct value *clr = derive_capability_for_address (regcache,
-							 bp_addr,
+							 bp_addr | 1,
 							 CAP_PERM_EXECUTE);
       if (clr == nullptr)
 	error (_("Unable to derive a suitable PCC"));
