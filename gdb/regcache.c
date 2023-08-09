@@ -910,6 +910,8 @@ regcache::cooked_write (int regnum, T val)
   gdb_byte *buf = (gdb_byte *) alloca (size);
   auto view = gdb::make_array_view (buf, size);
   store_integer (view, gdbarch_byte_order (m_descr->gdbarch), val);
+  if (m_descr->register_type[regnum]->is_tagged ())
+    *register_tag (regnum) = 0;
   cooked_write (regnum, view);
 }
 
