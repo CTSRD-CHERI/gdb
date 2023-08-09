@@ -2108,9 +2108,18 @@ pass_in_x (struct gdbarch *gdbarch, struct regcache *regcache,
   int len = TYPE_LENGTH (type);
   enum type_code typecode = type->code ();
   int regnum = AARCH64_X0_REGNUM + info->ngrn;
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
   const bfd_byte *buf = value_contents (arg).data ();
 
   info->argnum++;
+
+  /*
+   * XXX: HACK.  The X registers should really be pseudo-registers, but
+   * fake it by writing X registers as C registers.
+   */
+  bool aapcs64_cap = (tdep->abi == AARCH64_ABI_AAPCS64_CAP);
+  if (tdep->has_capability ())
+    regnum += tdep->cap_reg_base;
 
   while (len > 0)
     {
