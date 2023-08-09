@@ -344,11 +344,6 @@ public:
     m_cap = cap;
   }
 
-  ~capability () {
-    m_tag = false;
-    m_cap = 0;
-  }
-
   /* Return the tag bit.  */
 
   bool
