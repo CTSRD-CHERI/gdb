@@ -2165,6 +2165,14 @@ pass_in_x (struct gdbarch *gdbarch, struct regcache *regcache,
 
   info->argnum++;
 
+  /*
+   * XXX: HACK.  The X registers should really be pseudo-registers, but
+   * fake it by writing X registers as C registers.
+   */
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  if (tdep->has_capability ())
+    regnum += tdep->cap_reg_base;
+
   while (len > 0)
     {
       int partial_len = len < X_REGISTER_SIZE ? len : X_REGISTER_SIZE;
