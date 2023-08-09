@@ -2683,10 +2683,11 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     {
       regnum = tdep->cap_reg_clr;
 
-      /* For now, assume BP_ADDR is within the bounds of the CLR
-	 capability.  */
-      struct value *clr = regcache->cooked_read_value (regnum);
-      clr = convert_pointer_to_capability (gdbarch, clr, bp_addr);
+      struct value *clr = derive_capability_for_address (regcache,
+							 bp_addr,
+							 CAP_PERM_EXECUTE);
+      if (clr == nullptr)
+	error (_("Unable to derive a suitable PCC"));
       regcache->raw_supply_tag (regnum, value_tag (clr));
       regcache->cooked_write (regnum, value_contents (clr).data ());
     }
@@ -2715,11 +2716,11 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	{
 	  regnum = tdep->cap_reg_base + AARCH64_STRUCT_RETURN_REGNUM;
 
-	  /* For now, assume STRUCT_ADDR is within the bounds of the CSP
-	     capability.  */
-	  struct value *csp = regcache->cooked_read_value (regnum);
-	  struct value *c8 = convert_pointer_to_capability (gdbarch, csp,
-							    struct_addr);
+	  struct value *c8
+	    = derive_capability_for_address (regcache, struct_addr,
+					     CAP_PERM_LOAD | CAP_PERM_STORE);
+	  if (c8 == nullptr)
+	    error (_("Unable to derive a suitable C8"));
 	  regcache->raw_supply_tag (regnum, value_tag (c8));
 	  regcache->cooked_write (regnum, value_contents (c8).data ());
 	}
