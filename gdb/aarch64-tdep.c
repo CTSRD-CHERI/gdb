@@ -2390,6 +2390,160 @@ type_fields_overlap_capabilities (struct type *type)
   return false;
 }
 
+/* Construct a capability object from a value.  */
+static capability
+capability_from_value (struct value *val)
+{
+  capability cap;
+
+  memcpy (&cap.m_cap, value_contents (val).data (), sizeof (cap.m_cap));
+  cap.set_tag (value_tag (val));
+  return cap;
+}
+
+/* Try to derive a tagged capability for ADDR with permissions PERM
+   from VAL.  */
+
+static struct value *
+derive_capability_from_value (struct value *val, CORE_ADDR addr, uint32_t perm)
+{
+  if (val == nullptr || value_contents (val).data () == nullptr
+      || !value_tagged (val))
+    return nullptr;
+
+  capability cap = capability_from_value (val);
+  if (!cap.is_range_in_bounds (addr, 1) || !cap.check_permissions (perm))
+    return nullptr;
+
+  if (cap.get_value () != addr)
+    {
+      /* Try to derive a plain executable capability from a sentry,
+	 but otherwise don't try to derive from a sealed capability if
+	 the addresses don't match.  */
+      if (cap.get_otype () == CAP_SEAL_TYPE_RB)
+	cap.set_otype (0);
+      else if (cap.is_sealed ())
+	return nullptr;
+
+      cap.set_value (addr);
+    }
+
+  struct value *result = value_copy (val);
+
+  memcpy (value_contents_writeable (result).data (), &cap.m_cap,
+	  sizeof (cap.m_cap));
+
+  return result;
+}
+
+struct find_memory_regions_thunk
+{
+  struct gdbarch *gdbarch;
+  CORE_ADDR addr;
+  uint32_t perm;
+  struct value *result;
+
+  find_memory_regions_thunk (struct gdbarch *gdbarch, CORE_ADDR addr,
+			     uint32_t perm)
+    : gdbarch (gdbarch), addr (addr), perm (perm), result (nullptr) {};
+};
+
+/* Try to derive a capability from a single memory mapping.  */
+
+static int
+derive_capability_from_region (CORE_ADDR addr, unsigned long size,
+			       int read, int write, int exec,
+			       int modified, bool memory_tagged,
+			       void *data)
+{
+  struct find_memory_regions_thunk *thunk
+    = reinterpret_cast<struct find_memory_regions_thunk *> (data);
+  gdbarch *gdbarch = thunk->gdbarch;
+
+  /* If a capability is already derived, nothing to do.  */
+  if (thunk->result != nullptr)
+    return 0;
+
+  if (thunk->addr < addr || thunk->addr >= addr + size)
+    return 0;
+
+  /* XXX: Some permissions choices here are not correct in all cases.
+     This probably needs to use a gdbarch hook to deal with user
+     permissions.  */
+  uint32_t perm = 0;
+  if (read)
+    perm |= CAP_PERM_LOAD | CAP_PERM_LOAD_CAP | CAP_PERM_MUTABLE_LOAD
+      | CAP_PERM_GLOBAL;
+  if (write)
+    perm |= CAP_PERM_STORE | CAP_PERM_STORE_CAP | CAP_PERM_STORE_LOCAL;
+  if (exec)
+    perm |= CAP_PERM_EXECUTE | CAP_PERM_BRANCH_SEALED;
+
+  if ((perm & thunk->perm) != thunk->perm)
+    return 0;
+
+  capability cap;
+  cap.set_value (addr);
+
+  /* Inexact bounds are ok.  Presumably the OS padded the mapping
+     request for this region when it was first created.  That original
+     mapping request might have since been subdivided yielding a
+     smaller region that is now being derived from.  Rounded-up bounds
+     for the region should be a subset of the bounds from the original
+     mapping request.  */
+  cap.set_bounds (cap, size, false);
+  cap.set_permissions (perm);
+  cap.set_value (thunk->addr);
+  cap.set_tag (true);
+  gdb_assert (cap.is_in_bounds ());
+
+  aarch64_debug_printf ("Derived cap %s from memory region %s-%s (%c%c%c)",
+			cap.to_str (true).c_str (), paddress(gdbarch, addr),
+			paddress (gdbarch, addr + size), read ? 'r' : '-',
+			write ? 'w' : '-', exec ? 'x' : '-');
+
+  struct value *result
+    = allocate_value (builtin_type (gdbarch)->builtin_data_capability);
+
+  memcpy (value_contents_writeable (result).data (), &cap.m_cap,
+	  sizeof (cap.m_cap));
+  set_value_tag (result, true);
+  thunk->result = result;
+  return 0;
+}
+
+/* Construct a capability for ADDR with at least the requested
+   permissions PERM.  */
+
+static struct value *
+derive_capability_for_address (struct regcache *regcache, CORE_ADDR addr,
+			       uint32_t perm)
+{
+  /* Try to derive from the current thread's registers first.  */
+  struct gdbarch *gdbarch = regcache->arch ();
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  for (int regnum = AARCH64_C0_REGNUM (tdep->cap_reg_base);
+       regnum <= AARCH64_RCTPIDR_REGNUM (tdep->cap_reg_base); regnum++)
+    {
+      struct value *val = regcache->cooked_read_value (regnum);
+      struct value *result = derive_capability_from_value (val, addr, perm);
+      if (result != nullptr)
+	{
+	  aarch64_debug_printf
+	    ("Derived cap %s from %s",
+	     capability_from_value (result).to_str (true).c_str (),
+	     aarch64_c_register_names[regnum - tdep->cap_reg_base]);
+
+	  return result;
+	}
+    }
+
+  /* Try to derive a capability from the inferior's memory mappings. */
+  find_memory_regions_thunk thunk (gdbarch, addr, perm);
+  target_find_memory_regions (derive_capability_from_region, &thunk);
+  return thunk.result;
+}
+
 /* Convert a 64-bit pointer to a capability using the SOURCE capability.  */
 
 static struct value *
