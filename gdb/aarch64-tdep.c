@@ -5338,30 +5338,36 @@ static void
 morello_write_pc (struct regcache *regs, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = regs->arch ();
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
-  gdb_byte buf[16];
+  struct value *pcc = regs->cooked_read_value (tdep->cap_reg_pcc);
+  capability cap = capability_from_value (pcc);
 
-  regs->raw_collect (tdep->cap_reg_pcc, buf);
-
-  ULONGEST lower = extract_unsigned_integer (buf, 8, byte_order);
-  if (lower == pc)
+  if (cap.get_value () == pc)
     return;
 
-  ULONGEST upper = extract_unsigned_integer (buf + 8, 8, byte_order);
+  /* If the new PC is in bounds, just adjust the address of PCC.  */
+  if (cap.get_tag () && cap.is_range_in_bounds(pc, 4))
+    {
+      aarch64_debug_printf ("aarch64: set new PC %s from PCC",
+			    paddress (gdbarch, pc));
 
-  capability cap (upper, lower);
-  cap.set_tag (regs->raw_collect_tag (tdep->cap_reg_pcc));
+      cap.set_value (pc);
+      regs->raw_supply (tdep->cap_reg_pcc, &cap.m_cap);
+      return;
+    }
 
-  /* If untagged or if the new PC is in bounds, keep the current
-     bounds.  Otherwise, fall back to maximum bounds and reasonable
-     permissions.  We only adjust this if we are using the purecap
-     ABI.  */
-  if (cap.get_tag () && !cap.is_range_in_bounds(pc, 4))
-    store_unsigned_integer (buf + 8, 8, byte_order, 0xffffc00000010005);
+  /* Try to derive a capability containing PC.  */
+  struct value *new_pcc = derive_capability_for_address (regs, pc,
+							 CAP_PERM_EXECUTE);
+  if (new_pcc == nullptr)
+    {
+      /* Derive out of bounds value from PCC.  It will fault but is
+	 better than executing the wrong thing.  */
+      new_pcc = convert_pointer_to_capability (gdbarch, pcc, pc);
+    }
 
-  store_unsigned_integer (buf, 8, byte_order, pc);
-  regs->raw_supply (tdep->cap_reg_pcc, buf);
+  regs->raw_supply_tag (tdep->cap_reg_pcc, value_tag (new_pcc));
+  regs->raw_supply (tdep->cap_reg_pcc, value_contents (new_pcc).data ());
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
