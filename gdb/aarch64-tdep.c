@@ -2038,7 +2038,6 @@ pass_in_c (struct gdbarch *gdbarch, struct regcache *regcache,
   gdb_byte tmpbuf[C_REGISTER_SIZE];
   size_t len = TYPE_LENGTH (type);
   size_t xfer_len = 0;
-  CORE_ADDR address = value_address (arg);
 
   /* One more argument allocated.  */
   info->argnum++;
@@ -2050,6 +2049,10 @@ pass_in_c (struct gdbarch *gdbarch, struct regcache *regcache,
       /* Zero out any unspecified bytes.  */
       memset (tmpbuf, 0, C_REGISTER_SIZE);
       memcpy (tmpbuf, buf, xfer_len);
+
+      bool tag = false;
+      if (value_tagged (arg))
+	tag = value_tag (arg);
 
       if (aarch64_debug)
 	{
@@ -2063,30 +2066,16 @@ pass_in_c (struct gdbarch *gdbarch, struct regcache *regcache,
 	      = extract_unsigned_integer (tmpbuf + 8, xfer_len, byte_order);
 	  else
 	    regval2 = 0;
+	  capability cap ((uint128_t)regval2 << 64 | regval, tag);
 
-	  debug_printf ("arg %d in %s = 0x%s 0x%s\n", info->argnum,
-			gdbarch_register_name (gdbarch, regnum),
-			phex (regval, X_REGISTER_SIZE),
-			phex (regval2, X_REGISTER_SIZE));
+	  aarch64_debug_printf ("arg %d in %s = %s", info->argnum,
+				gdbarch_register_name (gdbarch, regnum),
+				cap.to_str (true).c_str ());
 	}
 
       /* Write the argument to the capability register.  */
+      regcache->raw_supply_tag (regnum, tag);
       regcache->raw_write (regnum, tmpbuf);
-
-      if (type->contains_capability () || type->code () == TYPE_CODE_CAPABILITY
-	  || TYPE_CAPABILITY (type))
-	{
-	  /* We need to read the tags from memory.  */
-	  gdb::byte_vector cap = target_read_capability (address);
-	  bool tag = cap[0] == 0 ? false : true;
-	  regcache->raw_supply_tag (regnum, tag);
-
-	  aarch64_debug_printf ("Read tag %s from address %s",
-				tag == true ? "true" : "false",
-				paddress (gdbarch, address));
-
-	  address += xfer_len;
-	}
 
       len -= xfer_len;
       buf += xfer_len;
