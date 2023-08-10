@@ -180,6 +180,8 @@ extern bool register_has_tag (struct gdbarch *gdbarch, int regnum);
 using register_read_ftype
   = gdb::function_view<register_status (int, gdb::array_view<gdb_byte>)>;
 
+typedef gdb::function_view<bool (int regnum)> register_readtag_ftype;
+
 /* A (register_number, register_value) pair.  */
 
 struct cached_reg_t
@@ -287,7 +289,7 @@ protected:
   /* Save a register cache.  The set of registers saved into the
      regcache determined by the save_reggroup.  COOKED_READ returns
      zero iff the register's value can't be returned.  */
-  void save (register_read_ftype cooked_read);
+  void save (register_read_ftype cooked_read, register_readtag_ftype read_tag);
 
   struct regcache_descr *m_descr;
 
@@ -538,10 +540,11 @@ public:
 
   /* Create a readonly regcache by getting contents from COOKED_READ.  */
 
-  readonly_detached_regcache (gdbarch *gdbarch, register_read_ftype cooked_read)
+  readonly_detached_regcache (gdbarch *gdbarch, register_read_ftype cooked_read,
+			      register_readtag_ftype read_tag)
     : readable_regcache (gdbarch, true)
   {
-    save (cooked_read);
+    save (cooked_read, read_tag);
   }
 
   DISABLE_COPY_AND_ASSIGN (readonly_detached_regcache);
