@@ -239,6 +239,10 @@ readonly_detached_regcache::readonly_detached_regcache (regcache &src)
 				[&src] (int regnum, gdb_byte *buf)
 				  {
 				    return src.cooked_read (regnum, buf);
+				  },
+				[&src] (int regnum)
+				  {
+				    return src.raw_collect_tag (regnum);
 				  })
 {
 }
@@ -266,7 +270,8 @@ reg_buffer::register_tag (int regnum) const
 }
 
 void
-reg_buffer::save (register_read_ftype cooked_read)
+reg_buffer::save (register_read_ftype cooked_read,
+		  register_readtag_ftype read_tag)
 {
   struct gdbarch *gdbarch = m_descr->gdbarch;
   int regnum;
@@ -291,6 +296,8 @@ reg_buffer::save (register_read_ftype cooked_read)
 
 	  if (status != REG_VALID)
 	    memset (dst_buf, 0, register_size (gdbarch, regnum));
+	  else if (m_descr->register_type[regnum]->is_tagged ())
+	    *register_tag (regnum) = read_tag (regnum);
 
 	  m_register_status[regnum] = status;
 	}
@@ -317,7 +324,11 @@ regcache::restore (readonly_detached_regcache *src)
       if (gdbarch_register_reggroup_p (gdbarch, regnum, restore_reggroup))
 	{
 	  if (src->m_register_status[regnum] == REG_VALID)
-	    cooked_write (regnum, src->register_buffer (regnum));
+	    {
+	      if (m_descr->register_type[regnum]->is_tagged ())
+		*register_tag (regnum) = *src->register_tag (regnum);
+	      cooked_write (regnum, src->register_buffer (regnum));
+	    }
 	}
     }
 }

@@ -1069,8 +1069,18 @@ frame_save_as_regcache (struct frame_info *this_frame)
 	return REG_VALID;
     };
 
+  auto read_tag = [this_frame] (int regnum)
+    {
+      struct value *val = get_frame_register_value (this_frame, regnum);
+      if (val != nullptr && value_tagged (val))
+	return value_tag (val);
+      else
+	return false;
+    };
+
   std::unique_ptr<readonly_detached_regcache> regcache
-    (new readonly_detached_regcache (get_frame_arch (this_frame), cooked_read));
+    (new readonly_detached_regcache (get_frame_arch (this_frame), cooked_read,
+				     read_tag));
 
   return regcache;
 }
