@@ -5350,7 +5350,8 @@ morello_write_pc (struct regcache *regs, CORE_ADDR pc)
 			    paddress (gdbarch, pc));
 
       cap.set_value (pc);
-      regs->raw_supply (tdep->cap_reg_pcc, &cap.m_cap);
+      regs->raw_write (tdep->cap_reg_pcc,
+		       reinterpret_cast <const gdb_byte *> (&cap.m_cap));
       return;
     }
 
@@ -5365,7 +5366,7 @@ morello_write_pc (struct regcache *regs, CORE_ADDR pc)
     }
 
   regs->raw_supply_tag (tdep->cap_reg_pcc, value_tag (new_pcc));
-  regs->raw_supply (tdep->cap_reg_pcc, value_contents (new_pcc).data ());
+  regs->raw_write (tdep->cap_reg_pcc, value_contents (new_pcc).data ());
 }
 
 /* Initialize the current architecture based on INFO.  If possible,
