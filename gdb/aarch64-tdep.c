@@ -3514,10 +3514,6 @@ morello_extract_return_value (struct value *value, struct regcache *regs,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int elements;
   struct type *fundamental_type;
-  /* Morello AAPCS64-cap ABI.  */
-  bool aapcs64_cap = (tdep->abi == AARCH64_ABI_AAPCS64_CAP);
-
-  aarch64_debug_printf ("ABI is %s", aapcs64_cap ? "AAPCS64-CAP" : "AAPCS64");
 
   if (aapcs_is_vfp_call_or_return_candidate (type, &elements,
 					     &fundamental_type))
@@ -3547,12 +3543,14 @@ morello_extract_return_value (struct value *value, struct regcache *regs,
     {
       aarch64_debug_printf ("Pointer/Capability types");
 
+      bool has_capability = TYPE_CAPABILITY (type)
+	|| type->code () == TYPE_CODE_CAPABILITY;
       int regno;
 
-      if (aapcs64_cap)
+      if (has_capability)
 	{
 	  regno = tdep->cap_reg_base + AARCH64_X0_REGNUM;
-	  set_value_tag (value, true);
+	  set_value_tag (value, regs->raw_collect_tag (regno));
 	}
       else
 	regno = AARCH64_X0_REGNUM;
@@ -3812,18 +3810,19 @@ morello_store_return_value (struct value *value, struct regcache *regs,
 	   || type->code () == TYPE_CODE_CAPABILITY
 	   || TYPE_IS_REFERENCE (type))
     {
+      bool has_capability = TYPE_CAPABILITY (type)
+	|| type->code () == TYPE_CODE_CAPABILITY;
       int regno;
 
       aarch64_debug_printf ("Pointer/Capability types");
 
-      if (aapcs64_cap || type->code () == TYPE_CODE_CAPABILITY)
-	regno = tdep->cap_reg_base + AARCH64_X0_REGNUM;
+      if (has_capability)
+	{
+	  regno = tdep->cap_reg_base + AARCH64_X0_REGNUM;
+	  regs->raw_supply_tag (regno, value_tag (value));
+	}
       else
 	regno = AARCH64_X0_REGNUM;
-
-      /* Also store the tag if we are dealing with a capability.  */
-      if (aapcs64_cap || type->code () == TYPE_CODE_CAPABILITY)
-	regs->raw_supply_tag (regno, value_tag (value));
 
       regs->cooked_write (regno, valbuf);
     }
