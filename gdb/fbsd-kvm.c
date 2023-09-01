@@ -300,6 +300,7 @@ fbsd_kvm_target_open (const char *args, int from_tty)
 	kvm_t *nkvm;
 	const char *kernel;
 	char *temp, *filename;
+	LONGEST osreldate;
 	bool writeable;
 
 	if (ops == NULL || ops->supply_pcb == NULL || ops->cpu_pcb_addr == NULL)
@@ -380,11 +381,23 @@ fbsd_kvm_target_open (const char *args, int from_tty)
 		kernstart = kgdb_lookup("kernbase");
 	}
 
+	osreldate = parse_and_eval_long("osreldate");
+
 	/*
-	 * Lookup symbols needed for stoppcbs[] handling, but don't
+	 * Look up symbols needed for stoppcbs handling, but don't
 	 * fail if they aren't present.
 	 */
 	stoppcbs = kgdb_lookup("stoppcbs");
+	if (osreldate >= 1400088) {
+		/* stoppcbs is now a pointer rather than an array. */
+		try {
+			stoppcbs = read_memory_typed_address(stoppcbs,
+			    builtin_type(target_gdbarch())->builtin_data_ptr);
+		} catch (const gdb_exception_error &e) {
+			stoppcbs = 0;
+		}
+	}
+
 	try {
 		pcb_size = parse_and_eval_long("pcb_size");
 	} catch (const gdb_exception_error &e) {
