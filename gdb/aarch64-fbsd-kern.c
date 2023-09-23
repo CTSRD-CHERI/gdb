@@ -245,6 +245,7 @@ static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri[] =
     { 1, AARCH64_CSP_REGNUM (0), 16 },
     { 1, AARCH64_CLR_REGNUM (0), 16 },
     { 1, AARCH64_PCC_REGNUM (0), 16 },
+    { 1, AARCH64_DDC_REGNUM (0), 16 },
     { 1, REGCACHE_MAP_SKIP, 8 },	/* cpsr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
@@ -258,6 +259,7 @@ static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri_alias[] 
     { 1, AARCH64_SP_REGNUM, 16 },
     { 1, AARCH64_LR_REGNUM, 16 },
     { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* ddc */
     { 1, AARCH64_CPSR_REGNUM, 8 },
     { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
@@ -285,6 +287,7 @@ static const struct regcache_map_entry aarch64_fbsd13_trapframe_map_cheri[] =
     { 1, AARCH64_CSP_REGNUM (0), 16 },
     { 1, AARCH64_CLR_REGNUM (0), 16 },
     { 1, AARCH64_PCC_REGNUM (0), 16 },
+    { 1, AARCH64_DDC_REGNUM (0), 16 },
     { 1, REGCACHE_MAP_SKIP, 4 },	/* cpsr */
     { 1, REGCACHE_MAP_SKIP, 4 },	/* esr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
@@ -297,6 +300,7 @@ static const struct regcache_map_entry aarch64_fbsd13_trapframe_map_cheri_alias[
     { 1, AARCH64_SP_REGNUM, 16 },
     { 1, AARCH64_LR_REGNUM, 16 },
     { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* ddc */
     { 1, AARCH64_CPSR_REGNUM, 4 },
     { 1, REGCACHE_MAP_SKIP, 4 },	/* esr */
     { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
