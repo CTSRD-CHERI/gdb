@@ -155,13 +155,15 @@ riscv_fbsd_supply_capregset (const struct regset *regset,
   for (unsigned i = 0; i < 33; i++)
     {
       int regno;
+      bool tag;
 
+      tag = cap_valid & 1;
+      cap_valid >>= 1;
       regno = cap_valid_regno(i);
       if (regno == -1)
 	continue;
       if (regnum == -1 || regno == regnum)
-	regcache->raw_supply_tag (regno, cap_valid & 1);
-      cap_valid >>= 1;
+	regcache->raw_supply_tag (regno, tag);
     }
 }
 
