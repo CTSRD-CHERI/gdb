@@ -288,13 +288,15 @@ aarch64_fbsd_supply_capregset (const struct regset *regset,
   for (unsigned i = 0; i < 40; i++)
     {
       int regno;
+      bool tag;
 
+      tag = tag_map & 1;
+      tag_map >>= 1;
       regno = tag_map_regno(tdep, i);
       if (regno == -1)
 	continue;
       if (regnum == -1 || regno == regnum)
-	regcache->raw_supply_tag (regno, tag_map & 1);
-      tag_map >>= 1;
+	regcache->raw_supply_tag (regno, tag);
     }
 }
 
