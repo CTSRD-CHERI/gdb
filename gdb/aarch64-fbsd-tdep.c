@@ -238,6 +238,87 @@ static const struct tramp_frame aarch64_fbsd_cheriabi_sigframe =
   aarch64_fbsd_cheriabi_sigframe_init
 };
 
+static void
+aarch64_fbsd_cheriabi_c18nexeframe_init (const struct tramp_frame *self,
+					 struct frame_info *this_frame,
+					 struct trad_frame_cache *this_cache,
+					 CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  CORE_ADDR exec_sp = get_frame_sp (this_frame);
+
+  /* X registers.  */
+  trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM, exec_sp);
+  trad_frame_set_reg_addr (this_cache, AARCH64_LR_REGNUM, exec_sp + 16);
+  trad_frame_set_reg_addr (this_cache, AARCH64_PC_REGNUM, exec_sp + 16);
+  /* C registers.  */
+  trad_frame_set_reg_addr (this_cache, AARCH64_CSP_REGNUM(tdep->cap_reg_base), exec_sp);
+  trad_frame_set_reg_addr (this_cache, AARCH64_CLR_REGNUM(tdep->cap_reg_base), exec_sp + 16);
+  trad_frame_set_reg_addr (this_cache, AARCH64_PCC_REGNUM(tdep->cap_reg_base), exec_sp + 16);
+  trad_frame_set_reg_addr (this_cache, AARCH64_RCSP_REGNUM(tdep->cap_reg_base), exec_sp + 32);
+
+  trad_frame_set_id (this_cache, frame_id_build (exec_sp, func));
+}
+
+static const struct tramp_frame aarch64_fbsd_cheriabi_c18nexeframe =
+{
+  NORMAL_FRAME,
+  4,
+  {
+    {0x42c07bea, ULONGEST_MAX},		/* ldp	   c10, c30, [csp]  */
+    {0xc2c0d3cb, ULONGEST_MAX},		/* gcperm  x11, c30  */
+    {0x3708006b, ULONGEST_MAX},		/* tbnz    x11, #1, 1f  */
+    {0xc2400beb, ULONGEST_MAX},		/* ldr     c11, [csp, #(CAP_WIDTH * 2)]  */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_cheriabi_c18nexeframe_init
+};
+
+static void
+aarch64_fbsd_cheriabi_c18nframe_init (const struct tramp_frame *self,
+				      struct frame_info *this_frame,
+				      struct trad_frame_cache *this_cache,
+				      CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = (aarch64_gdbarch_tdep *) gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  CORE_ADDR sp = get_frame_sp (this_frame);
+  gdb_byte buf[8];
+
+  if (target_read_memory (sp, buf, sizeof buf) == 0)
+    {
+      ULONGEST exec_sp = extract_unsigned_integer (buf, sizeof buf, byte_order);
+      /* X registers.  */
+      trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM, exec_sp);
+      trad_frame_set_reg_addr (this_cache, AARCH64_LR_REGNUM, exec_sp + 16);
+      trad_frame_set_reg_addr (this_cache, AARCH64_PC_REGNUM, exec_sp + 16);
+      /* C registers.  */
+      trad_frame_set_reg_addr (this_cache, AARCH64_CSP_REGNUM(tdep->cap_reg_base), exec_sp);
+      trad_frame_set_reg_addr (this_cache, AARCH64_CLR_REGNUM(tdep->cap_reg_base), exec_sp + 16);
+      trad_frame_set_reg_addr (this_cache, AARCH64_PCC_REGNUM(tdep->cap_reg_base), exec_sp + 16);
+      trad_frame_set_reg_addr (this_cache, AARCH64_RCSP_REGNUM(tdep->cap_reg_base), exec_sp + 32);
+    }
+
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static const struct tramp_frame aarch64_fbsd_cheriabi_c18nframe =
+{
+  NORMAL_FRAME,
+  4,
+  {
+    {0xc29f416a, ULONGEST_MAX},		/* mrs      c10, rcsp_el0  */
+    {0x0200414a, ULONGEST_MAX},		/* add      c10, c10, #16 */
+    {0xc2c1114b, ULONGEST_MAX},		/* gclim    x11, c10  */
+    {0xc2cb414b, ULONGEST_MAX},		/* scvalue  c11, c10, x11  */
+    {0xa21f016a, ULONGEST_MAX},		/* str      c10, [c11, #-CAP_WIDTH]  */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_cheriabi_c18nframe_init
+};
+
 /* Register set definitions.  */
 
 const struct regset aarch64_fbsd_gregset =
@@ -453,6 +534,8 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 	(gdbarch, svr4_lp64_cheri_fetch_link_map_offsets);
 
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_c18nexeframe);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_c18nframe);
     }
   else
     {
