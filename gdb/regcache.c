@@ -180,9 +180,10 @@ register_size (struct gdbarch *gdbarch, int regnum)
 /* See gdbsupport/common-regcache.h.  */
 
 int
-regcache_register_size (const struct regcache *regcache, int n)
+regcache_register_size (const reg_buffer_common *regcache, int n)
 {
-  return register_size (regcache->arch (), n);
+  return register_size
+    (gdb::checked_static_cast<const struct regcache *> (regcache)->arch (), n);
 }
 
 reg_buffer::reg_buffer (gdbarch *gdbarch, bool has_pseudo)
@@ -435,7 +436,7 @@ get_current_regcache (void)
 
 /* See gdbsupport/common-regcache.h.  */
 
-struct regcache *
+reg_buffer_common *
 get_thread_regcache_for_ptid (ptid_t ptid)
 {
   /* This function doesn't take a process_stratum_target parameter
@@ -648,11 +649,12 @@ readable_regcache::raw_read (int regnum, T *val)
 }
 
 enum register_status
-regcache_raw_read_unsigned (struct regcache *regcache, int regnum,
+regcache_raw_read_unsigned (reg_buffer_common *regcache, int regnum,
 			    ULONGEST *val)
 {
   gdb_assert (regcache != NULL);
-  return regcache->raw_read (regnum, val);
+  return gdb::checked_static_cast<struct regcache *> (regcache)->raw_read
+    (regnum, val);
 }
 
 void
@@ -1332,8 +1334,9 @@ reg_buffer::raw_compare (int regnum, const void *buf, int offset) const
 /* Special handling for register PC.  */
 
 CORE_ADDR
-regcache_read_pc (struct regcache *regcache)
+regcache_read_pc (reg_buffer_common *reg_buf)
 {
+  regcache *regcache = gdb::checked_static_cast<struct regcache *> (reg_buf);
   struct gdbarch *gdbarch = regcache->arch ();
 
   CORE_ADDR pc_val;
@@ -1360,7 +1363,7 @@ regcache_read_pc (struct regcache *regcache)
 /* See gdbsupport/common-regcache.h.  */
 
 CORE_ADDR
-regcache_read_pc_protected (regcache *regcache)
+regcache_read_pc_protected (reg_buffer_common *regcache)
 {
   CORE_ADDR pc;
   try
