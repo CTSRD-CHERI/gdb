@@ -4996,21 +4996,16 @@ aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
   /* Write the capability pseudo registers.  */
   if (is_capability_pseudo (gdbarch, pseudo_reg_num))
     {
-      gdb_byte tag;
-
-      tag = buf[16];
-
       /* Fetch the capability pseudo register index.  */
       int c_regnum = pseudo_reg_num - tdep->cap_pseudo_base;
       /* Fetch the actual C register this pseudo register maps to.  */
       int c_real_regnum = tdep->cap_reg_base + c_regnum;
 
-      put_frame_register (next_frame, c_real_regnum, buf);
+      value *val = value::allocate_register (next_frame, c_real_regnum);
+      copy (buf.slice (0, 16), val->contents_writeable ());
+      val->set_tag (buf[16]);
 
-#ifdef notyet
-      aarch64_register_set_tag (gdbarch, regcache, c_real_regnum,
-				(tag != 0)? true : false);
-#endif
+      put_frame_register (next_frame, c_real_regnum, val->contents (), val);
       return;
     }
 
