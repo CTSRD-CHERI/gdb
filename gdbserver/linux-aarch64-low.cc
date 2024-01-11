@@ -371,9 +371,9 @@ tag_map_regno(int idx)
   switch (idx)
     {
     case 31:
-      return (32);
+      return (AARCH64_PCC_REGNUM(0));
     case 32:
-      return (31);
+      return (AARCH64_CSP_REGNUM(0));
     default:
       return (idx);
     }
