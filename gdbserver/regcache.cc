@@ -332,17 +332,20 @@ static gdb::array_view<gdb_byte>
 register_data (const struct regcache *regcache, int n)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
-  return gdb::make_array_view (regcache->registers + reg.offset / 8,
+  return gdb::make_array_view (regcache->registers + reg.offset / 8
+			       + (reg.tagged ? 1 : 0),
 			       reg.size / 8 - (reg.tagged ? 1 : 0));
 }
+
+/* The tag is stored in the first byte of the buffer since it is sent
+   as the first byte of data in the remote protocol.  */
 
 static gdb::array_view<gdb_byte>
 register_tag (const struct regcache *regcache, int n)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
   gdb_assert (reg.tagged);
-  return gdb::make_array_view (regcache->registers
-			       + (reg.offset + reg.size) / 8 - 1, 1);
+  return gdb::make_array_view (regcache->registers + reg.offset / 8, 1);
 }
 
 void
@@ -350,7 +353,8 @@ supply_register (struct regcache *regcache, int n, const void *vbuf)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
   const gdb_byte *buf = static_cast<const gdb_byte *> (vbuf);
-  return regcache->raw_supply (n, gdb::make_array_view (buf, reg.size / 8));
+  return regcache->raw_supply (n, gdb::make_array_view (buf, reg.size / 8
+							- (reg.tagged ? 1 : 0)));
 }
 
 /* See gdbsupport/common-regcache.h.  */
@@ -471,7 +475,8 @@ collect_register (struct regcache *regcache, int n, void *vbuf)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
   gdb_byte *buf = static_cast<gdb_byte *> (vbuf);
-  regcache->raw_collect (n, gdb::make_array_view (buf, reg.size / 8));
+  regcache->raw_collect (n, gdb::make_array_view (buf, reg.size / 8
+						  - (reg.tagged ? 1 : 0)));
 }
 
 /* See gdbsupport/common-regcache.h.  */
@@ -502,6 +507,8 @@ regcache_raw_read_unsigned (reg_buffer_common *reg_buf, int regnum,
   gdb_assert (regcache != NULL);
 
   size = register_size (regcache->tdesc, regnum);
+  if (register_tagged (regcache->tdesc, regnum))
+    size--;
 
   if (size > (int) sizeof (ULONGEST))
     error (_("That operation is not available on integers of more than"
