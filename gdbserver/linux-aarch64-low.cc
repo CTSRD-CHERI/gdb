@@ -360,6 +360,25 @@ aarch64_store_tlsregset (struct regcache *regcache, const void *buf)
     supply_register (regcache, *regnum, tls_buf + sizeof (uint64_t));
 }
 
+/* Map bit index in tag_map to a register number relative to c0.  */
+
+static int
+tag_map_regno(int idx)
+{
+  /* Please note the PCC/CSP position in GDB's target description is
+     the inverse of the position in the Linux Kernel's
+     user_morello_state data structure.  */
+  switch (idx)
+    {
+    case 31:
+      return (32);
+    case 32:
+      return (31);
+    default:
+      return (idx);
+    }
+}
+
 /* Capability registers fill hook implementation.  */
 
 static void
@@ -394,8 +413,16 @@ aarch64_fill_cregset (struct regcache *regcache, void *buf)
   collect_register (regcache, regno++, &cregset->rddc);
   collect_register (regcache, regno++, &cregset->rctpidr);
   collect_register (regcache, regno++, &cregset->cid);
-  collect_register (regcache, regno++, &cregset->tag_map);
   collect_register (regcache, regno++, &cregset->cctlr);
+
+  /* Collect the tag bits.  */
+  cregset->tag_map = 0;
+  for (i = 0; i < 39; i++)
+    {
+      regno = cregs_base + tag_map_regno(i);
+      if (regcache->raw_collect_tag (regno))
+	cregset->tag_map |= (uint64_t)1 << i;
+    }
 }
 
 /* Capability registers store hook implementation.  */
@@ -424,8 +451,16 @@ aarch64_store_cregset (struct regcache *regcache, const void *buf)
   supply_register (regcache, regno++, &cregset->rddc);
   supply_register (regcache, regno++, &cregset->rctpidr);
   supply_register (regcache, regno++, &cregset->cid);
-  supply_register (regcache, regno++, &cregset->tag_map);
   supply_register (regcache, regno++, &cregset->cctlr);
+
+  /* Supply the tag bits.  */
+  uint64_t tag_map = cregset->tag_map;
+  for (i = 0; i < 39; i++)
+    {
+      regno = cregs_base + tag_map_regno(i);
+      regcache->raw_supply_tag (regno, tag_map & 1);
+      tag_map >>= 1;
+    }
 }
 
 bool
