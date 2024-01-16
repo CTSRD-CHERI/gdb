@@ -1462,22 +1462,13 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
   if (optim)
     error (_("Attempt to assign to a register that was not saved."));
 
-  struct type *val_type = fromval->type ();
-
-  /* If this value is a capability, we need to handle the capability tag
-     as well.  */
-  bool tagged = ((val_type->code () == TYPE_CODE_CAPABILITY
-		  || (val_type->code () == TYPE_CODE_PTR
-		      && TYPE_CAPABILITY (val_type)))
-		 && fromval->tagged ());
-
   switch (lval)
     {
     case lval_memory:
       {
 	/* If this value is a capability, we need to handle the capability tag
 	   as an atomic write.  */
-	if (tagged)
+	if (fromval->tagged ())
 	  {
 	    gdb::byte_vector cap (size + 1);
 
