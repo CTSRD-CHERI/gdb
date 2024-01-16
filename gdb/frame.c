@@ -1675,33 +1675,14 @@ put_frame_register_value (frame_info_ptr next_frame, int regnum,
       regnum++;
     }
 
-  /* Copy the data.  */
-  while (!buffer.empty ())
+  /* If the value is exactly one register.  */
+  if (offset == 0 && buffer.size () == register_size (gdbarch, regnum))
     {
-      int curr_len = std::min<int> (register_size (gdbarch, regnum) - offset,
-				    buffer.size ());
-
-      if (curr_len == register_size (gdbarch, regnum))
-	{
-	  put_frame_register (next_frame, regnum, buffer.slice (0, curr_len),
-			      fromval);
-	}
-      else
-	{
-	  value *value = frame_unwind_register_value (next_frame, regnum);
-	  gdb_assert (value != NULL);
-
-	  copy (buffer.slice (0, curr_len),
-		value->contents_writeable ().slice (offset, curr_len));
-	  put_frame_register (next_frame, regnum, value->contents_raw (),
-			      fromval);
-	  release_value (value);
-	}
-
-      buffer = buffer.slice (curr_len);
-      offset = 0;
-      regnum++;
+      put_frame_register (next_frame, regnum, buffer, fromval);
+      return;
     }
+
+  put_frame_register_bytes (next_frame, regnum, offset, buffer);
 }
 
 void
