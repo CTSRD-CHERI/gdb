@@ -1010,6 +1010,23 @@ regcache::cooked_write (int regnum, const gdb_byte *src)
 
 /* See regcache.h.  */
 
+void
+regcache::cooked_write_value (int regnum, struct value *val)
+{
+  gdb_assert (regnum >= 0);
+  gdb_assert (regnum < m_descr->nr_cooked_registers);
+
+  if (regnum >= num_raw_registers ()
+      && gdbarch_pseudo_register_write_value_p (m_descr->gdbarch))
+    gdbarch_pseudo_register_write_value
+      (m_descr->gdbarch, get_next_frame_sentinel_okay (get_current_frame ()),
+       regnum, val);
+  else
+    cooked_write (regnum, val->contents ().data ());
+}
+
+/* See regcache.h.  */
+
 register_status
 readable_regcache::read_part (int regnum, int offset,
 			      gdb::array_view<gdb_byte> dst, bool is_raw)

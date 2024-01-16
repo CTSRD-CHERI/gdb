@@ -76,6 +76,7 @@ struct gdbarch
   gdbarch_pseudo_register_read_ftype *pseudo_register_read = nullptr;
   gdbarch_pseudo_register_read_value_ftype *pseudo_register_read_value = nullptr;
   gdbarch_pseudo_register_write_ftype *pseudo_register_write = nullptr;
+  gdbarch_pseudo_register_write_value_ftype *pseudo_register_write_value = nullptr;
   gdbarch_deprecated_pseudo_register_write_ftype *deprecated_pseudo_register_write = nullptr;
   int num_regs = -1;
   int num_pseudo_regs = 0;
@@ -336,6 +337,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of pseudo_register_read, has predicate.  */
   /* Skip verify of pseudo_register_read_value, has predicate.  */
   /* Skip verify of pseudo_register_write, has predicate.  */
+  /* Skip verify of pseudo_register_write_value, has predicate.  */
   /* Skip verify of deprecated_pseudo_register_write, has predicate.  */
   if (gdbarch->num_regs == -1)
     log.puts ("\n\tnum_regs");
@@ -666,6 +668,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: pseudo_register_write = <%s>\n",
 	      host_address_to_string (gdbarch->pseudo_register_write));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_pseudo_register_write_value_p() = %d\n",
+	      gdbarch_pseudo_register_write_value_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: pseudo_register_write_value = <%s>\n",
+	      host_address_to_string (gdbarch->pseudo_register_write_value));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_deprecated_pseudo_register_write_p() = %d\n",
 	      gdbarch_deprecated_pseudo_register_write_p (gdbarch));
@@ -1964,6 +1972,30 @@ set_gdbarch_pseudo_register_write (struct gdbarch *gdbarch,
 				   gdbarch_pseudo_register_write_ftype pseudo_register_write)
 {
   gdbarch->pseudo_register_write = pseudo_register_write;
+}
+
+bool
+gdbarch_pseudo_register_write_value_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->pseudo_register_write_value != NULL;
+}
+
+void
+gdbarch_pseudo_register_write_value (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, struct value *val)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->pseudo_register_write_value != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_pseudo_register_write_value called\n");
+  gdbarch->pseudo_register_write_value (gdbarch, next_frame, pseudo_reg_num, val);
+}
+
+void
+set_gdbarch_pseudo_register_write_value (struct gdbarch *gdbarch,
+					 gdbarch_pseudo_register_write_value_ftype pseudo_register_write_value)
+{
+  gdbarch->pseudo_register_write_value = pseudo_register_write_value;
 }
 
 bool

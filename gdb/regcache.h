@@ -418,6 +418,8 @@ public:
   template<typename T, typename = RequireLongest<T>>
   void cooked_write (int regnum, T val);
 
+  void cooked_write_value (int regnum, struct value *val);
+
   void raw_update (int regnum) override;
 
   /* Partial transfer of raw registers.  Perform read, modify, write style

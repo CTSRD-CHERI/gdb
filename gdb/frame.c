@@ -1486,7 +1486,8 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
       gdb_assert (size == register_size (gdbarch, realnum));
 
       if (realnum < gdbarch_num_regs (gdbarch)
-	  || !gdbarch_pseudo_register_write_p (gdbarch))
+	  || !(gdbarch_pseudo_register_write_p (gdbarch)
+	       && !gdbarch_pseudo_register_write_value_p (gdbarch)))
 	{
 	  regcache *regcache = get_thread_regcache (inferior_thread ());
 
@@ -1506,8 +1507,11 @@ put_frame_register (frame_info_ptr next_frame, int regnum,
 	}
       else
 	{
-	  gdbarch_pseudo_register_write (gdbarch, next_frame, realnum, buf);
-	  /* TODO: Handle tagged */
+	  if (gdbarch_pseudo_register_write_value_p (gdbarch))
+	    gdbarch_pseudo_register_write_value (gdbarch, next_frame, realnum,
+						 fromval);
+	  else
+	    gdbarch_pseudo_register_write (gdbarch, next_frame, realnum, buf);
 	}
       break;
     default:

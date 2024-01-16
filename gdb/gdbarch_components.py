@@ -450,6 +450,24 @@ NEXT_FRAME.
 
 Method(
     comment="""
+Write contents of VAL to pseudo register with number PSEUDO_REG_NUM.
+
+Raw registers backing the pseudo register should be written to using
+NEXT_FRAME.  If this is defined, then pseudo_register_write will
+never be called.
+""",
+    type="void",
+    name="pseudo_register_write_value",
+    params=[
+        ("frame_info_ptr", "next_frame"),
+        ("int", "pseudo_reg_num"),
+        ("struct value *", "val"),
+    ],
+    predicate=True,
+)
+
+Method(
+    comment="""
 Write bytes to a pseudo register.
 
 This is marked as deprecated because it gets passed a regcache for

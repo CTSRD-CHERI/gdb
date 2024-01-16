@@ -220,6 +220,18 @@ typedef void (gdbarch_pseudo_register_write_ftype) (struct gdbarch *gdbarch, fra
 extern void gdbarch_pseudo_register_write (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf);
 extern void set_gdbarch_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_pseudo_register_write_ftype *pseudo_register_write);
 
+/* Write contents of VAL to pseudo register with number PSEUDO_REG_NUM.
+
+   Raw registers backing the pseudo register should be written to using
+   NEXT_FRAME.  If this is defined, then pseudo_register_write will
+   never be called. */
+
+extern bool gdbarch_pseudo_register_write_value_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_pseudo_register_write_value_ftype) (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, struct value *val);
+extern void gdbarch_pseudo_register_write_value (struct gdbarch *gdbarch, frame_info_ptr next_frame, int pseudo_reg_num, struct value *val);
+extern void set_gdbarch_pseudo_register_write_value (struct gdbarch *gdbarch, gdbarch_pseudo_register_write_value_ftype *pseudo_register_write_value);
+
 /* Write bytes to a pseudo register.
 
    This is marked as deprecated because it gets passed a regcache for
