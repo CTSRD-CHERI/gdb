@@ -5029,7 +5029,7 @@ aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
       copy (buf.slice (0, 16), val->contents_writeable ());
       val->set_tag (buf[16]);
 
-      put_frame_register (next_frame, c_real_regnum, val->contents (), val);
+      put_frame_register (next_frame, c_real_regnum, val);
       return;
     }
 
