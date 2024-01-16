@@ -2630,22 +2630,16 @@ convert_pointer_to_capability (struct gdbarch *gdbarch, struct value *source,
   if (source->contents ().data () == nullptr)
     return nullptr;
 
-  capability cap;
+  capability cap = capability_from_value (source);
 
-  memcpy (&cap.m_cap, source->contents ().data (), sizeof (cap.m_cap));
-
-  if (source->tagged () && cap.is_representable (pointer))
-    cap.set_tag (source->tag ());
+  if (!cap.is_representable (pointer))
+    cap.set_tag (false);
 
   /* Adjust the capability value to that of the pointer.  */
   cap.set_value (pointer);
 
   struct value *result = source->copy ();
-
-  /* Adjust the contents of the new capability.  */
-  memcpy (result->contents_writeable ().data (), &cap.m_cap,
-	  sizeof (cap.m_cap));
-  result->set_tag (cap.get_tag ());
+  value_from_capability (cap, result);
 
   aarch64_debug_printf ("returning cap %s", cap.to_str (true).c_str ());
 
