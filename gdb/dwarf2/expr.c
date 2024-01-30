@@ -1031,12 +1031,15 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 
 	    retval = value::allocate (subobj_type);
 
-	    /* The given offset is relative to the actual object.  */
-	    if (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG)
-	      subobj_offset += n - max;
+	    if (n > max)
+	      {
+		/* The given offset is relative to the actual object.  */
+		if (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG)
+		  subobj_offset += n - max;
+	      }
 
-	    copy (val->contents_all ().slice (subobj_offset, len),
-		  retval->contents_raw ());
+	    copy (val->contents_all ().slice (subobj_offset, n),
+		  retval->contents_raw ().slice (0, n));
 	  }
 	  break;
 
