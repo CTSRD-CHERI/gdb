@@ -1553,6 +1553,9 @@ value::copy () const
 	= val->contents_all_raw ().slice (0, length);
 
       gdb::copy (arg_view, val_contents);
+
+      if (m_tagged)
+	val->m_tag = m_tag;
     }
 
   if (val->lval () == lval_computed)
