@@ -1598,6 +1598,7 @@ value::non_lval ()
       struct value *val = value::allocate (enc_type);
 
       gdb::copy (contents_all (), val->contents_all_raw ());
+      val->m_tag = m_tag;
       val->m_type = m_type;
       val->set_embedded_offset (embedded_offset ());
       val->set_pointed_to_offset (pointed_to_offset ());
