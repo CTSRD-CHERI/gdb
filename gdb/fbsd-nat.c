@@ -56,6 +56,10 @@
 #define	PIOD_READ_CHERI_CAP	7	/* Read CHERI capabilities */
 #endif
 
+#ifndef PIOD_WRITE_CHERI_CAP
+#define	PIOD_WRITE_CHERI_CAP	8	/* Write CHERI capabilities */
+#endif
+
 /* Information stored about each inferior.  */
 struct fbsd_inferior : public private_inferior
 {
@@ -2576,6 +2580,20 @@ fbsd_nat_target::read_capability (CORE_ADDR addr)
     return {};
 
   return cap_vec;
+}
+
+bool
+fbsd_nat_target::write_capability (CORE_ADDR addr,
+				   gdb::array_view<const gdb_byte> buffer)
+{
+  struct ptrace_io_desc piod;
+
+  piod.piod_op = PIOD_WRITE_CHERI_CAP;
+  piod.piod_offs = (void *) (uintptr_t) addr;
+  piod.piod_addr = const_cast<gdb_byte *> (buffer.data ());
+  piod.piod_len = buffer.size ();
+  return ptrace (PT_IO, get_ptrace_pid (inferior_ptid),
+		 (PTRACE_TYPE_ARG3) &piod, 0) == 0;
 }
 #endif
 

@@ -124,6 +124,8 @@ public:
 
 #if __has_feature(capabilities)
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
+  bool write_capability (CORE_ADDR addr,
+			 gdb::array_view<const gdb_byte> buffer) override;
 #endif
 
   /* Methods meant to be overridden by arch-specific target
