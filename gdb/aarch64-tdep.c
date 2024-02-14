@@ -2659,10 +2659,11 @@ morello_write_memory_with_capabilities (CORE_ADDR destination,
   size_t size = type->length ();
   CORE_ADDR source = arg->address ();
 
-  write_memory (destination, buffer, size);
-
   if (!type->contains_capability ())
-    return;
+    {
+      write_memory (destination, buffer, size);
+      return;
+    }
 
   /* If the type contains capabilities, we need to copy the tags as well.
      Given this type contains capabilities, the data should be aligned to
