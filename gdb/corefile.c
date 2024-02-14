@@ -354,6 +354,29 @@ write_memory (CORE_ADDR memaddr,
     memory_error (TARGET_XFER_E_IO, memaddr);
 }
 
+/* See gdbcore.h.  */
+
+void
+write_memory (CORE_ADDR memaddr, struct value *val)
+{
+  struct type *type = val->type ();
+
+  if (val->tagged ())
+    {
+      gdb::byte_vector cap;
+
+      cap.resize (type->length () + 1);
+      cap[0] = val->tag () ? 1 : 0;
+      gdb::array_view<gdb_byte> dst (cap);
+      copy (val->contents (), dst.slice (1));
+      if (target_write_capability (memaddr, cap))
+	return;
+    }
+
+  ssize_t len = type_length_units (type);
+  write_memory (memaddr, val->contents ().data (), len);
+}
+
 /* Notify interpreters and observers that INF's memory was changed.  */
 
 static void
@@ -372,6 +395,18 @@ write_memory_with_notification (CORE_ADDR memaddr, const bfd_byte *myaddr,
 {
   write_memory (memaddr, myaddr, len);
   notify_memory_changed (current_inferior (), memaddr, len, myaddr);
+}
+
+/* See gdbcore.h.  */
+
+void
+write_memory_with_notification (CORE_ADDR memaddr, struct value *val)
+{
+  struct type *type = val->type ();
+  ssize_t len = type_length_units (type);
+  write_memory (memaddr, val);
+  notify_memory_changed (current_inferior (), memaddr, len,
+			 val->contents ().data ());
 }
 
 /* Store VALUE at ADDR in the inferior as a LEN-byte unsigned
