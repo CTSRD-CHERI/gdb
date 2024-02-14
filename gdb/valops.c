@@ -1193,15 +1193,11 @@ value_assign (struct value *toval, struct value *fromval)
 	    modify_field (type, buffer, value_as_long (fromval),
 			  toval->bitpos (), toval->bitsize ());
 	    dest_buffer = buffer;
+	    write_memory_with_notification (changed_addr, dest_buffer,
+					    changed_len);
 	  }
 	else
-	  {
-	    changed_addr = toval->address ();
-	    changed_len = type_length_units (type);
-	    dest_buffer = fromval->contents ().data ();
-	  }
-
-	write_memory_with_notification (changed_addr, dest_buffer, changed_len);
+	  write_memory_with_notification (toval->address (), fromval);
       }
       break;
 
@@ -1497,7 +1493,7 @@ value_coerce_to_target (struct value *val)
 
   length = check_typedef (val->type ())->length ();
   addr = allocate_space_in_inferior (length);
-  write_memory (addr, val->contents ().data (), length);
+  write_memory (addr, val);
   return value_at_lazy (val->type (), addr);
 }
 
