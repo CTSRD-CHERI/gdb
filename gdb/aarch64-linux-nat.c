@@ -1071,6 +1071,18 @@ aarch64_linux_nat_target::low_siginfo_size ()
   if (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 32)
     return sizeof (struct compat_siginfo);
 
+#if __has_feature(capabilities)
+#ifdef __CHERI_PURE_CAPABILITY__
+  /* Is the inferior hybrid? */
+  if (gdbarch_capability_bit (gdbarch) != gdbarch_ptr_bit (gdbarch))
+    return sizeof (struct compat64_siginfo);
+#else
+  /* Is the inferior pure capability? */
+  if (gdbarch_capability_bit (gdbarch) == gdbarch_ptr_bit (gdbarch))
+    return sizeof (struct compat64c_siginfo);
+#endif
+#endif
+
   return sizeof (siginfo_t);
 }
 
@@ -1099,6 +1111,36 @@ aarch64_linux_nat_target::low_siginfo_fixup (siginfo_t *native, gdb_byte *inf,
 
       return true;
     }
+
+#if __has_feature(capabilities)
+#ifdef __CHERI_PURE_CAPABILITY__
+  /* Is the inferior hybrid? */
+  if (gdbarch_capability_bit (gdbarch) != gdbarch_ptr_bit (gdbarch))
+    {
+      if (direction == 0)
+	aarch64_compat64_siginfo_from_siginfo ((struct compat64_siginfo *) inf,
+					       native);
+      else
+	aarch64_siginfo_from_compat64_siginfo (native,
+					       (struct compat64_siginfo *) inf);
+
+      return true;
+    }
+#else
+  /* Is the inferior pure capability? */
+  if (gdbarch_capability_bit (gdbarch) == gdbarch_ptr_bit (gdbarch))
+    {
+      if (direction == 0)
+	aarch64_compat64c_siginfo_from_siginfo ((struct compat64c_siginfo *) inf,
+						native);
+      else
+	aarch64_siginfo_from_compat64c_siginfo (native,
+						(struct compat64c_siginfo *) inf);
+
+      return true;
+    }
+#endif
+#endif
 
   return false;
 }
