@@ -89,7 +89,7 @@ typedef struct compat_siginfo
     /* SIGILL, SIGFPE, SIGSEGV, SIGBUS */
     struct
     {
-      unsigned int _addr;
+      compat_uptr_t _addr;
     } _sigfault;
 
     /* SIGPOLL */
