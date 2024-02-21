@@ -100,6 +100,7 @@ public:
   void low_forget_process (pid_t pid) override;
 
   /* Add our siginfo layout converter.  */
+  size_t low_siginfo_size () override;
   bool low_siginfo_fixup (siginfo_t *ptrace, gdb_byte *inf, int direction)
     override;
 
@@ -1059,6 +1060,18 @@ aarch64_linux_nat_target::read_description ()
   features.capability = aarch64_supports_morello (tid);
 
   return aarch64_read_description (features);
+}
+
+size_t
+aarch64_linux_nat_target::low_siginfo_size ()
+{
+  struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
+
+  /* Is the inferior 32-bit?  */
+  if (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 32)
+    return sizeof (struct compat_siginfo);
+
+  return sizeof (siginfo_t);
 }
 
 /* Convert a native/host siginfo object, into/from the siginfo in the

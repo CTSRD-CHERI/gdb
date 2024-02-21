@@ -171,6 +171,11 @@ public:
   virtual void low_prepare_to_resume (struct lwp_info *)
   {}
 
+  /* Return the size of a siginfo_t object in the inferior's
+     architecture.  */
+  virtual size_t low_siginfo_size ()
+  { return sizeof(siginfo_t); }
+
   /* Convert a ptrace/host siginfo object, into/from the siginfo in
      the layout of the inferiors' architecture.  Returns true if any
      conversion was done; false otherwise, in which case the caller

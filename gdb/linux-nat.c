@@ -3641,12 +3641,13 @@ linux_xfer_siginfo (ptid_t ptid, enum target_object object,
 		    ULONGEST *xfered_len)
 {
   siginfo_t siginfo;
-  gdb_byte inf_siginfo[sizeof (siginfo_t)];
+  size_t siginfo_size = linux_target->low_siginfo_size ();
+  gdb_byte inf_siginfo[siginfo_size];
 
   gdb_assert (object == TARGET_OBJECT_SIGNAL_INFO);
   gdb_assert (readbuf || writebuf);
 
-  if (offset > sizeof (siginfo))
+  if (offset > sizeof (inf_siginfo))
     return TARGET_XFER_E_IO;
 
   if (!linux_nat_get_siginfo (ptid, &siginfo))
@@ -3660,8 +3661,8 @@ linux_xfer_siginfo (ptid_t ptid, enum target_object object,
      post-conversion.  */
   siginfo_fixup (&siginfo, inf_siginfo, 0);
 
-  if (offset + len > sizeof (siginfo))
-    len = sizeof (siginfo) - offset;
+  if (offset + len > sizeof (inf_siginfo))
+    len = sizeof (inf_siginfo) - offset;
 
   if (readbuf != NULL)
     memcpy (readbuf, inf_siginfo + offset, len);
