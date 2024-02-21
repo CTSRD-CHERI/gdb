@@ -113,10 +113,168 @@ typedef struct compat_siginfo
 #define cpt_si_band _sifields._sigpoll._band
 #define cpt_si_fd _sifields._sigpoll._fd
 
+#if __has_feature(capabilities)
+#ifdef __CHERI_PURE_CAPABILITY__
+typedef int compat64_int_t;
+typedef uint64_t compat64_uptr_t;
+
+typedef int compat64_timer_t;
+typedef int64_t compat64_clock_t;
+
+typedef union compat64_sigval
+{
+  compat64_int_t sival_int;
+  compat64_uptr_t sival_ptr;
+} compat64_sigval_t;
+
+typedef struct compat64_siginfo
+{
+  int si_signo;
+  int si_errno;
+  int si_code;
+
+  union
+  {
+    int _pad[((128 / sizeof (int)) - 3)];
+
+    /* kill() */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+    } _kill;
+
+    /* POSIX.1b timers */
+    struct
+    {
+      compat64_timer_t _tid;
+      int _overrun;
+      compat64_sigval_t _sigval;
+    } _timer;
+
+    /* POSIX.1b signals */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      compat64_sigval_t _sigval;
+    } _rt;
+
+    /* SIGCHLD */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      int _status;
+      compat64_clock_t _utime;
+      compat64_clock_t _stime;
+    } _sigchld;
+
+    /* SIGILL, SIGFPE, SIGSEGV, SIGBUS */
+    struct
+    {
+      compat64_uptr_t _addr;
+    } _sigfault;
+
+    /* SIGPOLL */
+    struct
+    {
+      int _band;
+      int _fd;
+    } _sigpoll;
+  } _sifields;
+} compat64_siginfo_t;
+#else
+typedef int compat64c_int_t;
+typedef __uintcap_t compat64c_uptr_t;
+
+typedef int compat64c_timer_t;
+typedef int64_t compat64c_clock_t;
+
+typedef union compat64c_sigval
+{
+  compat64c_int_t sival_int;
+  compat64c_uptr_t sival_ptr;
+} compat64c_sigval_t;
+
+typedef struct compat64c_siginfo
+{
+  int si_signo;
+  int si_errno;
+  int si_code;
+
+  union
+  {
+    int _pad[((128 / sizeof (int)) - 3)];
+
+    /* kill() */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+    } _kill;
+
+    /* POSIX.1b timers */
+    struct
+    {
+      compat64c_timer_t _tid;
+      int _overrun;
+      compat64c_sigval_t _sigval;
+    } _timer;
+
+    /* POSIX.1b signals */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      compat64c_sigval_t _sigval;
+    } _rt;
+
+    /* SIGCHLD */
+    struct
+    {
+      unsigned int _pid;
+      unsigned int _uid;
+      int _status;
+      compat64c_clock_t _utime;
+      compat64c_clock_t _stime;
+    } _sigchld;
+
+    /* SIGILL, SIGFPE, SIGSEGV, SIGBUS */
+    struct
+    {
+      compat64c_uptr_t _addr;
+    } _sigfault;
+
+    /* SIGPOLL */
+    struct
+    {
+      int _band;
+      int _fd;
+    } _sigpoll;
+  } _sifields;
+} compat64c_siginfo_t;
+#endif
+#endif
+
 void aarch64_siginfo_from_compat_siginfo (siginfo_t *to,
 					    compat_siginfo_t *from);
 void aarch64_compat_siginfo_from_siginfo (compat_siginfo_t *to,
 					    siginfo_t *from);
+
+#if __has_feature(capabilities)
+#ifdef __CHERI_PURE_CAPABILITY__
+void aarch64_siginfo_from_compat64_siginfo (siginfo_t *to,
+					    compat64_siginfo_t *from);
+void aarch64_compat64_siginfo_from_siginfo (compat64_siginfo_t *to,
+					    siginfo_t *from);
+#else
+void aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
+					     compat64c_siginfo_t *from);
+void aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
+					     siginfo_t *from);
+#endif
+#endif
 
 void aarch64_linux_prepare_to_resume (struct lwp_info *lwp);
 
