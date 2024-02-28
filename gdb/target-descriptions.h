@@ -120,6 +120,12 @@ void tdesc_use_registers (struct gdbarch *gdbarch,
 
 tdesc_arch_data_up tdesc_data_alloc ();
 
+/* Search FEATURE for a register named NAME.  If it exists and no
+   register exists named NEW_NAME, rename the existing register.  */
+
+void tdesc_rename_register (const struct tdesc_feature *feature,
+			    const char *name, const char *new_name);
+
 /* Search FEATURE for a register named NAME.  Record REGNO and the
    register in DATA; when tdesc_use_registers is called, REGNO will be
    assigned to the register.  1 is returned if the register was found,

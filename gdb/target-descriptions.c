@@ -766,6 +766,22 @@ tdesc_numbered_register (const struct tdesc_feature *feature,
   return 1;
 }
 
+/* See target-descriptions.h.  */
+
+void
+tdesc_rename_register (const struct tdesc_feature *feature,
+		       const char *name, const char *new_name)
+{
+  struct tdesc_reg *reg = tdesc_find_register_early (feature, name);
+  if (reg == nullptr)
+    return;
+
+  if (tdesc_find_register_early (feature, new_name))
+    return;
+
+  reg->name = new_name;
+}
+
 /* Search FEATURE for a register named NAME, but do not assign a fixed
    register number to it.  */
 
