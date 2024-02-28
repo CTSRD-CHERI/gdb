@@ -40,10 +40,10 @@ create_feature_aarch64_capability (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "c28", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "c29", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "c30", regnum++, 1, "general", 128, "data_capability");
-  tdesc_create_reg (feature, "csp", regnum++, 1, "general", 128, "data_capability");
+  tdesc_create_reg (feature, "ecsp", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "pcc", regnum++, 1, "general", 128, "code_capability");
-  tdesc_create_reg (feature, "ddc", regnum++, 1, "system", 128, "data_capability");
-  tdesc_create_reg (feature, "ctpidr", regnum++, 1, "system", 128, "data_capability");
+  tdesc_create_reg (feature, "eddc", regnum++, 1, "system", 128, "data_capability");
+  tdesc_create_reg (feature, "ectpidr", regnum++, 1, "system", 128, "data_capability");
   tdesc_create_reg (feature, "rcsp", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "rddc", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "rctpidr", regnum++, 1, "system", 128, "data_capability");

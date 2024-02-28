@@ -38,10 +38,10 @@
   <reg name="c28" bitsize="128" type="data_capability" group="general"/>
   <reg name="c29" bitsize="128" type="data_capability" group="general"/>
   <reg name="c30" bitsize="128" type="data_capability" group="general"/>
-  <reg name="csp" bitsize="128" type="data_capability" group="general"/>
+  <reg name="ecsp" bitsize="128" type="data_capability" group="general"/>
   <reg name="pcc" bitsize="128" type="code_capability" group="general"/>
-  <reg name="ddc" bitsize="128" type="data_capability" group="system"/>
-  <reg name="ctpidr" bitsize="128" type="data_capability" group="system"/>
+  <reg name="eddc" bitsize="128" type="data_capability" group="system"/>
+  <reg name="ectpidr" bitsize="128" type="data_capability" group="system"/>
   <reg name="rcsp" bitsize="128" type="data_capability" group="general"/>
   <reg name="rddc" bitsize="128" type="data_capability" group="general"/>
   <reg name="rctpidr" bitsize="128" type="data_capability" group="system"/>
