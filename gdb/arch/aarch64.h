@@ -165,10 +165,10 @@ enum aarch64_regnum
 
 #define AARCH64_C0_REGNUM(cap_reg_base)      (cap_reg_base)
 #define AARCH64_CLR_REGNUM(cap_reg_base)     (cap_reg_base + 30)
-#define AARCH64_CSP_REGNUM(cap_reg_base)     (cap_reg_base + 31)
+#define AARCH64_ECSP_REGNUM(cap_reg_base)    (cap_reg_base + 31)
 #define AARCH64_PCC_REGNUM(cap_reg_base)     (cap_reg_base + 32)
-#define AARCH64_DDC_REGNUM(cap_reg_base)     (cap_reg_base + 33)
-#define AARCH64_CTPIDR_REGNUM(cap_reg_base)  (cap_reg_base + 34)
+#define AARCH64_EDDC_REGNUM(cap_reg_base)    (cap_reg_base + 33)
+#define AARCH64_ECTPIDR_REGNUM(cap_reg_base) (cap_reg_base + 34)
 #define AARCH64_RCSP_REGNUM(cap_reg_base)    (cap_reg_base + 35)
 #define AARCH64_RDDC_REGNUM(cap_reg_base)    (cap_reg_base + 36)
 #define AARCH64_RCTPIDR_REGNUM(cap_reg_base) (cap_reg_base + 37)
