@@ -62,6 +62,8 @@ struct regset;
 #define AARCH64_X_REGISTER_COUNT 32
 /* Total number of D registers.  */
 #define AARCH64_D_REGISTER_COUNT 32
+/* Total number of Morello banked pseudo registers.  */
+#define AARCH64_C_BANKED_PSEUDO_COUNT 3
 /* Total number of Morello pseudo registers.  */
 #define AARCH64_C_PSEUDO_COUNT 39
 
@@ -214,12 +216,18 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
   int cap_reg_last;
   /* CLR register number.  */
   int cap_reg_clr;
-  /* CSP register numbers.  */
-  int cap_reg_csp;
+  /* ECSP register number.  */
+  int cap_reg_ecsp;
   /* PCC register number.  */
   int cap_reg_pcc;
   /* RCSP register number.  */
   int cap_reg_rcsp;
+  /* First banked capability pseudo register.  */
+  int cap_banked_pseudo_base;
+  /* CSP pseudo register number.  */
+  int cap_reg_csp;
+  /* CTPIDR pseudo register number.  */
+  int cap_reg_ctpidr;
   /* First capability pseudo register.  */
   int cap_pseudo_base;
   /* Number of capability pseudo registers.  */

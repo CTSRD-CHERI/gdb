@@ -244,8 +244,8 @@ static const char *const aarch64_c_register_names[] =
   "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7",
   "c8", "c9", "c10", "c11", "c12", "c13", "c14", "c15",
   "c16", "c17", "c18", "c19", "c20", "c21", "c22", "c23",
-  "c24", "c25", "c26", "c27", "c28", "c29", "c30", "csp",
-  "pcc", "ddc", "ctpidr", "rcsp", "rddc", "rctpidr", "cid",
+  "c24", "c25", "c26", "c27", "c28", "c29", "c30", "ecsp",
+  "pcc", "eddc", "ectpidr", "rcsp", "rddc", "rctpidr", "cid",
   "cctlr"
 };
 
@@ -321,6 +321,14 @@ static const char *const aarch64_mte_register_names[] =
   "tag_ctl"
 };
 
+/* The banked capability pseudo registers.  These are backed by either
+   the executive or restricted registers depending on the permissions
+   in PCC.  */
+static const char *const aarch64_c_banked_pseudo_register_names[] =
+{
+  "csp", "ctpidr", "ddc"
+};
+
 /* The capability pseudo registers.  These contain the same information
    as the C registers, but broken up in 3 pieces.  */
 static const char *const aarch64_c_pseudo_register_names[] =
@@ -328,8 +336,8 @@ static const char *const aarch64_c_pseudo_register_names[] =
   "pc0", "pc1", "pc2", "pc3", "pc4", "pc5", "pc6", "pc7",
   "pc8", "pc9", "pc10", "pc11", "pc12", "pc13", "pc14", "pc15",
   "pc16", "pc17", "pc18", "pc19", "pc20", "pc21", "pc22", "pc23",
-  "pc24", "pc25", "pc26", "pc27", "pc28", "pc29", "pc30", "pcsp",
-  "ppcc", "pddc", "pctpidr", "prcsp", "prddc", "prctpidr", "pcid"
+  "pc24", "pc25", "pc26", "pc27", "pc28", "pc29", "pc30", "pecsp",
+  "ppcc", "peddc", "pectpidr", "prcsp", "prddc", "prctpidr", "pcid"
 };
 
 static int aarch64_stack_frame_destroyed_p (struct gdbarch *, CORE_ADDR);
@@ -4478,6 +4486,59 @@ aarch64_sme_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 }
 
 static bool
+is_banked_capability_pseudo (gdbarch *gdbarch, int regnum)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  if (tdep->has_capability () && regnum >= tdep->cap_banked_pseudo_base
+      && regnum < tdep->cap_banked_pseudo_base + AARCH64_C_BANKED_PSEUDO_COUNT)
+    return true;
+
+  return false;
+}
+
+static bool
+morello_frame_is_executive (gdbarch *gdbarch, frame_info_ptr this_frame)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  struct value *pcc = frame_unwind_register_value (this_frame,
+						   tdep->cap_reg_pcc);
+  capability cap = capability_from_value (pcc);
+  aarch64_debug_printf ("morello_frame_is_executive: pcc %s, %s",
+			cap.to_str (true).c_str (),
+			cap.check_permissions (CAP_PERM_EXECUTIVE) ? "true" :
+			"false");
+  return cap.check_permissions (CAP_PERM_EXECUTIVE);
+}
+
+static int executive_cap_registers[] =
+{
+  AARCH64_ECSP_REGNUM(0), AARCH64_ECTPIDR_REGNUM(0), AARCH64_EDDC_REGNUM(0)
+};
+
+static int restricted_cap_registers[] =
+{
+  AARCH64_RCSP_REGNUM(0), AARCH64_RCTPIDR_REGNUM(0), AARCH64_RDDC_REGNUM(0)
+};
+
+static int
+banked_capability_regnum (gdbarch *gdbarch, frame_info_ptr this_frame,
+			  int regnum)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  gdb_assert (is_banked_capability_pseudo (gdbarch, regnum));
+
+  regnum -= tdep->cap_banked_pseudo_base;
+
+  if (morello_frame_is_executive (gdbarch, this_frame))
+    regnum = executive_cap_registers[regnum];
+  else
+    regnum = restricted_cap_registers[regnum];
+  return regnum + tdep->cap_reg_base;
+}
+
+static bool
 is_capability_pseudo (gdbarch *gdbarch, int regnum)
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
@@ -4619,6 +4680,11 @@ aarch64_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
     return "";
 
   /* Pseudo capability registers.  */
+  if (is_banked_capability_pseudo (gdbarch, regnum))
+    {
+      int c_regnum = regnum - tdep->cap_banked_pseudo_base;
+      return aarch64_c_banked_pseudo_register_names[c_regnum];
+    }
   if (is_capability_pseudo (gdbarch, regnum))
     {
       int c_regnum = regnum - tdep->cap_pseudo_base;
@@ -4669,6 +4735,8 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
     return builtin_type (gdbarch)->builtin_uint64;
 
   /* Pseudo capability registers.  */
+  if (is_banked_capability_pseudo (gdbarch, regnum))
+    return builtin_type (gdbarch)->builtin_data_capability;
   if (is_capability_pseudo (gdbarch, regnum))
     return morello_capability_pseudo_type (gdbarch);
 
@@ -4706,6 +4774,9 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
   /* RA_STATE is used for unwinding only.  Do not assign it to any groups.  */
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return 0;
+
+  if (is_banked_capability_pseudo (gdbarch, regnum))
+    return group == all_reggroup || group == general_reggroup;
 
   /* The capability pseudo registers are just helper.  They don't belong
      to any group.  */
@@ -4850,6 +4921,13 @@ aarch64_pseudo_read_value (gdbarch *gdbarch, frame_info_ptr next_frame,
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
   /* Read the capability pseudo registers.  */
+  if (is_banked_capability_pseudo (gdbarch, pseudo_reg_num))
+    {
+      int c_regnum = banked_capability_regnum (gdbarch, next_frame,
+					       pseudo_reg_num);
+      return value_of_register (c_regnum, next_frame);
+    }
+
   if (is_capability_pseudo (gdbarch, pseudo_reg_num))
     {
       gdb_byte lower_bytes[8];
@@ -5086,6 +5164,27 @@ aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
 				   pseudo_offset - AARCH64_SVE_V0_REGNUM, buf);
 
   gdb_assert_not_reached ("regnum out of bound");
+}
+
+/* Implement the "pseudo_register_write" gdbarch method.  */
+
+static void
+aarch64_pseudo_write_value (gdbarch *gdbarch, frame_info_ptr next_frame,
+			    const int pseudo_reg_num,
+			    struct value *fromval)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  if (is_banked_capability_pseudo (gdbarch, pseudo_reg_num))
+    {
+      int c_regnum = banked_capability_regnum (gdbarch, next_frame,
+					       pseudo_reg_num);
+      put_frame_register (next_frame, c_regnum, fromval);
+      return;
+    }
+
+  return aarch64_pseudo_write (gdbarch, next_frame, pseudo_reg_num,
+			       fromval->contents ());
 }
 
 /* Callback function for user_reg_add.  */
@@ -6419,11 +6518,17 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       = tdesc_find_feature (tdesc,"org.gnu.gdb.aarch64.capability");
   int first_cap_regnum = -1;
   int last_cap_regnum = -1;
+  int first_banked_cap_pseudo = -1;
   int first_cap_pseudo = -1;
 
   if (feature_capability != nullptr)
     {
       first_cap_regnum = num_regs;
+
+      /* Permit "csp" for "ecsp", etc.  */
+      tdesc_rename_register (feature_capability, "csp", "ecsp");
+      tdesc_rename_register (feature_capability, "ctpidr", "ectpidr");
+      tdesc_rename_register (feature_capability, "ddc", "eddc");
 
       for (i = 0; i < ARRAY_SIZE (aarch64_c_register_names); i++)
 	valid_p &= tdesc_numbered_register (feature_capability,
@@ -6433,6 +6538,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       last_cap_regnum = first_cap_regnum + i - 1;
       num_regs += i;
+
+      /* Pseudo registers for the banked executive/restricted mode
+	 registers.  */
+      first_banked_cap_pseudo = num_pseudo_regs;
+      num_pseudo_regs += AARCH64_C_BANKED_PSEUDO_COUNT;
 
       /* Also add pseudo registers to make it easier to set the whole 129
 	 bits of the C registers.  Each C register is broken into 3 fields:
@@ -6485,7 +6595,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->cap_reg_base = first_cap_regnum;
   tdep->cap_reg_last = last_cap_regnum;
   tdep->cap_reg_clr = (first_cap_regnum == -1)? -1 : first_cap_regnum + 30;
-  tdep->cap_reg_csp = (first_cap_regnum == -1)? -1 : first_cap_regnum + 31;
+  tdep->cap_reg_ecsp = (first_cap_regnum == -1)? -1 : first_cap_regnum + 31;
   tdep->cap_reg_pcc = (first_cap_regnum == -1)? -1 : first_cap_regnum + 32;
   tdep->cap_reg_rcsp = (first_cap_regnum == -1)? -1 : first_cap_regnum + 35;
 
@@ -6513,7 +6623,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_num_pseudo_regs (gdbarch, num_pseudo_regs);
   set_gdbarch_pseudo_register_read_value (gdbarch, aarch64_pseudo_read_value);
-  set_gdbarch_pseudo_register_write (gdbarch, aarch64_pseudo_write);
+  set_gdbarch_pseudo_register_write_value (gdbarch, aarch64_pseudo_write_value);
   set_tdesc_pseudo_register_name (gdbarch, aarch64_pseudo_register_name);
   set_tdesc_pseudo_register_type (gdbarch, aarch64_pseudo_register_type);
   set_tdesc_pseudo_register_reggroup_p (gdbarch,
@@ -6698,6 +6808,10 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Set address class hooks for capabilities.  */
   if (feature_capability)
     {
+      tdep->cap_banked_pseudo_base = num_regs + first_banked_cap_pseudo;
+      tdep->cap_reg_csp = tdep->cap_banked_pseudo_base;
+      tdep->cap_reg_ctpidr = tdep->cap_banked_pseudo_base + 1;
+
       if (have_capability)
 	{
 	  /* These hooks only make sense if we are using the AAPCS64-CAP
@@ -6762,7 +6876,6 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 		      value_of_aarch64_user_reg,
 		      &aarch64_morello_register_aliases[i].regnum);
 
-      num_regs = gdbarch_num_regs (gdbarch);
       tdep->cap_pseudo_base
 	= (first_cap_pseudo == -1)? -1 : num_regs + first_cap_pseudo;
       tdep->cap_pseudo_count
