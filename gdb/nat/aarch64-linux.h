@@ -113,7 +113,6 @@ typedef struct compat_siginfo
 #define cpt_si_band _sifields._sigpoll._band
 #define cpt_si_fd _sifields._sigpoll._fd
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
 typedef int compat64_int_t;
 typedef uint64_t compat64_uptr_t;
@@ -186,7 +185,11 @@ typedef struct compat64_siginfo
 } compat64_siginfo_t;
 #else
 typedef int compat64c_int_t;
-typedef __uintcap_t compat64c_uptr_t;
+typedef struct compat64c_uintcap_t
+{
+  uint64_t lower;
+  uint64_t upper;
+} compat64c_uptr_t;
 
 typedef int compat64c_timer_t;
 typedef int64_t compat64c_clock_t;
@@ -255,14 +258,12 @@ typedef struct compat64c_siginfo
   } _sifields;
 } compat64c_siginfo_t;
 #endif
-#endif
 
 void aarch64_siginfo_from_compat_siginfo (siginfo_t *to,
 					    compat_siginfo_t *from);
 void aarch64_compat_siginfo_from_siginfo (compat_siginfo_t *to,
 					    siginfo_t *from);
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
 void aarch64_siginfo_from_compat64_siginfo (siginfo_t *to,
 					    compat64_siginfo_t *from);
@@ -273,7 +274,6 @@ void aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
 					     compat64c_siginfo_t *from);
 void aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
 					     siginfo_t *from);
-#endif
 #endif
 
 void aarch64_linux_prepare_to_resume (struct lwp_info *lwp);

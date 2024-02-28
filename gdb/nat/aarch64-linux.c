@@ -214,7 +214,6 @@ aarch64_siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
     }
 }
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
 /* Convert native siginfo FROM to the siginfo in the layout of the
    inferior's architecture TO.  */
@@ -350,7 +349,7 @@ aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
     {
       to->cpt_si_timerid = from->si_timerid;
       to->cpt_si_overrun = from->si_overrun;
-      to->cpt_si_ptr = (uintptr_t) from->si_ptr;
+      to->cpt_si_ptr.lower = (uintptr_t) from->si_ptr;
     }
   else if (to->si_code == SI_USER)
     {
@@ -361,7 +360,7 @@ aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
     {
       to->cpt_si_pid = from->si_pid;
       to->cpt_si_uid = from->si_uid;
-      to->cpt_si_ptr = (uintptr_t) from->si_ptr;
+      to->cpt_si_ptr.lower = (uintptr_t) from->si_ptr;
     }
   else
     {
@@ -378,7 +377,7 @@ aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
 	case SIGFPE:
 	case SIGSEGV:
 	case SIGBUS:
-	  to->cpt_si_addr = (uintptr_t) from->si_addr;
+	  to->cpt_si_addr.lower = (uintptr_t) from->si_addr;
 	  break;
 	case SIGPOLL:
 	  to->cpt_si_band = from->si_band;
@@ -387,7 +386,7 @@ aarch64_compat64c_siginfo_from_siginfo (compat64c_siginfo_t *to,
 	default:
 	  to->cpt_si_pid = from->si_pid;
 	  to->cpt_si_uid = from->si_uid;
-	  to->cpt_si_ptr = (uintptr_t) from->si_ptr;
+	  to->cpt_si_ptr.lower = (uintptr_t) from->si_ptr;
 	  break;
 	}
     }
@@ -409,7 +408,7 @@ aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
     {
       to->si_timerid = from->cpt_si_timerid;
       to->si_overrun = from->cpt_si_overrun;
-      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
+      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr.lower;
     }
   else if (to->si_code == SI_USER)
     {
@@ -420,7 +419,7 @@ aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
     {
       to->si_pid = from->cpt_si_pid;
       to->si_uid = from->cpt_si_uid;
-      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr;
+      to->si_ptr = (void *) (intptr_t) from->cpt_si_ptr.lower;
     }
   else
     {
@@ -437,7 +436,7 @@ aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
 	case SIGFPE:
 	case SIGSEGV:
 	case SIGBUS:
-	  to->si_addr = (void *) (intptr_t) from->cpt_si_addr;
+	  to->si_addr = (void *) (intptr_t) from->cpt_si_addr.lower;
 	  break;
 	case SIGPOLL:
 	  to->si_band = from->cpt_si_band;
@@ -446,12 +445,11 @@ aarch64_siginfo_from_compat64c_siginfo (siginfo_t *to,
 	default:
 	  to->si_pid = from->cpt_si_pid;
 	  to->si_uid = from->cpt_si_uid;
-	  to->si_ptr = (void* ) (intptr_t) from->cpt_si_ptr;
+	  to->si_ptr = (void* ) (intptr_t) from->cpt_si_ptr.lower;
 	  break;
 	}
     }
 }
-#endif
 #endif
 
 /* Called by libthread_db.  Returns a pointer to the thread local

@@ -1071,7 +1071,6 @@ aarch64_linux_nat_target::low_siginfo_size ()
   if (gdbarch_bfd_arch_info (gdbarch)->bits_per_word == 32)
     return sizeof (struct compat_siginfo);
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
   /* Is the inferior hybrid? */
   if (gdbarch_capability_bit (gdbarch) != gdbarch_ptr_bit (gdbarch))
@@ -1080,7 +1079,6 @@ aarch64_linux_nat_target::low_siginfo_size ()
   /* Is the inferior pure capability? */
   if (gdbarch_capability_bit (gdbarch) == gdbarch_ptr_bit (gdbarch))
     return sizeof (struct compat64c_siginfo);
-#endif
 #endif
 
   return sizeof (siginfo_t);
@@ -1112,7 +1110,6 @@ aarch64_linux_nat_target::low_siginfo_fixup (siginfo_t *native, gdb_byte *inf,
       return true;
     }
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
   /* Is the inferior hybrid? */
   if (gdbarch_capability_bit (gdbarch) != gdbarch_ptr_bit (gdbarch))
@@ -1139,7 +1136,6 @@ aarch64_linux_nat_target::low_siginfo_fixup (siginfo_t *native, gdb_byte *inf,
 
       return true;
     }
-#endif
 #endif
 
   return false;
