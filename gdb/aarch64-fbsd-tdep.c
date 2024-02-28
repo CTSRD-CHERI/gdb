@@ -64,10 +64,10 @@ static const struct regcache_map_entry aarch64_fbsd_capregmap[] =
   {
     { 30, AARCH64_C0_REGNUM(0), 16 }, /* c0 ... c29 */
     { 1, AARCH64_CLR_REGNUM(0), 16 },
-    { 1, AARCH64_CSP_REGNUM(0), 16 },
+    { 1, AARCH64_ECSP_REGNUM(0), 16 },
     { 1, AARCH64_PCC_REGNUM(0), 16 },
-    { 1, AARCH64_DDC_REGNUM(0), 16 },
-    { 1, AARCH64_CTPIDR_REGNUM(0), 16 },
+    { 1, AARCH64_EDDC_REGNUM(0), 16 },
+    { 1, AARCH64_ECTPIDR_REGNUM(0), 16 },
     { 1, REGCACHE_MAP_SKIP, 16 }, /* ctpidrro */
     { 1, AARCH64_CID_REGNUM(0), 16 },
     { 1, AARCH64_RCSP_REGNUM(0), 16 },
@@ -177,9 +177,9 @@ const struct regcache_map_entry aarch64_fbsd_cheriabi_capregmap[] =
   {
     { 30, AARCH64_C0_REGNUM(0), 16 }, /* c0 ... c29 */
     { 1, AARCH64_CLR_REGNUM(0), 16 },
-    { 1, AARCH64_CSP_REGNUM(0), 16 },
+    { 1, AARCH64_ECSP_REGNUM(0), 16 },
     { 1, AARCH64_PCC_REGNUM(0), 16 },
-    { 1, AARCH64_DDC_REGNUM(0), 16 },
+    { 1, AARCH64_EDDC_REGNUM(0), 16 },
     { 0 }
   };
 
@@ -194,7 +194,7 @@ aarch64_fbsd_cheriabi_sigframe_init (const struct tramp_frame *self,
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  CORE_ADDR sp = get_frame_sp (this_frame);
+  CORE_ADDR sp = get_frame_register_unsigned (this_frame, tdep->cap_reg_ecsp);
   CORE_ADDR mcontext_addr
     = (sp
        + AARCH64C_SIGFRAME_UCONTEXT_OFFSET
@@ -428,7 +428,7 @@ aarch64_fbsd_get_thread_local_address (struct gdbarch *gdbarch, ptid_t ptid,
 				       ptid, gdbarch);
 
   if (tdep->has_capability () && tdep->abi == AARCH64_ABI_AAPCS64_CAP)
-    regnum = AARCH64_CTPIDR_REGNUM(tdep->cap_reg_base);
+    regnum = tdep->cap_reg_ctpidr;
   else
     regnum = tdep->tls_regnum_base;
   target_fetch_registers (regcache, regnum);

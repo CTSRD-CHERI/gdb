@@ -562,7 +562,7 @@ tag_map_regno(aarch64_gdbarch_tdep *tdep, int idx)
   switch (idx)
     {
     case 31:
-      return (tdep->cap_reg_csp);
+      return (tdep->cap_reg_ecsp);
     case 32:
       return (tdep->cap_reg_pcc);
     default:

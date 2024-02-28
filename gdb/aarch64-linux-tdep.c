@@ -768,7 +768,7 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 			paddress (gdbarch, offset + 31 * reg_size));
 	}
 
-      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp,
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_ecsp,
 			       offset + 31 * reg_size);
       trad_frame_set_reg_addr (this_cache, tdep->cap_reg_rcsp,
 			       offset + 32 * reg_size);
@@ -862,9 +862,9 @@ static const struct regcache_map_entry aarch64_linux_cregmap[] =
   {
     { 31, AARCH64_C0_REGNUM(0), 16 }, /* c0 ... c30 */
     { 1, AARCH64_PCC_REGNUM(0), 16 },
-    { 1, AARCH64_CSP_REGNUM(0), 16 },
-    { 1, AARCH64_DDC_REGNUM(0), 16 },
-    { 1, AARCH64_CTPIDR_REGNUM(0), 16 },
+    { 1, AARCH64_ECSP_REGNUM(0), 16 },
+    { 1, AARCH64_EDDC_REGNUM(0), 16 },
+    { 1, AARCH64_ECTPIDR_REGNUM(0), 16 },
     { 1, AARCH64_RCSP_REGNUM(0), 16 },
     { 1, AARCH64_RDDC_REGNUM(0), 16 },
     { 1, AARCH64_RCTPIDR_REGNUM(0), 16 },
@@ -898,7 +898,7 @@ tag_map_regno(aarch64_gdbarch_tdep *tdep, int idx)
     case 31:
       return (tdep->cap_reg_pcc);
     case 32:
-      return (tdep->cap_reg_csp);
+      return (tdep->cap_reg_ecsp);
     default:
       return (tdep->cap_reg_base + idx);
     }
