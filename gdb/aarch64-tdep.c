@@ -439,6 +439,37 @@ class instruction_reader : public abstract_instruction_reader
 
 } // namespace
 
+/* Construct a capability object from a value.  */
+
+static capability
+capability_from_value (struct value *val)
+{
+  gdbarch *gdbarch = val->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  const gdb_byte *buf = val->contents ().data ();
+  ULONGEST lower = extract_unsigned_integer (buf, 8, byte_order);
+  ULONGEST upper = extract_unsigned_integer (buf + 8, 8, byte_order);
+
+  capability cap (upper, lower);
+  cap.set_tag (val->tag ());
+  return cap;
+}
+
+/* Store a capability object in a value.  */
+
+static void
+value_from_capability (capability &cap, struct value *val)
+{
+  gdbarch *gdbarch = val->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte *buf = val->contents_writeable ().data ();
+  uint128_t cap_val = cap.get_capability ();
+
+  store_unsigned_integer (buf, 8, byte_order, cap_val);
+  store_unsigned_integer (buf + 8, 8, byte_order, cap_val >> 64);
+  val->set_tag (cap.get_tag ());
+}
+
 /* If address signing is enabled, mask off the signature bits from the link
    register, which is passed by value in ADDR, using the register values in
    THIS_FRAME.  */
@@ -2439,37 +2470,6 @@ type_fields_overlap_capabilities (struct type *type)
 	return true;
     }
   return false;
-}
-
-/* Construct a capability object from a value.  */
-
-static capability
-capability_from_value (struct value *val)
-{
-  gdbarch *gdbarch = val->arch ();
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  const gdb_byte *buf = val->contents ().data ();
-  ULONGEST lower = extract_unsigned_integer (buf, 8, byte_order);
-  ULONGEST upper = extract_unsigned_integer (buf + 8, 8, byte_order);
-
-  capability cap (upper, lower);
-  cap.set_tag (val->tag ());
-  return cap;
-}
-
-/* Store a capability object in a value.  */
-
-static void
-value_from_capability (capability &cap, struct value *val)
-{
-  gdbarch *gdbarch = val->arch ();
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  gdb_byte *buf = val->contents_writeable ().data ();
-  uint128_t cap_val = cap.get_capability ();
-
-  store_unsigned_integer (buf, 8, byte_order, cap_val);
-  store_unsigned_integer (buf + 8, 8, byte_order, cap_val >> 64);
-  val->set_tag (cap.get_tag ());
 }
 
 /* Try to derive a tagged capability for ADDR with permissions PERM
