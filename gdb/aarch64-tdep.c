@@ -1533,53 +1533,48 @@ aarch64_prologue_prev_register (frame_info_ptr this_frame,
 
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  CORE_ADDR lr;
 
   /* If we are asked to unwind the PC, then we need to return the LR
      instead.  The prologue may save PC, but it will point into this
-     frame's prologue, not the next frame's resume location.
-
-     We do the same for PCC and CLR.  */
-  if (prev_regnum == AARCH64_PC_REGNUM || prev_regnum == tdep->cap_reg_pcc)
+     frame's prologue, not the next frame's resume location.  */
+  if (prev_regnum == AARCH64_PC_REGNUM)
     {
-      CORE_ADDR lr;
-      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-
-      /* Fetch LR or CLR depending on the ABI.  */
-      int lr_regnum;
-      if (prev_regnum == AARCH64_PC_REGNUM)
-	lr_regnum = AARCH64_LR_REGNUM;
-      else
-	lr_regnum = tdep->cap_reg_clr;
-
-      struct value *lr_value = frame_unwind_register_value (this_frame,
-							    lr_regnum);
-
-      /* Make sure LR is available. If not, there is nothing we can do.  */
-      if (lr_value == nullptr || (lr_value != nullptr
-				  && lr_value->optimized_out ()))
-	throw_error (OPTIMIZED_OUT_ERROR, _("Register %d was not saved"),
-		     prev_regnum);
-
-      /* Extract only the bottom 8 bytes of CLR.  This truncates the capability
-	 to 8 bytes.  For LR, this gets us the whole register.  */
-      lr = extract_unsigned_integer (lr_value->contents_all ().data (), 8,
-				     byte_order);
+      lr = frame_unwind_register_unsigned (this_frame, AARCH64_LR_REGNUM);
 
       if (tdep->has_pauth ()
 	  && cache->saved_regs[tdep->ra_sign_state_regnum].is_value ())
 	lr = aarch64_frame_unmask_lr (tdep, this_frame, lr);
 
-      /* Remove any potential LSB's in the address.  */
+      return frame_unwind_got_constant (this_frame, prev_regnum, lr);
+    }
+
+  /* We do the same for PCC and CLR.  */
+  else if (prev_regnum == tdep->cap_reg_pcc)
+    {
+      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+      struct value *clr = frame_unwind_register_value (this_frame,
+						       tdep->cap_reg_clr);
+
+      /* Make sure CLR is available. If not, there is nothing we can do.  */
+      if (clr == nullptr || (clr != nullptr && clr->optimized_out ()))
+	throw_error (OPTIMIZED_OUT_ERROR, _("CLR was not saved"));
+
+      capability cap = capability_from_value (clr);
+
+      /* Unseal if this is a sentry.  */
+      if (cap.get_otype () == CAP_SEAL_TYPE_RB)
+	cap.set_otype (0);
+
+      /* Strip the LSB.  */
+      lr = cap.get_value ();
+      lr = aarch64_frame_unmask_lr (tdep, this_frame, lr);
       lr = gdbarch_addr_bits_remove (gdbarch, lr);
+      cap.set_value (lr);
 
-      struct value *lr_value_adjusted
-	  = frame_unwind_got_constant (this_frame, prev_regnum, lr);
-
-      /* Copy the capability tag over, if it exists.  */
-      if (prev_regnum == tdep->cap_reg_pcc && lr_value->tagged ())
-	lr_value_adjusted->set_tag (lr_value->tag ());
-
-      return lr_value_adjusted;
+      struct value *clr_adjusted = clr->copy ();
+      value_from_capability (cap, clr_adjusted);
+      return clr_adjusted;
     }
 
   /* SP is generally not saved to the stack, but this frame is
@@ -1742,42 +1737,39 @@ aarch64_dwarf2_prev_register (frame_info_ptr this_frame,
 {
   gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  CORE_ADDR lr;
 
-  if (regnum == AARCH64_PC_REGNUM || regnum == tdep->cap_reg_pcc)
+  if (regnum == AARCH64_PC_REGNUM)
     {
-      /* Fetch LR or CLR depending on the ABI.  */
-      int lr_regnum;
-      if (regnum == AARCH64_PC_REGNUM)
-	lr_regnum = AARCH64_LR_REGNUM;
-      else
-	lr_regnum = tdep->cap_reg_clr;
+      lr = frame_unwind_register_unsigned (this_frame, AARCH64_LR_REGNUM);
+      lr = aarch64_frame_unmask_lr (tdep, this_frame, lr);
+      return frame_unwind_got_constant (this_frame, regnum, lr);
+    }
+  else if (regnum == tdep->cap_reg_pcc)
+    {
+      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+      struct value *clr = frame_unwind_register_value (this_frame,
+						       tdep->cap_reg_clr);
 
-      struct value *lr_value = frame_unwind_register_value (this_frame,
-							    lr_regnum);
+      /* Make sure CLR is available. If not, there is nothing we can do.  */
+      if (clr == nullptr || (clr != nullptr && clr->optimized_out ()))
+	throw_error (OPTIMIZED_OUT_ERROR, _("CLR was not saved"));
 
-      /* Make sure LR is available. If not, there is nothing we can do.  */
-      if (lr_value == nullptr || (lr_value != nullptr
-				  && lr_value->optimized_out ()))
-	throw_error (OPTIMIZED_OUT_ERROR, _("Register %d was not saved"),
-		     regnum);
+      capability cap = capability_from_value (clr);
 
-      /* Extract only the bottom 8 bytes of CLR.  This truncates the capability
-	 to 8 bytes.  For LR, this gets us the whole register.  */
-      CORE_ADDR lr
-	= extract_unsigned_integer (lr_value->contents_all ().data (), 8,
-				    gdbarch_byte_order (gdbarch));
+      /* Unseal if this is a sentry.  */
+      if (cap.get_otype () == CAP_SEAL_TYPE_RB)
+	cap.set_otype (0);
 
+      /* Strip the LSB.  */
+      lr = cap.get_value ();
       lr = aarch64_frame_unmask_lr (tdep, this_frame, lr);
       lr = gdbarch_addr_bits_remove (gdbarch, lr);
+      cap.set_value (lr);
 
-      struct value *lr_value_adjusted
-	= frame_unwind_got_constant (this_frame, regnum, lr);
-
-      /* Copy the capability tag over, if it exists.  */
-      if (regnum == tdep->cap_reg_pcc && lr_value->tagged ())
-	lr_value_adjusted->set_tag (lr_value->tag ());
-
-      return lr_value_adjusted;
+      struct value *clr_adjusted = clr->copy ();
+      value_from_capability (cap, clr_adjusted);
+      return clr_adjusted;
     }
 
   internal_error (_("Unexpected register %d"), regnum);
