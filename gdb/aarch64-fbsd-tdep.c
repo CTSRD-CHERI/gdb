@@ -476,7 +476,7 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_read_description (gdbarch,
 				     aarch64_fbsd_core_read_description);
 
-  if (tdep->has_tls ())
+  if (tdep->has_tls () || tdep->abi == AARCH64_ABI_AAPCS64_CAP)
     {
       set_gdbarch_fetch_tls_load_module_address (gdbarch,
 						 svr4_fetch_objfile_link_map);
