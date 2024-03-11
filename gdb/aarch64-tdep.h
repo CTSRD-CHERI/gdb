@@ -262,4 +262,9 @@ void aarch64_displaced_step_fixup (struct gdbarch *gdbarch,
 
 bool aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch);
 
+/* Convert a 64-bit pointer to a capability using the SOURCE capability.  */
+
+struct value *aarch64_convert_pointer_to_capability (struct value *source,
+						     CORE_ADDR pointer);
+
 #endif /* aarch64-tdep.h */
