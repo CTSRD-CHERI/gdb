@@ -760,6 +760,8 @@ gdbpy_initialize_frames (void)
       || PyModule_AddIntConstant (gdb_module, "SIGTRAMP_FRAME",
 				  SIGTRAMP_FRAME) < 0
       || PyModule_AddIntConstant (gdb_module, "ARCH_FRAME", ARCH_FRAME) < 0
+      || PyModule_AddIntConstant (gdb_module, "COMPARTMENT_FRAME",
+				  COMPARTMENT_FRAME) < 0
       || PyModule_AddIntConstant (gdb_module, "SENTINEL_FRAME",
 				  SENTINEL_FRAME) < 0)
     return -1;
