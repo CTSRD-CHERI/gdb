@@ -466,6 +466,9 @@ frame_type_str (frame_type type)
     case ARCH_FRAME:
       return "ARCH_FRAME";
 
+    case COMPARTMENT_FRAME:
+      return "COMPARTMENT_FRAME";
+
     case SENTINEL_FRAME:
       return "SENTINEL_FRAME";
 
