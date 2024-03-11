@@ -242,6 +242,108 @@ static const struct tramp_frame aarch64_fbsd_cheriabi_sigframe =
   aarch64_fbsd_cheriabi_sigframe_init
 };
 
+/* CheriABI compartmentalization trampoline frames.
+
+   This unwinds past the start of tramp_pop_frame.  */
+
+/* Determine which stack pointer to pull CSP from by reading the new
+   PCC from an address and checking its permissions.  */
+
+static int
+c18nframe_pcc_executive (frame_info_ptr this_frame, CORE_ADDR pcc_addr)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  struct value *val = frame_unwind_got_memory (this_frame, tdep->cap_reg_pcc,
+					       pcc_addr);
+  val->fetch_lazy ();
+  capability cap = aarch64_capability_from_value (val);
+  return cap.check_permissions (CAP_PERM_EXECUTIVE);
+}
+
+static const struct regcache_map_entry aarch64_fbsd_c18n_gregmap[] =
+  {
+    { 2, REGCACHE_MAP_SKIP, 8 }, /* next and cookie */
+    { 1, REGCACHE_MAP_SKIP, 16 }, /* rcsp (o_stack) */
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 11, AARCH64_X0_REGNUM + 19, 16 }, /* x19 ... x29 */
+    { 0 }
+  };
+
+const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
+  {
+    { 2, REGCACHE_MAP_SKIP, 8 }, /* next and cookie */
+    { 1, AARCH64_RCSP_REGNUM(0), 16 },
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 11, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c29 */
+    { 0 }
+  };
+
+/* Implement the "init" method of struct tramp_frame.  */
+
+static void
+aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
+			     frame_info_ptr this_frame,
+			     struct trad_frame_cache *this_cache,
+			     CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[8];
+
+  /* Fetch the address of the executive CSP which points to the
+     trusted frame.  */
+  CORE_ADDR sp = frame_unwind_register_unsigned (this_frame,
+						 tdep->cap_reg_ecsp);
+
+  /* Saved X registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_gregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_c18n_gregmap));
+
+  /* Saved C registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_c18n_capregmap),
+			     tdep->cap_reg_base);
+
+  bool csp_is_ecsp = c18nframe_pcc_executive (this_frame, sp + 32);
+  if (!csp_is_ecsp)
+    trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp + 16);
+
+  if (target_read_memory (sp, buf, 8) == 0)
+    {
+      ULONGEST next = extract_unsigned_integer (buf, 8, byte_order);
+
+      /* Update ECSP with address from next.  */
+      struct value *ecsp = frame_unwind_register_value (this_frame,
+							tdep->cap_reg_ecsp);
+      struct value *new_ecsp = aarch64_convert_pointer_to_capability (ecsp,
+								      next);
+      trad_frame_set_reg_value_bytes (this_cache, tdep->cap_reg_ecsp,
+				      new_ecsp->contents ());
+      if (csp_is_ecsp)
+	trad_frame_set_reg_value_bytes (this_cache, tdep->cap_reg_csp,
+					new_ecsp->contents ());
+    }
+
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static const struct tramp_frame aarch64_fbsd_c18nframe =
+{
+  COMPARTMENT_FRAME,
+  4,
+  {
+    {0xa9402fea, ULONGEST_MAX},		/* ldp     x10, x11, [csp]  */
+    {0xc24007ec, ULONGEST_MAX},		/* ldr     c12, [csp, #16]  */
+    {0x42c14ffe, ULONGEST_MAX},		/* ldp     c30, c19, [csp, #32] */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_c18nframe_init
+};
+
 /* Register set definitions.  */
 
 const struct regset aarch64_fbsd_gregset =
@@ -459,6 +561,7 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 	(gdbarch, svr4_lp64_cheri_fetch_link_map_offsets);
 
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe);
     }
   else
     {
