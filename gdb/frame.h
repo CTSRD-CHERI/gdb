@@ -198,6 +198,8 @@ enum frame_type
   SIGTRAMP_FRAME,
   /* Fake frame representing a cross-architecture call.  */
   ARCH_FRAME,
+  /* Compartment switch frame.  */
+  COMPARTMENT_FRAME,
   /* Sentinel or registers frame.  This frame obtains register values
      direct from the inferior's registers.  */
   SENTINEL_FRAME

@@ -489,6 +489,13 @@ annotate_signal_handler_caller (void)
 }
 
 void
+annotate_cross_compartment_call (void)
+{
+  if (annotation_level == 2)
+    printf_unfiltered (("\n\032\032cross-compartment-call\n"));
+}
+
+void
 annotate_frame_address (void)
 {
   if (annotation_level == 2)

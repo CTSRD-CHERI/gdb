@@ -111,6 +111,7 @@ extern bool annotate_source_line (struct symtab *s, int line,
 extern void annotate_frame_begin (int, struct gdbarch *, CORE_ADDR);
 extern void annotate_function_call (void);
 extern void annotate_signal_handler_caller (void);
+extern void annotate_cross_compartment_call (void);
 extern void annotate_frame_address (void);
 extern void annotate_frame_address_end (void);
 extern void annotate_frame_function_name (void);

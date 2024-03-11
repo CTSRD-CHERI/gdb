@@ -1040,6 +1040,7 @@ print_frame_info (const frame_print_options &fp_opts,
 
   if (get_frame_type (frame) == DUMMY_FRAME
       || get_frame_type (frame) == SIGTRAMP_FRAME
+      || get_frame_type (frame) == COMPARTMENT_FRAME
       || get_frame_type (frame) == ARCH_FRAME)
     {
       ui_out_emit_tuple tuple_emitter (uiout, "frame");
@@ -1077,6 +1078,12 @@ print_frame_info (const frame_print_options &fp_opts,
       else if (get_frame_type (frame) == ARCH_FRAME)
 	{
 	  uiout->field_string ("func", "<cross-architecture call>",
+			       metadata_style.style ());
+	}
+      else if (get_frame_type (frame) == COMPARTMENT_FRAME)
+	{
+	  annotate_cross_compartment_call ();
+	  uiout->field_string ("func", "<cross-compartment call>",
 			       metadata_style.style ());
 	}
       uiout->text ("\n");
