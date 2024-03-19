@@ -1036,6 +1036,11 @@ extern frame_info_ptr create_new_frame (CORE_ADDR base, CORE_ADDR pc);
 
 extern bool frame_unwinder_is (frame_info_ptr fi, const frame_unwind *unwinder);
 
+/* Output additional details about a FRAME to the output stream
+   UIOUT.  */
+
+extern void frame_print_info (frame_info_ptr frame, struct ui_out *uiout);
+
 /* Return the language of FRAME.  */
 
 extern enum language get_frame_language (frame_info_ptr frame);

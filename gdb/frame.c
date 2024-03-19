@@ -3061,6 +3061,18 @@ frame_unwinder_is (frame_info_ptr fi, const frame_unwind *unwinder)
   return fi->unwind == unwinder;
 }
 
+/* See frame.h.  */
+
+void
+frame_print_info (frame_info_ptr frame, struct ui_out *uiout)
+{
+  if (frame->unwind == nullptr)
+    frame_unwind_find_by_frame (frame, &frame->prologue_cache);
+
+  if (frame->unwind->print_info != nullptr)
+    frame->unwind->print_info (frame, uiout);
+}
+
 /* Level of the selected frame: 0 for innermost, 1 for its caller, ...
    or -1 for a NULL frame.  */
 

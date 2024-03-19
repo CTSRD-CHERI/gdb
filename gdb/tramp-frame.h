@@ -80,6 +80,10 @@ struct tramp_frame
   /* Given the current frame in THIS_FRAME and a frame cache in FRAME_CACHE,
      return the architecture of the previous frame.  */
   frame_prev_arch_ftype *prev_arch;
+
+  /* Output additional details for the current frame to an output
+     stream.  */
+  frame_print_info_ftype *print_info;
 };
 
 void tramp_frame_prepend_unwinder (struct gdbarch *gdbarch,
