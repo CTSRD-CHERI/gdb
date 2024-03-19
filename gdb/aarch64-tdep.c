@@ -1632,8 +1632,8 @@ aarch64_make_stub_cache (frame_info_ptr this_frame, void **this_cache)
 
   try
     {
-      cache->prev_sp = get_frame_register_unsigned (this_frame,
-						    AARCH64_SP_REGNUM);
+      int sp_regnum = gdbarch_sp_regnum (get_frame_arch (this_frame));
+      cache->prev_sp = get_frame_register_unsigned (this_frame, sp_regnum);
       cache->prev_pc = get_frame_pc (this_frame);
       cache->available_p = 1;
     }
