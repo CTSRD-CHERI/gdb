@@ -156,6 +156,12 @@ typedef void (frame_dealloc_cache_ftype) (frame_info *self,
 typedef struct gdbarch *(frame_prev_arch_ftype) (frame_info_ptr this_frame,
 						 void **this_prologue_cache);
 
+/* Output additional details about a THIS_FRAME to the output stream
+   UIOUT.  */
+
+typedef void (frame_print_info_ftype) (frame_info_ptr this_frame,
+				       struct ui_out *uiout);
+
 struct frame_unwind
 {
   const char *name;
@@ -171,6 +177,7 @@ struct frame_unwind
   frame_sniffer_ftype *sniffer;
   frame_dealloc_cache_ftype *dealloc_cache;
   frame_prev_arch_ftype *prev_arch;
+  frame_print_info_ftype *print_info;
 };
 
 /* Register a frame unwinder, _prepending_ it to the front of the
