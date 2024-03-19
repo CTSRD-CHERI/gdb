@@ -447,10 +447,10 @@ class instruction_reader : public abstract_instruction_reader
 
 } // namespace
 
-/* Construct a capability object from a value.  */
+/* See aarch64-tdep.h.  */
 
-static capability
-capability_from_value (struct value *val)
+capability
+aarch64_capability_from_value (struct value *val)
 {
   gdbarch *gdbarch = val->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -463,10 +463,10 @@ capability_from_value (struct value *val)
   return cap;
 }
 
-/* Store a capability object in a value.  */
+/* See aarch64-tdep.h.  */
 
-static void
-value_from_capability (capability &cap, struct value *val)
+void
+aarch64_value_from_capability (capability &cap, struct value *val)
 {
   gdbarch *gdbarch = val->arch ();
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
@@ -1568,7 +1568,7 @@ aarch64_prologue_prev_register (frame_info_ptr this_frame,
       if (clr == nullptr || (clr != nullptr && clr->optimized_out ()))
 	throw_error (OPTIMIZED_OUT_ERROR, _("CLR was not saved"));
 
-      capability cap = capability_from_value (clr);
+      capability cap = aarch64_capability_from_value (clr);
 
       /* Unseal if this is a sentry.  */
       if (cap.get_otype () == CAP_SEAL_TYPE_RB)
@@ -1581,7 +1581,7 @@ aarch64_prologue_prev_register (frame_info_ptr this_frame,
       cap.set_value (lr);
 
       struct value *clr_adjusted = clr->copy ();
-      value_from_capability (cap, clr_adjusted);
+      aarch64_value_from_capability (cap, clr_adjusted);
       return clr_adjusted;
     }
 
@@ -1762,7 +1762,7 @@ aarch64_dwarf2_prev_register (frame_info_ptr this_frame,
       if (clr == nullptr || clr->optimized_out ())
 	throw_error (OPTIMIZED_OUT_ERROR, _("CLR was not saved"));
 
-      capability cap = capability_from_value (clr);
+      capability cap = aarch64_capability_from_value (clr);
 
       /* Unseal if this is a sentry.  */
       if (cap.get_otype () == CAP_SEAL_TYPE_RB)
@@ -1775,7 +1775,7 @@ aarch64_dwarf2_prev_register (frame_info_ptr this_frame,
       cap.set_value (lr);
 
       struct value *clr_adjusted = clr->copy ();
-      value_from_capability (cap, clr_adjusted);
+      aarch64_value_from_capability (cap, clr_adjusted);
       return clr_adjusted;
     }
   else if (regnum == tdep->cap_reg_ecsp || regnum == tdep->cap_reg_rcsp)
@@ -2501,7 +2501,7 @@ derive_capability_from_value (struct value *val, CORE_ADDR addr, uint32_t perm)
       || !val->tagged ())
     return nullptr;
 
-  capability cap = capability_from_value (val);
+  capability cap = aarch64_capability_from_value (val);
   if (!cap.is_range_in_bounds (addr, 1) || !cap.check_permissions (perm))
     return nullptr;
 
@@ -2519,7 +2519,7 @@ derive_capability_from_value (struct value *val, CORE_ADDR addr, uint32_t perm)
     }
 
   struct value *result = val->copy ();
-  value_from_capability (cap, result);
+  aarch64_value_from_capability (cap, result);
 
   return result;
 }
@@ -2593,7 +2593,7 @@ derive_capability_from_region (CORE_ADDR addr, unsigned long size,
   struct value *result
     = value::allocate (builtin_type (gdbarch)->builtin_data_capability);
 
-  value_from_capability (cap, result);
+  aarch64_value_from_capability (cap, result);
   thunk->result = result;
   return 0;
 }
@@ -2617,7 +2617,7 @@ derive_capability_for_address (struct regcache *regcache, CORE_ADDR addr,
 	{
 	  aarch64_debug_printf
 	    ("Derived cap %s from %s",
-	     capability_from_value (result).to_str (true).c_str (),
+	     aarch64_capability_from_value (result).to_str (true).c_str (),
 	     aarch64_c_register_names[regnum - tdep->cap_reg_base]);
 
 	  return result;
@@ -2645,7 +2645,7 @@ aarch64_convert_pointer_to_capability (struct value *source, CORE_ADDR pointer)
   if (source->contents ().data () == nullptr)
     return nullptr;
 
-  capability cap = capability_from_value (source);
+  capability cap = aarch64_capability_from_value (source);
 
   if (!cap.is_representable (pointer))
     cap.set_tag (false);
@@ -2654,7 +2654,7 @@ aarch64_convert_pointer_to_capability (struct value *source, CORE_ADDR pointer)
   cap.set_value (pointer);
 
   struct value *result = source->copy ();
-  value_from_capability (cap, result);
+  aarch64_value_from_capability (cap, result);
 
   aarch64_debug_printf ("returning cap %s", cap.to_str (true).c_str ());
 
@@ -4519,7 +4519,7 @@ morello_frame_is_executive (gdbarch *gdbarch, frame_info_ptr this_frame)
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   struct value *pcc = frame_unwind_register_value (this_frame,
 						   tdep->cap_reg_pcc);
-  capability cap = capability_from_value (pcc);
+  capability cap = aarch64_capability_from_value (pcc);
   aarch64_debug_printf ("morello_frame_is_executive: pcc %s, %s",
 			cap.to_str (true).c_str (),
 			cap.check_permissions (CAP_PERM_EXECUTIVE) ? "true" :
@@ -6112,13 +6112,13 @@ static void
 morello_set_capability_address (struct gdbarch *gdbarch, struct value *val,
 				CORE_ADDR addr)
 {
-  capability cap = capability_from_value (val);
+  capability cap = aarch64_capability_from_value (val);
 
   if (!cap.is_representable (addr))
     cap.set_tag (false);
   cap.set_value (addr);
 
-  value_from_capability (cap, val);
+  aarch64_value_from_capability (cap, val);
 }
 
 /* Given ABFD, try to determine if we are dealing with a symbol file
@@ -6235,7 +6235,7 @@ morello_write_pc (struct regcache *regs, CORE_ADDR pc)
   struct gdbarch *gdbarch = regs->arch ();
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   struct value *pcc = regs->cooked_read_value (tdep->cap_reg_pcc);
-  capability cap = capability_from_value (pcc);
+  capability cap = aarch64_capability_from_value (pcc);
 
   if (cap.get_value () == pc)
     return;
@@ -6246,7 +6246,7 @@ morello_write_pc (struct regcache *regs, CORE_ADDR pc)
       aarch64_debug_printf ("set new PC %s from PCC", paddress (gdbarch, pc));
 
       cap.set_value (pc);
-      value_from_capability (cap, pcc);
+      aarch64_value_from_capability (cap, pcc);
       regs->raw_write (tdep->cap_reg_pcc, pcc->contents ().data ());
       return;
     }

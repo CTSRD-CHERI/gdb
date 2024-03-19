@@ -26,6 +26,7 @@
 #include "displaced-stepping.h"
 #include "infrun.h"
 #include "gdbarch.h"
+#include "gdbsupport/capability.h"
 
 /* Forward declarations.  */
 struct gdbarch;
@@ -266,5 +267,13 @@ bool aarch64_displaced_step_hw_singlestep (struct gdbarch *gdbarch);
 
 struct value *aarch64_convert_pointer_to_capability (struct value *source,
 						     CORE_ADDR pointer);
+
+/* Construct a capability object from a value.  */
+
+capability aarch64_capability_from_value (struct value *val);
+
+/* Store a capability object in a value.  */
+
+void aarch64_value_from_capability (capability &cap, struct value *val);
 
 #endif /* aarch64-tdep.h */
