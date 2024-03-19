@@ -2605,8 +2605,7 @@ derive_capability_for_address (struct regcache *regcache, CORE_ADDR addr,
 /* Convert a 64-bit pointer to a capability using the SOURCE capability.  */
 
 static struct value *
-convert_pointer_to_capability (struct gdbarch *gdbarch, struct value *source,
-			       CORE_ADDR pointer)
+convert_pointer_to_capability (struct value *source, CORE_ADDR pointer)
 {
   aarch64_debug_enter_exit ();
 
@@ -2876,7 +2875,7 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		     capability.  */
 		  struct value *csp
 		    = regcache->cooked_read_value (tdep->cap_reg_csp);
-		  arg = convert_pointer_to_capability (gdbarch, csp, sp);
+		  arg = convert_pointer_to_capability (csp, sp);
 		  arg_type = csp->type ();
 		}
 	      else
@@ -2909,7 +2908,7 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		     capability.  */
 		  struct value *csp
 		    = regcache->cooked_read_value (tdep->cap_reg_csp);
-		  arg = convert_pointer_to_capability (gdbarch, csp, sp);
+		  arg = convert_pointer_to_capability (csp, sp);
 		  arg_type = csp->type ();
 		}
 	      else
@@ -2959,7 +2958,7 @@ morello_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
       regnum = tdep->cap_reg_csp;
 
       struct value *csp = regcache->cooked_read_value (regnum);
-      csp = convert_pointer_to_capability (gdbarch, csp, sp);
+      csp = convert_pointer_to_capability (csp, sp);
       regcache->raw_supply_tag (regnum, csp->tag ());
       regcache->cooked_write (regnum, csp->contents ().data ());
     }
@@ -6144,7 +6143,7 @@ morello_write_pc (struct regcache *regs, CORE_ADDR pc)
     {
       /* Derive out of bounds value from PCC.  It will fault but is
 	 better than executing the wrong thing.  */
-      new_pcc = convert_pointer_to_capability (gdbarch, pcc, pc);
+      new_pcc = convert_pointer_to_capability (pcc, pc);
     }
 
   regs->raw_supply_tag (tdep->cap_reg_pcc, new_pcc->tag ());
