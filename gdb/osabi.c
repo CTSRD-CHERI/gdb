@@ -67,6 +67,7 @@ static const struct osabi_names gdb_osabi_names[] =
   { "Solaris", NULL },
   { "GNU/Linux", "linux(-gnu[^-]*)?" },
   { "FreeBSD", NULL },
+  { "FreeBSD/kernel", NULL },
   { "NetBSD", NULL },
   { "OpenBSD", NULL },
   { "WindowsCE", NULL },

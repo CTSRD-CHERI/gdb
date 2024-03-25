@@ -704,6 +704,7 @@ ALL_AMD_DBGAPI_TARGET_OBS = \
 # All target-dependent objects files that require 64-bit CORE_ADDR
 # (used with --enable-targets=all --enable-64-bit-bfd).
 ALL_64_TARGET_OBS = \
+	aarch64-fbsd-kern.o \
 	aarch64-fbsd-tdep.o \
 	aarch64-linux-tdep.o \
 	aarch64-newlib-tdep.o \
@@ -718,6 +719,7 @@ ALL_64_TARGET_OBS = \
 	amd64-darwin-tdep.o \
 	amd64-dicos-tdep.o \
 	amd64-fbsd-tdep.o \
+	amd64fbsd-kern.o \
 	amd64-linux-tdep.o \
 	amd64-netbsd-tdep.o \
 	amd64-obsd-tdep.o \
@@ -737,18 +739,21 @@ ALL_64_TARGET_OBS = \
 	ia64-vms-tdep.o \
 	loongarch-linux-tdep.o \
 	loongarch-tdep.o \
+	mipsfbsd-kern.o \
 	mips-fbsd-tdep.o \
 	mips-linux-tdep.o \
 	mips-netbsd-tdep.o \
 	mips-sde-tdep.o \
 	mips-tdep.o \
 	mips64-obsd-tdep.o \
+	riscv-fbsd-kern.o \
 	riscv-fbsd-tdep.o \
 	riscv-linux-tdep.o \
 	riscv-none-tdep.o \
 	riscv-ravenscar-thread.o \
 	riscv-tdep.o \
 	sparc64-fbsd-tdep.o \
+	sparc64fbsd-kern.o \
 	sparc64-linux-tdep.o \
 	sparc64-netbsd-tdep.o \
 	sparc64-obsd-tdep.o \
@@ -773,6 +778,7 @@ ALL_TARGET_OBS = \
 	arch/loongarch.o \
 	arch/ppc-linux-common.o \
 	arm-bsd-tdep.o \
+	arm-fbsd-kern.o \
 	arm-fbsd-tdep.o \
 	arm-linux-tdep.o \
 	arm-netbsd-tdep.o \
@@ -790,6 +796,8 @@ ALL_TARGET_OBS = \
 	csky-linux-tdep.o \
 	csky-tdep.o \
 	dicos-tdep.o \
+	fbsd-kld.o \
+	fbsd-kthr.o \
 	fbsd-tdep.o \
 	frv-linux-tdep.o \
 	frv-tdep.o \
@@ -804,6 +812,7 @@ ALL_TARGET_OBS = \
 	i386-bsd-tdep.o \
 	i386-darwin-tdep.o \
 	i386-dicos-tdep.o \
+	i386fbsd-kern.o \
 	i386-fbsd-tdep.o \
 	i386-gnu-tdep.o \
 	i386-go32-tdep.o \
@@ -841,6 +850,7 @@ ALL_TARGET_OBS = \
 	obsd-tdep.o \
 	or1k-linux-tdep.o \
 	or1k-tdep.o \
+	ppcfbsd-kern.o \
 	ppc-fbsd-tdep.o \
 	ppc-linux-tdep.o \
 	ppc-netbsd-tdep.o \
@@ -1644,6 +1654,7 @@ ALLDEPFILES = \
 	arch/riscv.c \
 	arch/tic6x.c \
 	aarch32-tdep.c \
+	aarch64-fbsd-kern.c \
 	aarch64-fbsd-nat.c \
 	aarch64-fbsd-tdep.c \
 	aarch64-linux-nat.c \
@@ -1664,6 +1675,7 @@ ALLDEPFILES = \
 	amd64-bsd-nat.c \
 	amd64-darwin-tdep.c \
 	amd64-dicos-tdep.c \
+	amd64fbsd-kern.c \
 	amd64-fbsd-nat.c \
 	amd64-fbsd-tdep.c \
 	amd64-linux-nat.c \
@@ -1680,6 +1692,7 @@ ALLDEPFILES = \
 	arc-linux-nat.c \
 	arc-tdep.c \
 	arm-bsd-tdep.c \
+	arm-fbsd-kern.c \
 	arm-fbsd-nat.c \
 	arm-fbsd-tdep.c \
 	arm-linux-nat.c \
@@ -1699,6 +1712,9 @@ ALLDEPFILES = \
 	csky-tdep.c \
 	darwin-nat.c \
 	dicos-tdep.c \
+	fbsd-kld.c \
+	fbsd-kthr.c \
+	fbsd-kvm.c \
 	fbsd-nat.c \
 	fbsd-tdep.c \
 	fork-child.c \
@@ -1719,6 +1735,7 @@ ALLDEPFILES = \
 	i386-darwin-nat.c \
 	i386-darwin-tdep.c \
 	i386-dicos-tdep.c \
+	i386fbsd-kern.c \
 	i386-fbsd-nat.c \
 	i386-fbsd-tdep.c \
 	i386-gnu-nat.c \
@@ -1759,6 +1776,7 @@ ALLDEPFILES = \
 	microblaze-linux-tdep.c \
 	microblaze-tdep.c \
 	mingw-hdep.c \
+	mipsfbsd-kern.c \
 	mips-fbsd-nat.c \
 	mips-fbsd-tdep.c \
 	mips-linux-nat.c \
@@ -1779,6 +1797,7 @@ ALLDEPFILES = \
 	obsd-tdep.c \
 	or1k-linux-nat.c \
 	posix-hdep.c \
+	ppcfbsd-kern.c \
 	ppc-fbsd-nat.c \
 	ppc-fbsd-tdep.c \
 	ppc-linux-nat.c \
@@ -1793,6 +1812,7 @@ ALLDEPFILES = \
 	procfs.c \
 	ravenscar-thread.c \
 	remote-sim.c \
+	riscv-fbsd-kern.c \
 	riscv-fbsd-nat.c \
 	riscv-fbsd-tdep.c \
 	riscv-linux-nat.c \
@@ -1830,6 +1850,7 @@ ALLDEPFILES = \
 	sparc-sol2-nat.c \
 	sparc-sol2-tdep.c \
 	sparc-tdep.c \
+	sparc64fbsd-kern.c \
 	sparc64-fbsd-nat.c \
 	sparc64-fbsd-tdep.c \
 	sparc64-linux-nat.c \
@@ -1917,7 +1938,7 @@ generated_files = \
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb
+all: gdb$(EXEEXT) kgdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
 # Rule for compiling .c files in the top-level gdb directory.
@@ -2180,6 +2201,12 @@ ifneq ($(CODESIGN_CERT),)
 	$(ECHO_SIGN) $(CODESIGN) -s $(CODESIGN_CERT) gdb$(EXEEXT)
 endif
 
+kgdb$(EXEEXT): kgdb-main.o $(LIBGDB_OBS) $(CDEPS) $(TDEPLIBS)
+	$(SILENCE) rm -f kgdb$(EXEEXT)
+	$(ECHO_CXXLD) $(CC_LD) $(INTERNAL_LDFLAGS) $(WIN32LDAPP) \
+		-o kgdb$(EXEEXT) kgdb-main.o $(LIBGDB_OBS) \
+		$(TDEPLIBS) $(TUI_LIBRARY) $(CLIBS) $(LOADLIBES)
+
 # This is useful when debugging GDB, because some Unix's don't let you run GDB
 # on itself without copying the executable.  So "make gdb1" will make
 # gdb and put a copy in gdb1, and you can run it with "gdb gdb1".
@@ -2215,6 +2242,7 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	rm -f init.c stamp-init version.c stamp-version
 	rm -f gdb$(EXEEXT) core make.log
 	rm -f gdb[0-9]$(EXEEXT)
+	rm -f kgdb$(EXEEXT)
 	rm -f test-cp-name-parser$(EXEEXT)
 	rm -f xml-builtin.c stamp-xml
 	rm -f $(DEPDIR)/*
@@ -2638,7 +2666,7 @@ endif
 
 # A list of all the objects we might care about in this build, for
 # dependency tracking.
-all_object_files = gdb.o $(LIBGDB_OBS) gdbtk-main.o \
+all_object_files = kgdb-main.o gdb.o $(LIBGDB_OBS) gdbtk-main.o \
 	test-cp-name-parser.o
 
 # All the .deps files to include.
