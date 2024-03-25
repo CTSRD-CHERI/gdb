@@ -1292,6 +1292,22 @@ reg_buffer::raw_supply_zeroed (int regnum)
   m_register_status[regnum] = REG_VALID;
 }
 
+void
+reg_buffer::raw_supply_unsigned (int regnum, ULONGEST val)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (m_descr->gdbarch);
+  gdb_byte *regbuf;
+  size_t regsize;
+
+  assert_regnum (regnum);
+
+  regbuf = register_buffer (regnum);
+  regsize = m_descr->sizeof_register[regnum];
+
+  store_unsigned_integer (regbuf, regsize, byte_order, val);
+  m_register_status[regnum] = REG_VALID;
+}
+
 /* See gdbsupport/common-regcache.h.  */
 
 void
@@ -1470,6 +1486,53 @@ regcache::collect_regset (const struct regset *regset, int regbase,
   transfer_regset (regset, regbase, nullptr, regnum, nullptr, (gdb_byte *) buf,
 		   size);
 }
+
+/* See regcache.h  */
+
+int
+regcache_map_entry_size (const struct regcache_map_entry *map, gdbarch *gdbarch)
+{
+  int size = 0, count;
+
+  for (; (count = map->count) != 0; map++)
+    {
+      int regno = map->regno;
+      int slot_size = map->size;
+
+      if (slot_size == 0 && regno != REGCACHE_MAP_SKIP)
+	slot_size = register_size (gdbarch, regno);
+
+      size += count * slot_size;
+    }
+  return size;
+}
+
+/* See regcache.h  */
+
+int
+regcache_map_offset (const struct regcache_map_entry *map, int regnum,
+		     gdbarch *gdbarch)
+{
+  int offs = 0, count;
+
+  for (; (count = map->count) != 0; map++)
+    {
+      int regno = map->regno;
+      int slot_size = map->size;
+
+      if (slot_size == 0 && regno != REGCACHE_MAP_SKIP)
+	slot_size = register_size (gdbarch, regno);
+
+      if (regno != REGCACHE_MAP_SKIP && regnum >= regno
+	  && regnum < regno + count)
+	return offs + (regno - regnum) * slot_size;
+
+      offs += count * slot_size;
+    }
+  return -1;
+}
+
+/* See regcache.h  */
 
 bool
 regcache_map_supplies (const struct regcache_map_entry *map, int regnum,
