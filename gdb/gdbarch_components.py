@@ -1187,6 +1187,19 @@ TAG to STREAM.
     invalid=False,
 )
 
+Method(
+    comment="""
+Set the address of a capability in VAL to ADDR.
+""",
+    type="void",
+    name="set_capability_address",
+    params=[
+        ("struct value *", "val"),
+        ("CORE_ADDR", "addr"),
+    ],
+    predicate=True,
+)
+
 Function(
     comment="""
 Fetch the target specific address used to represent a load module.

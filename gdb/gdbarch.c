@@ -136,6 +136,7 @@ struct gdbarch
   gdbarch_remote_register_number_ftype *remote_register_number = default_remote_register_number;
   gdbarch_print_cap_ftype *print_cap = default_print_cap;
   gdbarch_print_cap_attributes_ftype *print_cap_attributes = default_print_cap_attributes;
+  gdbarch_set_capability_address_ftype *set_capability_address = nullptr;
   gdbarch_fetch_tls_load_module_address_ftype *fetch_tls_load_module_address = nullptr;
   gdbarch_get_thread_local_address_ftype *get_thread_local_address = nullptr;
   CORE_ADDR frame_args_skip = 0;
@@ -404,6 +405,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of remote_register_number, invalid_p == 0 */
   /* Skip verify of print_cap, invalid_p == 0 */
   /* Skip verify of print_cap_attributes, invalid_p == 0 */
+  /* Skip verify of set_capability_address, has predicate.  */
   /* Skip verify of fetch_tls_load_module_address, has predicate.  */
   /* Skip verify of get_thread_local_address, has predicate.  */
   /* Skip verify of frame_args_skip, invalid_p == 0 */
@@ -887,6 +889,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: print_cap_attributes = <%s>\n",
 	      host_address_to_string (gdbarch->print_cap_attributes));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_set_capability_address_p() = %d\n",
+	      gdbarch_set_capability_address_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: set_capability_address = <%s>\n",
+	      host_address_to_string (gdbarch->set_capability_address));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_fetch_tls_load_module_address_p() = %d\n",
 	      gdbarch_fetch_tls_load_module_address_p (gdbarch));
@@ -3078,6 +3086,30 @@ set_gdbarch_print_cap_attributes (struct gdbarch *gdbarch,
 				  gdbarch_print_cap_attributes_ftype print_cap_attributes)
 {
   gdbarch->print_cap_attributes = print_cap_attributes;
+}
+
+bool
+gdbarch_set_capability_address_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->set_capability_address != NULL;
+}
+
+void
+gdbarch_set_capability_address (struct gdbarch *gdbarch, struct value *val, CORE_ADDR addr)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->set_capability_address != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_set_capability_address called\n");
+  gdbarch->set_capability_address (gdbarch, val, addr);
+}
+
+void
+set_gdbarch_set_capability_address (struct gdbarch *gdbarch,
+				    gdbarch_set_capability_address_ftype set_capability_address)
+{
+  gdbarch->set_capability_address = set_capability_address;
 }
 
 bool

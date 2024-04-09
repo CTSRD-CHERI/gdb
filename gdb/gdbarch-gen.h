@@ -646,6 +646,14 @@ typedef void (gdbarch_print_cap_attributes_ftype) (struct gdbarch *gdbarch, cons
 extern void gdbarch_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag, struct ui_file *stream);
 extern void set_gdbarch_print_cap_attributes (struct gdbarch *gdbarch, gdbarch_print_cap_attributes_ftype *print_cap_attributes);
 
+/* Set the address of a capability in VAL to ADDR. */
+
+extern bool gdbarch_set_capability_address_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_set_capability_address_ftype) (struct gdbarch *gdbarch, struct value *val, CORE_ADDR addr);
+extern void gdbarch_set_capability_address (struct gdbarch *gdbarch, struct value *val, CORE_ADDR addr);
+extern void set_gdbarch_set_capability_address (struct gdbarch *gdbarch, gdbarch_set_capability_address_ftype *set_capability_address);
+
 /* Fetch the target specific address used to represent a load module. */
 
 extern bool gdbarch_fetch_tls_load_module_address_p (struct gdbarch *gdbarch);
