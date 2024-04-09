@@ -234,6 +234,6 @@ struct value *frame_unwind_got_bytes (frame_info_ptr frame, int regnum,
    CORE_ADDR to a target address if necessary.  */
 
 struct value *frame_unwind_got_address (frame_info_ptr frame, int regnum,
-					CORE_ADDR addr);
+					CORE_ADDR addr, int src_regnum = -1);
 
 #endif

@@ -329,10 +329,21 @@ frame_unwind_got_bytes (frame_info_ptr frame, int regnum, const gdb_byte *buf)
 
 struct value *
 frame_unwind_got_address (frame_info_ptr frame, int regnum,
-			  CORE_ADDR addr)
+			  CORE_ADDR addr, int src_regnum)
 {
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct value *reg_val;
+  struct type *reg_type = register_type (gdbarch, regnum);
+
+  if (src_regnum != -1 && (reg_type->code () == TYPE_CODE_CAPABILITY
+			   || TYPE_CAPABILITY (reg_type))
+      && gdbarch_set_capability_address_p (gdbarch))
+    {
+      reg_val = value_of_register (src_regnum,
+				   get_next_frame_sentinel_okay (frame));
+      gdbarch_set_capability_address (gdbarch, reg_val, addr);
+      return reg_val;
+    }
 
   reg_val = value::zero (register_type (gdbarch, regnum), not_lval);
   pack_long (reg_val->contents_writeable ().data (),
