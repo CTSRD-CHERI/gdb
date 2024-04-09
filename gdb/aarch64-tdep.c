@@ -5993,6 +5993,21 @@ morello_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents,
   gdb_printf (stream, "%s", cap.metadata_str ().c_str ());
 }
 
+/* Set the address of a capability value.  */
+
+static void
+morello_set_capability_address (struct gdbarch *gdbarch, struct value *val,
+				CORE_ADDR addr)
+{
+  capability cap = capability_from_value (val);
+
+  if (!cap.is_representable (addr))
+    cap.set_tag (false);
+  cap.set_value (addr);
+
+  value_from_capability (cap, val);
+}
+
 /* Given ABFD, try to determine if we are dealing with a symbol file
    that uses capabilities.
 
@@ -6706,6 +6721,8 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
       /* Address manipulation.  */
       set_gdbarch_addr_bits_remove (gdbarch, aarch64_addr_bits_remove);
+      set_gdbarch_set_capability_address (gdbarch,
+					  morello_set_capability_address);
 
       set_gdbarch_address_class_type_flags
 	(gdbarch, aarch64_address_class_type_flags);
