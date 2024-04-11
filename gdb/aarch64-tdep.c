@@ -1778,6 +1778,25 @@ aarch64_dwarf2_prev_register (frame_info_ptr this_frame,
       value_from_capability (cap, clr_adjusted);
       return clr_adjusted;
     }
+  else if (regnum == tdep->cap_reg_ecsp || regnum == tdep->cap_reg_rcsp)
+    {
+      /* Read PCC from the next frame to check its permissions.  */
+      struct value *pcc = get_frame_register_value (this_frame,
+						    tdep->cap_reg_pcc);
+      if (pcc != nullptr && !pcc->optimized_out ())
+	{
+	  capability cap = aarch64_capability_from_value (pcc);
+	  int saved_csp_regnum;
+	  if (cap.check_permissions (CAP_PERM_EXECUTIVE))
+	    saved_csp_regnum = tdep->cap_reg_ecsp;
+	  else
+	    saved_csp_regnum = tdep->cap_reg_rcsp;
+
+	  if (regnum == saved_csp_regnum)
+	    return frame_unwind_register_value (this_frame, tdep->cap_reg_csp);
+	}
+      return frame_unwind_got_register (this_frame, regnum, regnum);
+    }
 
   internal_error (_("Unexpected register %d"), regnum);
 }
@@ -1794,7 +1813,8 @@ aarch64_dwarf2_frame_init_reg (struct gdbarch *gdbarch, int regnum,
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
-  if (regnum == AARCH64_PC_REGNUM || regnum == tdep->cap_reg_pcc)
+  if (regnum == AARCH64_PC_REGNUM || regnum == tdep->cap_reg_pcc ||
+      regnum == tdep->cap_reg_ecsp || regnum == tdep->cap_reg_rcsp)
     {
       reg->how = DWARF2_FRAME_REG_FN;
       reg->loc.fn = aarch64_dwarf2_prev_register;
