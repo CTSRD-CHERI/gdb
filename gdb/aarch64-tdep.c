@@ -1747,12 +1747,11 @@ aarch64_dwarf2_prev_register (frame_info_ptr this_frame,
     }
   else if (regnum == tdep->cap_reg_pcc)
     {
-      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       struct value *clr = frame_unwind_register_value (this_frame,
 						       tdep->cap_reg_clr);
 
       /* Make sure CLR is available. If not, there is nothing we can do.  */
-      if (clr == nullptr || (clr != nullptr && clr->optimized_out ()))
+      if (clr == nullptr || clr->optimized_out ())
 	throw_error (OPTIMIZED_OUT_ERROR, _("CLR was not saved"));
 
       capability cap = capability_from_value (clr);
