@@ -23,6 +23,7 @@
 
 #include <vector>
 #include "frame.h"
+#include "comparts.h"
 #include "dis-asm.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "infrun.h"

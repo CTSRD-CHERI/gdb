@@ -1041,6 +1041,7 @@ COMMON_SFILES = \
 	cli-out.c \
 	coff-pe-read.c \
 	coffread.c \
+	comparts.c \
 	complaints.c \
 	completer.c \
 	copying.c \
@@ -1307,6 +1308,7 @@ HFILES_NO_SRCDIR = \
 	cli-out.h \
 	coff-pe-read.h \
 	command.h \
+	comparts.h \
 	complaints.h \
 	completer.h \
 	cp-abi.h \

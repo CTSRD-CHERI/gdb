@@ -654,6 +654,18 @@ typedef void (gdbarch_set_capability_address_ftype) (struct gdbarch *gdbarch, st
 extern void gdbarch_set_capability_address (struct gdbarch *gdbarch, struct value *val, CORE_ADDR addr);
 extern void set_gdbarch_set_capability_address (struct gdbarch *gdbarch, gdbarch_set_capability_address_ftype *set_capability_address);
 
+/* Fetch the list of intra-process compartments for the current inferior. */
+
+typedef compart_list (gdbarch_current_comparts_ftype) (struct gdbarch *gdbarch);
+extern compart_list gdbarch_current_comparts (struct gdbarch *gdbarch);
+extern void set_gdbarch_current_comparts (struct gdbarch *gdbarch, gdbarch_current_comparts_ftype *current_comparts);
+
+/* Populate extra information for an intra-process compartment. */
+
+typedef void (gdbarch_fetch_compart_info_ftype) (struct gdbarch *gdbarch, compart *c);
+extern void gdbarch_fetch_compart_info (struct gdbarch *gdbarch, compart *c);
+extern void set_gdbarch_fetch_compart_info (struct gdbarch *gdbarch, gdbarch_fetch_compart_info_ftype *fetch_compart_info);
+
 /* Fetch the target specific address used to represent a load module. */
 
 extern bool gdbarch_fetch_tls_load_module_address_p (struct gdbarch *gdbarch);

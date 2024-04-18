@@ -335,4 +335,10 @@ extern void default_print_cap_attributes (struct gdbarch *gdbarch,
 					  const gdb_byte *contents, bool tag,
 					  struct ui_file *stream);
 
+/* Default implementation of gdbarch_current_comparts.  */
+extern compart_list default_current_comparts (struct gdbarch *gdbarch);
+
+/* Default implementation of gdbarch_fetch_compart_info.  */
+extern void default_fetch_compart_info (struct gdbarch *gdbarch, compart *c);
+
 #endif /* ARCH_UTILS_H */
