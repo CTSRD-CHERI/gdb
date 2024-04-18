@@ -1200,6 +1200,28 @@ Set the address of a capability in VAL to ADDR.
     predicate=True,
 )
 
+Method(
+    comment="""
+Fetch the list of intra-process compartments for the current inferior.
+""",
+    type="compart_list",
+    name="current_comparts",
+    params=[],
+    predefault="default_current_comparts",
+    invalid=False,
+)
+
+Method(
+    comment="""
+Populate extra information for an intra-process compartment.
+""",
+    type="void",
+    name="fetch_compart_info",
+    params=[("compart *", "c")],
+    predefault="default_fetch_compart_info",
+    invalid=False,
+)
+
 Function(
     comment="""
 Fetch the target specific address used to represent a load module.

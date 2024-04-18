@@ -1126,6 +1126,21 @@ default_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents,
   return;
 }
 
+/* See arch-utils.h.  */
+
+compart_list
+default_current_comparts (struct gdbarch *gdbarch)
+{
+  return {};
+}
+
+/* See arch-utils.h.  */
+
+void
+default_fetch_compart_info (struct gdbarch *gdbarch, compart *c)
+{
+}
+
 bool
 default_dwarf2_omit_typedef_p (struct type *target_type, const char *producer,
 			       const char *name)

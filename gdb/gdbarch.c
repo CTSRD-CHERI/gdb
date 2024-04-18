@@ -137,6 +137,8 @@ struct gdbarch
   gdbarch_print_cap_ftype *print_cap = default_print_cap;
   gdbarch_print_cap_attributes_ftype *print_cap_attributes = default_print_cap_attributes;
   gdbarch_set_capability_address_ftype *set_capability_address = nullptr;
+  gdbarch_current_comparts_ftype *current_comparts = default_current_comparts;
+  gdbarch_fetch_compart_info_ftype *fetch_compart_info = default_fetch_compart_info;
   gdbarch_fetch_tls_load_module_address_ftype *fetch_tls_load_module_address = nullptr;
   gdbarch_get_thread_local_address_ftype *get_thread_local_address = nullptr;
   CORE_ADDR frame_args_skip = 0;
@@ -406,6 +408,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of print_cap, invalid_p == 0 */
   /* Skip verify of print_cap_attributes, invalid_p == 0 */
   /* Skip verify of set_capability_address, has predicate.  */
+  /* Skip verify of current_comparts, invalid_p == 0 */
+  /* Skip verify of fetch_compart_info, invalid_p == 0 */
   /* Skip verify of fetch_tls_load_module_address, has predicate.  */
   /* Skip verify of get_thread_local_address, has predicate.  */
   /* Skip verify of frame_args_skip, invalid_p == 0 */
@@ -895,6 +899,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: set_capability_address = <%s>\n",
 	      host_address_to_string (gdbarch->set_capability_address));
+  gdb_printf (file,
+	      "gdbarch_dump: current_comparts = <%s>\n",
+	      host_address_to_string (gdbarch->current_comparts));
+  gdb_printf (file,
+	      "gdbarch_dump: fetch_compart_info = <%s>\n",
+	      host_address_to_string (gdbarch->fetch_compart_info));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_fetch_tls_load_module_address_p() = %d\n",
 	      gdbarch_fetch_tls_load_module_address_p (gdbarch));
@@ -3110,6 +3120,40 @@ set_gdbarch_set_capability_address (struct gdbarch *gdbarch,
 				    gdbarch_set_capability_address_ftype set_capability_address)
 {
   gdbarch->set_capability_address = set_capability_address;
+}
+
+compart_list
+gdbarch_current_comparts (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->current_comparts != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_current_comparts called\n");
+  return gdbarch->current_comparts (gdbarch);
+}
+
+void
+set_gdbarch_current_comparts (struct gdbarch *gdbarch,
+			      gdbarch_current_comparts_ftype current_comparts)
+{
+  gdbarch->current_comparts = current_comparts;
+}
+
+void
+gdbarch_fetch_compart_info (struct gdbarch *gdbarch, compart *c)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->fetch_compart_info != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_fetch_compart_info called\n");
+  gdbarch->fetch_compart_info (gdbarch, c);
+}
+
+void
+set_gdbarch_fetch_compart_info (struct gdbarch *gdbarch,
+				gdbarch_fetch_compart_info_ftype fetch_compart_info)
+{
+  gdbarch->fetch_compart_info = fetch_compart_info;
 }
 
 bool
