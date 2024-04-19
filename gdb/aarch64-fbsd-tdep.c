@@ -23,7 +23,9 @@
 #include "fbsd-tdep.h"
 #include "aarch64-tdep.h"
 #include "aarch64-fbsd-tdep.h"
+#include "comparts.h"
 #include "inferior.h"
+#include "gdbcore.h"
 #include "osabi.h"
 #include "solib-svr4.h"
 #include "target.h"
@@ -832,6 +834,204 @@ aarch64_fbsd_get_thread_local_address (struct gdbarch *gdbarch, ptid_t ptid,
   return fbsd_get_thread_local_address (gdbarch, dtv_addr, lm_addr, offset);
 }
 
+struct fbsd_comparts_data
+{
+  /* Layout of struct compart.  */
+  LONGEST compart_size = 0;
+  LONGEST compart_name_off = 0;
+  LONGEST compart_libs_off = 0;
+  LONGEST compart_imports_off = 0;
+  LONGEST compart_trusts_off = 0;
+
+  /* Additional fields in r_debug.  */
+  LONGEST r_comparts_size_off = 0;
+  LONGEST r_comparts_off = 0;
+};
+
+static const registry<program_space>::key<fbsd_comparts_data>
+  fbsd_comparts_data_handle;
+
+static struct fbsd_comparts_data *
+get_fbsd_comparts_data (struct program_space *pspace)
+{
+  struct fbsd_comparts_data *data;
+
+  data = fbsd_comparts_data_handle.get (pspace);
+  if (data == NULL)
+    data = fbsd_comparts_data_handle.emplace (pspace);
+
+  return data;
+}
+
+/* Lookup offsets of fields in the runtime linker's 'struct compart'
+   needed to enumerate compartments.  */
+
+static void
+aarch64_fbsd_fetch_compart_offsets (struct gdbarch *gdbarch,
+				    struct fbsd_comparts_data *data)
+{
+  try
+    {
+      /* Fetch offsets from debug symbols in rtld.  */
+      struct symbol *compart_sym
+	= lookup_symbol_in_language ("compart", NULL, STRUCT_DOMAIN,
+				     language_c, NULL).symbol;
+      if (compart_sym == NULL)
+	error (_("Unable to find struct compart symbol"));
+      data->compart_name_off = lookup_struct_elt (compart_sym->type (),
+						  "name", 0).offset / 8;
+      data->compart_libs_off = lookup_struct_elt (compart_sym->type (),
+						  "libs", 0).offset / 8;
+      data->compart_imports_off = lookup_struct_elt (compart_sym->type (),
+						     "imports", 0).offset / 8;
+      data->compart_trusts_off = lookup_struct_elt (compart_sym->type (),
+						    "trusts", 0).offset / 8;
+      data->compart_size = compart_sym->type ()->length ();
+
+      data->r_comparts_size_off = 84;
+      data->r_comparts_off = 96;
+      return;
+    }
+  catch (const gdb_exception_error &e)
+    {
+      data->compart_size = -1;
+    }
+
+  try
+    {
+      /* Fetch size from a global variable in rtld.  */
+      data->compart_size = fbsd_read_integer_by_name (gdbarch, "_compart_size");
+
+      /* Assume default layout.  */
+      data->compart_name_off = 0;
+      data->compart_libs_off = 16;
+      data->compart_imports_off = 48;
+      data->compart_trusts_off = 80;
+
+      data->r_comparts_size_off = 84;
+      data->r_comparts_off = 96;
+      return;
+    }
+  catch (const gdb_exception_error &e)
+    {
+      data->compart_size = -1;
+    }
+}
+
+/* Implement the current_compartments gdbarch method.  */
+
+static compart_list
+aarch64_fbsd_current_comparts (struct gdbarch *gdbarch)
+{
+  CORE_ADDR debug_base = svr4_elf_locate_base ();
+  if (debug_base == 0)
+    return {};
+
+  struct fbsd_comparts_data *data
+    = get_fbsd_comparts_data (current_program_space);
+
+  if (data->compart_size == 0)
+    aarch64_fbsd_fetch_compart_offsets (gdbarch, data);
+
+  if (data->compart_size == -1)
+    return {};
+
+  LONGEST count;
+  if (safe_read_memory_integer(debug_base + data->r_comparts_size_off, 4,
+			       gdbarch_byte_order (gdbarch), &count) == 0)
+    error (_("Unable to read compartment count"));
+
+  struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+  CORE_ADDR comparts_addr = read_memory_typed_address (debug_base +
+						       data->r_comparts_off,
+						       ptr_type);
+
+  compart_list comparts;
+  for (LONGEST i = 0; i < count; i++)
+    {
+      compart_up c (new compart ());
+      c->id = i;
+      c->addr = comparts_addr + i * data->compart_size;
+      CORE_ADDR name_addr
+	= read_memory_typed_address (c->addr + data->compart_name_off,
+				     ptr_type);
+      gdb::unique_xmalloc_ptr<char> name
+	= target_read_string (name_addr, SO_NAME_MAX_PATH_SIZE - 1);
+      if (name == nullptr)
+	c->name = "unknown";
+      else
+	c->name = name.get ();
+      comparts.push_back (std::move (c));
+    }
+  return comparts;
+}
+
+/* Fetch a vector of strings from a struct string_base.  */
+
+static std::vector<std::string>
+aarch64_fetch_string_base (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+  CORE_ADDR buf_addr = read_memory_typed_address (addr, ptr_type);
+  LONGEST size = read_memory_integer (addr + ptr_type->length (), 8,
+				      gdbarch_byte_order (gdbarch));
+  if (size == 0)
+    return {};
+
+  gdb::unique_xmalloc_ptr<char> buf ((char *) xmalloc (size + 1));
+  read_memory (buf_addr, (gdb_byte *) buf.get (), size);
+  buf.get ()[size] = '\0';
+
+  std::vector<std::string> list;
+  char *cp = buf.get ();
+  char *end = cp + size;
+  while (cp < end) {
+    if (*cp != '\0')
+      list.emplace_back (cp);
+    cp += strlen (cp) + 1;
+  }
+  return list;
+}
+
+/* Implement the fetch_compart_info gdbarch method.  */
+
+static void
+aarch64_fbsd_fetch_compart_info (struct gdbarch *gdbarch,
+				 compart *c)
+{
+  struct fbsd_comparts_data *data
+    = get_fbsd_comparts_data (current_program_space);
+
+  try
+    {
+      c->libraries
+	= aarch64_fetch_string_base (gdbarch, c->addr + data->compart_libs_off);
+    }
+  catch (const gdb_exception_error &e)
+    {
+    }
+
+  try
+    {
+      c->imports
+	= aarch64_fetch_string_base (gdbarch,
+				     c->addr + data->compart_imports_off);
+    }
+  catch (const gdb_exception_error &e)
+    {
+    }
+
+  try
+    {
+      c->trusts
+	= aarch64_fetch_string_base (gdbarch,
+				     c->addr + data->compart_trusts_off);
+    }
+  catch (const gdb_exception_error &e)
+    {
+    }
+}
+
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
 
 static void
@@ -846,6 +1046,8 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
     {
       set_solib_svr4_fetch_link_map_offsets
 	(gdbarch, svr4_lp64_cheri_fetch_link_map_offsets);
+      set_gdbarch_current_comparts (gdbarch, aarch64_fbsd_current_comparts);
+      set_gdbarch_fetch_compart_info (gdbarch, aarch64_fbsd_fetch_compart_info);
 
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe_v0);
