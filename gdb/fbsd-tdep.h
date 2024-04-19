@@ -82,4 +82,9 @@ extern void fbsd_report_signal_info (struct gdbarch *gdbarch,
 				     struct ui_out *uiout,
 				     enum gdb_signal siggnal);
 
+/* Read an integer symbol value from the current target.  */
+
+extern LONGEST fbsd_read_integer_by_name (struct gdbarch *gdbarch,
+					  const char *name);
+
 #endif /* fbsd-tdep.h */
