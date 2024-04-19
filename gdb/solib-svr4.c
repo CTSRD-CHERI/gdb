@@ -710,8 +710,8 @@ scan_dyntag_auxv (const int desired_dyntag, CORE_ADDR *ptr,
    If there are any errors while trying to find the address, we
    silently return 0, otherwise the found address is returned.  */
 
-static CORE_ADDR
-elf_locate_base (void)
+CORE_ADDR
+svr4_elf_locate_base ()
 {
   struct bound_minimal_symbol msymbol;
   CORE_ADDR dyn_ptr, dyn_ptr_addr;
@@ -774,6 +774,12 @@ elf_locate_base (void)
 
   /* DT_DEBUG entry not found.  */
   return 0;
+}
+
+static CORE_ADDR
+elf_locate_base (void)
+{
+  return svr4_elf_locate_base ();
 }
 
 /* Find the first element in the inferior's dynamic link map, and
