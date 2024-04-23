@@ -32,6 +32,7 @@
 #include "tramp-frame.h"
 #include "trad-frame.h"
 
+#include "cli/cli-style.h"
 #include "gdbsupport/capability.h"
 
 /* Register maps.  */
@@ -597,7 +598,12 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
   if (fetch_c18n_stack_info (gdbarch, caller, id, name))
     {
       if (name != nullptr)
-	uiout->message ("\"%pF\" ", string_field ("caller-name", name.get ()));
+	{
+	  uiout->text ("\"");
+	  uiout->field_string ("caller-name", name.get (),
+			       file_name_style.style ());
+	  uiout->text ("\" ");
+	}
       uiout->message ("(ID: %pF)", signed_field ("caller-id", id));
     }
   else
@@ -610,7 +616,12 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
   if (fetch_c18n_stack_info (gdbarch, callee, id, name))
     {
       if (name != nullptr)
-	uiout->message ("\"%pF\" ", string_field ("callee-name", name.get ()));
+	{
+	  uiout->text ("\"");
+	  uiout->field_string ("callee-name", name.get (),
+			       file_name_style.style ());
+	  uiout->text ("\" ");
+	}
       uiout->message ("(ID: %pF)", signed_field ("callee-id", id));
     }
   else
