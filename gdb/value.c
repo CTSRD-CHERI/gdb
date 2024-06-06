@@ -3684,10 +3684,12 @@ struct value *
 value_from_component (struct value *whole, struct type *type, LONGEST offset)
 {
   struct value *v;
+  struct type *resolved_type = check_typedef (type);
 
   /* Capabilities must be fetched explicitly and not copied from the
      containing value.  */
-  if (TYPE_CAPABILITY (type))
+  if (resolved_type->code () == TYPE_CODE_CAPABILITY ||
+      TYPE_CAPABILITY (resolved_type))
     v = value::allocate_lazy (type);
   else if (whole->lval () == lval_memory && whole->lazy ())
     v = value::allocate_lazy (type);
