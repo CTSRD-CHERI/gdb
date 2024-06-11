@@ -45,12 +45,18 @@ sort_comparts (compart_list &list)
 void
 update_compart_list (int from_tty)
 {
+  unsigned int entry_generation = get_frame_cache_generation ();
+
+  if (entry_generation == current_program_space->compart_generation)
+    return;
+
   gdbarch *gdbarch = target_gdbarch ();
   compart_list inferior = gdbarch_current_comparts (gdbarch);
 
   if (inferior.empty ())
     {
       current_program_space->compart_list.clear ();
+      current_program_space->compart_generation = entry_generation;
       return;
     }
 
@@ -130,6 +136,7 @@ update_compart_list (int from_tty)
     }
 
   current_program_space->compart_list = std::move(new_list);
+  current_program_space->compart_generation = entry_generation;
 }
 
 /* Implement the "info compartments" command.  Walk through the
@@ -213,6 +220,21 @@ info_compartments_command (const char *pattern, int from_tty)
       else
 	uiout->message (_("No compartments.\n"));
     }
+}
+
+const struct compart *
+compart_info (LONGEST id)
+{
+  update_compart_list (0);
+
+  for (const compart_up &compart : current_program_space->compart_list)
+    {
+      if (compart->id == id)
+	return (compart.get ());
+      if (compart->id > id)
+	return (nullptr);
+    }
+  return (nullptr);
 }
 
 void _initialize_comparts ();

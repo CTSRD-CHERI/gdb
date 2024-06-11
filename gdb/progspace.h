@@ -375,6 +375,9 @@ struct program_space
      This is so we can properly report solib changes to the user.  */
   std::vector<std::string> deleted_solibs;
 
+  /* Compartment list generation.  */
+  unsigned int compart_generation = UINT_MAX;
+
   /* List of compartments in this space.  Managed by comparts.c.  */
   compart_list compart_list;
 

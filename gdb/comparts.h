@@ -69,4 +69,9 @@ extern bool debug_comparts;
 
 extern void update_compart_list (int from_tty);
 
+/* Return reference to info for compartment ID from the current
+   inferior.  */
+
+extern const struct compart *compart_info (LONGEST id);
+
 #endif /* COMPARTS_H */
