@@ -470,13 +470,13 @@ static const struct tramp_frame aarch64_fbsd_c18nframe_v1 =
   aarch64_fbsd_c18nframe_print_info_v1
 };
 
-/* The current version is after commit
+/* The third version is after commit
    9adf0524a740f88d3991ee277cd71e4f61ef0626 and assumes a compartment
    ID and optional compartment name address at the bottom of the
    restricted stack.  Also includes a proper rcsp and ecsp address in
    the frame.  */
 
-static const struct regcache_map_entry aarch64_fbsd_c18n_gregmap[] =
+static const struct regcache_map_entry aarch64_fbsd_c18n_gregmap_v2[] =
   {
     { 1, AARCH64_X0_REGNUM + 29, 16 }, /* x29 */
     { 1, AARCH64_PC_REGNUM, 16 },
@@ -487,7 +487,7 @@ static const struct regcache_map_entry aarch64_fbsd_c18n_gregmap[] =
     { 0 }
   };
 
-const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
+const struct regcache_map_entry aarch64_fbsd_c18n_capregmap_v2[] =
   {
     { 1, AARCH64_C0_REGNUM(0) + 29, 16 }, /* c29 */
     { 1, AARCH64_PCC_REGNUM(0), 16 },
@@ -501,10 +501,10 @@ const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
 /* Implement the "init" method of struct tramp_frame.  */
 
 static void
-aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
-			     frame_info_ptr this_frame,
-			     struct trad_frame_cache *this_cache,
-			     CORE_ADDR func)
+aarch64_fbsd_c18nframe_init_v2 (const struct tramp_frame *self,
+				frame_info_ptr this_frame,
+				struct trad_frame_cache *this_cache,
+				CORE_ADDR func)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
@@ -517,14 +517,14 @@ aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
 						 tdep->cap_reg_ecsp);
 
   /* Saved X registers.  */
-  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_gregmap, sp,
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_gregmap_v2, sp,
 			     regcache_map_entry_size
-			     (aarch64_fbsd_c18n_gregmap));
+			     (aarch64_fbsd_c18n_gregmap_v2));
 
   /* Saved C registers.  */
-  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap, sp,
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap_v2, sp,
 			     regcache_map_entry_size
-			     (aarch64_fbsd_c18n_capregmap),
+			     (aarch64_fbsd_c18n_capregmap_v2),
 			     tdep->cap_reg_base);
 
   bool csp_is_ecsp = c18nframe_pcc_executive (this_frame, sp + 16);
@@ -551,8 +551,8 @@ aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
 }
 
 static bool
-fetch_c18n_stack_info (struct gdbarch *gdbarch, struct value *val,
-		       LONGEST &id, gdb::unique_xmalloc_ptr<char> &name)
+fetch_c18n_stack_info_v2 (struct gdbarch *gdbarch, struct value *val,
+			  LONGEST &id, gdb::unique_xmalloc_ptr<char> &name)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[16];
@@ -583,8 +583,8 @@ fetch_c18n_stack_info (struct gdbarch *gdbarch, struct value *val,
 }
 
 static void
-aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
-				   struct ui_out *uiout)
+aarch64_fbsd_c18nframe_print_info_v2 (frame_info_ptr this_frame,
+				      struct ui_out *uiout)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
@@ -595,7 +595,7 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
   struct value *caller = frame_unwind_register_value (this_frame,
 						      tdep->cap_reg_rcsp);
   uiout->text (", from ");
-  if (fetch_c18n_stack_info (gdbarch, caller, id, name))
+  if (fetch_c18n_stack_info_v2 (gdbarch, caller, id, name))
     {
       if (name != nullptr)
 	{
@@ -613,7 +613,7 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
   struct value *callee = get_frame_register_value (this_frame,
 						   tdep->cap_reg_rcsp);
   uiout->text (" to ");
-  if (fetch_c18n_stack_info (gdbarch, callee, id, name))
+  if (fetch_c18n_stack_info_v2 (gdbarch, callee, id, name))
     {
       if (name != nullptr)
 	{
@@ -628,7 +628,7 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
     uiout->text ("<unknown>");
 }
 
-static const struct tramp_frame aarch64_fbsd_c18nframe =
+static const struct tramp_frame aarch64_fbsd_c18nframe_v2 =
 {
   COMPARTMENT_FRAME,
   4,
@@ -636,6 +636,164 @@ static const struct tramp_frame aarch64_fbsd_c18nframe =
     {0x42c07bfd, ULONGEST_MAX},		/* ldp     c29, c30, [csp]  */
     {0xa9422fea, ULONGEST_MAX},		/* ldp     x10, x11, [csp, #32]  */
     {0x42c1b3ef, ULONGEST_MAX},		/* ldp     c15, c12, [csp, #48] */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_c18nframe_init_v2,
+  nullptr,
+  nullptr,
+  aarch64_fbsd_c18nframe_print_info_v2
+};
+
+/* The current version is after commit
+   852db1b30e764a505a4c37cae218e83717e2ee5c which no longer stores
+   metadata at the bottom of the restricted stack.  Instead, the
+   trusted frame now includes a mangled compartment ID that can be
+   used to fetch the compartment name from the global compartment
+   list.  */
+
+static const struct regcache_map_entry aarch64_fbsd_c18n_gregmap[] =
+  {
+    { 1, AARCH64_X0_REGNUM + 29, 16 }, /* x29 */
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 10, AARCH64_X0_REGNUM + 19, 16 }, /* x19 ... x28 */
+    { 0 }
+  };
+
+const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
+  {
+    { 1, AARCH64_C0_REGNUM(0) + 29, 16 }, /* c29 */
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 10, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c28 */
+    { 2, REGCACHE_MAP_SKIP, 16 }, /* sp and osp */
+    { 1, AARCH64_EDDC_REGNUM(0), 16 }, /* previous */
+    { 0 }
+  };
+
+/* Implement the "init" method of struct tramp_frame.  */
+
+static void
+aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
+			     frame_info_ptr this_frame,
+			     struct trad_frame_cache *this_cache,
+			     CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[8];
+
+  /* Fetch the address of the executive DDC which points to the
+     trusted frame.  */
+  int eddc_regno = AARCH64_EDDC_REGNUM(tdep->cap_reg_base);
+  CORE_ADDR sp = get_frame_register_unsigned (this_frame, eddc_regno);
+
+  /* Saved X registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_gregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_c18n_gregmap));
+
+  /* Saved C registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_c18n_capregmap),
+			     tdep->cap_reg_base);
+
+  bool executive = c18nframe_pcc_executive (this_frame, sp + 32);
+  if (!executive)
+    {
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp + 192);
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_rcsp, sp + 192);
+    }
+  else
+      trad_frame_set_reg_realreg (this_cache, tdep->cap_reg_csp,
+				  tdep->cap_reg_ecsp);
+
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static bool
+fetch_c18n_stack_info (struct gdbarch *gdbarch, CORE_ADDR idx_addr,
+		       LONGEST &id, std::string &name)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  gdb_byte buf[2];
+
+  id = -1;
+  name.clear ();
+
+  /* Fetch the mangled stack table index.  */
+  if (target_read_memory (idx_addr, buf, sizeof(buf)) != 0)
+    return false;
+
+  LONGEST raw_id = extract_unsigned_integer (buf, 2, byte_order);
+
+  /* See index_to_cid macro in rtld_c18n.h.
+
+     offsetof(struct stk_table, entries) = 32
+     offsetof(struct stk_table_entry, stack) = 0
+     sizeof(struct stk_table_entry) = 32  */
+  id = (raw_id - 32 - 0) / 32;
+
+  const struct compart *compart = compart_info (id);
+  if (compart != nullptr)
+    name = compart->name;
+
+  return true;
+}
+
+static void
+aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
+				   struct ui_out *uiout)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  std::string name;
+  LONGEST id;
+
+  /* Fetch the address of the executive DDC which points to the
+     trusted frame.  */
+  int eddc_regno = AARCH64_EDDC_REGNUM(tdep->cap_reg_base);
+  CORE_ADDR sp = get_frame_register_unsigned (this_frame, eddc_regno);
+
+  uiout->text (", from ");
+  if (fetch_c18n_stack_info (gdbarch, sp + 240, id, name))
+    {
+      if (!name.empty ())
+	{
+	  uiout->text ("\"");
+	  uiout->field_string ("caller-name", name.c_str (),
+			       file_name_style.style ());
+	  uiout->text ("\" ");
+	}
+      uiout->message ("(ID: %pF)", signed_field ("caller-id", id));
+    }
+  else
+    uiout->text ("<unknown>");
+
+  uiout->text (" to ");
+  if (fetch_c18n_stack_info (gdbarch, sp + 244, id, name))
+    {
+      if (!name.empty ())
+	{
+	  uiout->text ("\"");
+	  uiout->field_string ("callee-name", name.c_str (),
+			       file_name_style.style ());
+	  uiout->text ("\" ");
+	}
+      uiout->message ("(ID: %pF)", signed_field ("callee-id", id));
+    }
+  else
+    uiout->text ("<unknown>");
+}
+
+static const struct tramp_frame aarch64_fbsd_c18nframe =
+{
+  COMPARTMENT_FRAME,
+  4,
+  {
+    {0xc29b4132, ULONGEST_MAX},		/* mrs     c18, ddc  */
+    {0x42c72a51, ULONGEST_MAX},		/* ldp     c17, c10, [c18, #224]  */
+    {0x42c6324b, ULONGEST_MAX},		/* ldp     c11, c12, [c18, #192]  */
     {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
   },
   aarch64_fbsd_c18nframe_init,
@@ -1063,6 +1221,7 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe_v0);
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe_v1);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe_v2);
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe);
     }
   else
