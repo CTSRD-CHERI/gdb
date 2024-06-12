@@ -3054,8 +3054,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       if (this->lval () == lval_register && lazy ())
 	fetch_lazy ();
 
-      if (lazy () || resolved_type->code () == TYPE_CODE_CAPABILITY
-	  || TYPE_CAPABILITY (resolved_type))
+      if (lazy () || is_capability (resolved_type))
 	v = value::allocate_lazy (type);
       else
 	{
@@ -3684,12 +3683,10 @@ struct value *
 value_from_component (struct value *whole, struct type *type, LONGEST offset)
 {
   struct value *v;
-  struct type *resolved_type = check_typedef (type);
 
   /* Capabilities must be fetched explicitly and not copied from the
      containing value.  */
-  if (resolved_type->code () == TYPE_CODE_CAPABILITY ||
-      TYPE_CAPABILITY (resolved_type))
+  if (is_capability (type))
     v = value::allocate_lazy (type);
   else if (whole->lval () == lval_memory && whole->lazy ())
     v = value::allocate_lazy (type);
@@ -3892,8 +3889,7 @@ value::fetch_lazy_memory ()
 
   CORE_ADDR addr = address ();
   struct type *type = check_typedef (enclosing_type ());
-  bool has_capability = TYPE_CAPABILITY (type)
-    || type->code () == TYPE_CODE_CAPABILITY;
+  bool has_capability = is_capability (type);
 
   if (has_capability)
     {

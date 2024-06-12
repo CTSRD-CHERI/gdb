@@ -1405,7 +1405,7 @@ frame_unwind_register_unsigned (frame_info_ptr next_frame, int regnum)
     }
 
   ULONGEST r;
-  if (type->code () == TYPE_CODE_CAPABILITY || TYPE_CAPABILITY (type))
+  if (is_capability (type))
     r = gdbarch_pointer_to_address (gdbarch, type,
 				    value->contents_all ().data ());
   else

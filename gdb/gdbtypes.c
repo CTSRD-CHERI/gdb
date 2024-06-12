@@ -5849,7 +5849,7 @@ append_composite_type_field_raw (struct type *t, const char *name,
 
   if (field != nullptr
       && (field->contains_capability ()
-	  || field->code () == TYPE_CODE_CAPABILITY))
+	  || is_capability (field)))
     t->set_contains_capability (true);
 
   return f;

@@ -335,8 +335,7 @@ frame_unwind_got_address (frame_info_ptr frame, int regnum,
   struct value *reg_val;
   struct type *reg_type = register_type (gdbarch, regnum);
 
-  if (src_regnum != -1 && (reg_type->code () == TYPE_CODE_CAPABILITY
-			   || TYPE_CAPABILITY (reg_type))
+  if (src_regnum != -1 && is_capability (reg_type)
       && gdbarch_set_capability_address_p (gdbarch))
     {
       reg_val = value_of_register (src_regnum,

@@ -12974,8 +12974,7 @@ handle_struct_member_die (struct die_info *child_die, struct type *type,
   /* If the composite type contains capabilities, cache that information.  */
   if (child_type != nullptr
       && (child_type->contains_capability ()
-	  || child_type->code () == TYPE_CODE_CAPABILITY
-	  || TYPE_CAPABILITY (child_type)))
+	  || is_capability (child_type)))
     type->set_contains_capability (true);
 }
 

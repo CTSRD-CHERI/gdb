@@ -2359,7 +2359,7 @@ pass_in_c_x_or_stack (struct gdbarch *gdbarch, struct regcache *regcache,
 
   /* Check if we have a case where we need to pass arguments via the C
      registers.  */
-  if (TYPE_CAPABILITY (type) || type->contains_capability ())
+  if (is_capability (type) || type->contains_capability ())
     pass_in_c_or_stack (gdbarch, regcache, info, type, arg);
   else
     pass_in_x_or_stack (gdbarch, regcache, info, type, arg);
@@ -2609,10 +2609,10 @@ convert_pointer_to_capability (struct value *source, CORE_ADDR pointer)
 {
   aarch64_debug_enter_exit ();
 
-  gdb_assert (TYPE_CAPABILITY (source->type ()));
-
   if (source == nullptr)
     return nullptr;
+
+  gdb_assert (is_capability (source->type ()));
 
   if (source->contents ().data () == nullptr)
     return nullptr;
@@ -3806,11 +3806,9 @@ morello_extract_return_value (struct value *value, struct regcache *regs,
     {
       aarch64_debug_printf ("Pointer/Capability types");
 
-      bool has_capability = TYPE_CAPABILITY (type)
-	|| type->code () == TYPE_CODE_CAPABILITY;
       int regno;
 
-      if (has_capability)
+      if (is_capability (type))
 	{
 	  regno = tdep->cap_reg_base + AARCH64_X0_REGNUM;
 	  value->set_tag (regs->raw_collect_tag (regno));
@@ -4077,13 +4075,11 @@ morello_store_return_value (struct value *value, struct regcache *regs,
 	   || type->code () == TYPE_CODE_CAPABILITY
 	   || TYPE_IS_REFERENCE (type))
     {
-      bool has_capability = TYPE_CAPABILITY (type)
-	|| type->code () == TYPE_CODE_CAPABILITY;
       int regno;
 
       aarch64_debug_printf ("Pointer/Capability types");
 
-      if (has_capability)
+      if (is_capability (type))
 	{
 	  regno = tdep->cap_reg_base + AARCH64_X0_REGNUM;
 	  regs->raw_supply_tag (regno, value->tag ());
