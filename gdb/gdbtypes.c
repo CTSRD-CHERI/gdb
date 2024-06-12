@@ -2917,6 +2917,15 @@ resolve_dynamic_type (struct type *type,
 
 /* See gdbtypes.h  */
 
+bool
+is_capability (struct type *type)
+{
+  type = check_typedef (type);
+  return type->code () == TYPE_CODE_CAPABILITY || TYPE_CAPABILITY (type);
+}
+
+/* See gdbtypes.h  */
+
 dynamic_prop *
 type::dyn_prop (dynamic_prop_node_kind prop_kind) const
 {

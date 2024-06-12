@@ -2685,6 +2685,10 @@ extern int is_dynamic_type (struct type *type);
 
 extern struct type *check_typedef (struct type *);
 
+/* Returns whether TYPE is a capability.  */
+
+extern bool is_capability (struct type *type);
+
 extern void check_stub_method_group (struct type *, int);
 
 extern char *gdb_mangle_name (struct type *, int, int);
