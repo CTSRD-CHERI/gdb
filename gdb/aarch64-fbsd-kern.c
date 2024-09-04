@@ -70,7 +70,7 @@ get_aarch64_fbsd_kern_info (void)
 static const struct regcache_map_entry aarch64_fbsd_pcbmap[] =
   {
     { 11, AARCH64_X0_REGNUM + 19, 8 }, /* x19 ... x29 */
-    { 1, AARCH64_PC_REGNUM, 8 },
+    { 1, AARCH64_LR_REGNUM, 8 },
     { 1, AARCH64_SP_REGNUM, 8 },
     { 0 }
   };
@@ -84,7 +84,7 @@ static const struct regset aarch64_fbsd_pcbregset =
 static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri[] =
   {
     { 11, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c29 */
-    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 1, AARCH64_CLR_REGNUM(0), 16 },
     { 1, AARCH64_ECSP_REGNUM(0), 16 },
     { 0 }
   };
@@ -98,7 +98,7 @@ static const struct regset aarch64_fbsd_pcbregset_cheri =
 static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri_alias[] =
   {
     { 11, AARCH64_X0_REGNUM + 19, 16 }, /* x19 ... x29 */
-    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, AARCH64_LR_REGNUM, 16 },
     { 1, AARCH64_SP_REGNUM, 16 },
     { 0 }
   };
@@ -115,7 +115,7 @@ static const struct regset aarch64_fbsd_pcbregset_cheri_alias =
 static const struct regcache_map_entry aarch64_fbsd13_pcbmap[] =
   {
     { 30, AARCH64_X0_REGNUM, 8 }, /* x0 ... x29 */
-    { 1, AARCH64_PC_REGNUM, 8 },
+    { 1, AARCH64_LR_REGNUM, 8 },
     { 1, REGCACHE_MAP_SKIP, 8 },
     { 1, AARCH64_SP_REGNUM, 8 },
     { 0 }
@@ -130,7 +130,7 @@ static const struct regset aarch64_fbsd13_pcbregset =
 static const struct regcache_map_entry aarch64_fbsd13_pcbmap_cheri[] =
   {
     { 30, AARCH64_C0_REGNUM(0), 16 }, /* c0 ... c29 */
-    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 1, AARCH64_CLR_REGNUM(0), 16 },
     { 1, REGCACHE_MAP_SKIP, 16 },
     { 1, AARCH64_ECSP_REGNUM(0), 16 },
     { 0 }
@@ -145,7 +145,7 @@ static const struct regset aarch64_fbsd13_pcbregset_cheri =
 static const struct regcache_map_entry aarch64_fbsd13_pcbmap_cheri_alias[] =
   {
     { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
-    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, AARCH64_LR_REGNUM, 16 },
     { 1, REGCACHE_MAP_SKIP, 16 },
     { 1, AARCH64_SP_REGNUM, 16 },
     { 0 }
@@ -164,13 +164,21 @@ aarch64_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
   struct aarch64_fbsd_kern_info *info = get_aarch64_fbsd_kern_info();
   gdb_byte buf[8 * 33];
 
+  /* Always give a value for PC in case the PCB isn't readable. */
+  regcache->raw_supply_zeroed (AARCH64_PC_REGNUM);
+
   if (info->osreldate >= 1400084)
     pcbregset = &aarch64_fbsd_pcbregset;
   else
     pcbregset = &aarch64_fbsd13_pcbregset;
   if (target_read_memory (pcb_addr, buf, sizeof buf) == 0)
-    regcache_supply_regset (pcbregset, regcache, -1, buf,
-			    sizeof (buf));
+    {
+      regcache->supply_regset (pcbregset, -1, buf, sizeof (buf));
+
+      /* Supply LR as PC as well to simulate the PC as if the thread
+	 had just returned.  */
+      regcache->raw_supply_reg (AARCH64_PC_REGNUM, AARCH64_LR_REGNUM);
+    }
 }
 
 static void
@@ -181,6 +189,10 @@ aarch64_fbsd_supply_cheriabi_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
   const struct regset *pcbregset_cheri, *pcbregset_cheri_alias;
   struct aarch64_fbsd_kern_info *info = get_aarch64_fbsd_kern_info();
   size_t len;
+
+  /* Always give a value for PC in case the PCB isn't readable. */
+  regcache->raw_supply_zeroed (AARCH64_PC_REGNUM);
+  regcache->raw_supply_zeroed (tdep->cap_reg_pcc);
 
   if (info->osreldate >= 1400084)
     {
@@ -197,6 +209,11 @@ aarch64_fbsd_supply_cheriabi_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
   regcache->supply_regset (pcbregset_cheri, tdep->cap_reg_base, -1, pcb_addr,
 			   len);
   regcache->supply_regset (pcbregset_cheri_alias, -1, pcb_addr, len);
+
+  /* Supply LR as PC as well to simulate the PC as if the thread had
+     just returned.  */
+  regcache->raw_supply_reg (AARCH64_PC_REGNUM, AARCH64_LR_REGNUM);
+  regcache->raw_supply_reg (tdep->cap_reg_pcc, tdep->cap_reg_clr);
 }
 
 static bool
