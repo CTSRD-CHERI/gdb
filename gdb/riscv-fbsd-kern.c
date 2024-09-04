@@ -127,9 +127,9 @@ riscv_fbsd_supply_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
 
   /* Supply the RA as PC as well to simulate the PC as if the
      thread had just returned. */
-  regcache->raw_supply_addr (RISCV_PC_REGNUM, pcb_addr);
+  regcache->raw_supply_reg (RISCV_PC_REGNUM, RISCV_RA_REGNUM);
   if (cheri)
-    regcache->raw_supply_addr (RISCV_PCC_REGNUM, pcb_addr);
+    regcache->raw_supply_reg (RISCV_PCC_REGNUM, RISCV_CRA_REGNUM);
 }
 
 static bool
