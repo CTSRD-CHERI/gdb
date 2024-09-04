@@ -1315,6 +1315,27 @@ reg_buffer::raw_supply_zeroed (int regnum)
   m_register_status[regnum] = REG_VALID;
 }
 
+/* See regcache.h.  */
+
+void
+reg_buffer::raw_supply_reg (int regnum, int srcreg)
+{
+  assert_regnum (regnum);
+  assert_regnum (srcreg);
+  gdb_assert (m_register_status[srcreg] == REG_VALID);
+  gdb_assert (m_descr->sizeof_register[regnum]
+	      == m_descr->sizeof_register[srcreg]);
+  gdb_assert (register_has_tag (m_descr->gdbarch, regnum)
+	      == register_has_tag (m_descr->gdbarch, srcreg));
+
+  gdb::array_view<gdb_byte> dst = register_buffer (regnum);
+  gdb::array_view<gdb_byte> src = register_buffer (srcreg);
+  copy (src, dst);
+  if (register_has_tag (m_descr->gdbarch, regnum))
+    *register_tag (regnum) = *register_tag (srcreg);
+  m_register_status[regnum] = REG_VALID;
+}
+
 void
 reg_buffer::raw_supply_unsigned (int regnum, ULONGEST val)
 {
