@@ -276,6 +276,10 @@ public:
   void raw_supply_part (int regnum, int offset,
 			gdb::array_view<const gdb_byte> src);
 
+  /* Supply the value of register REGNUM from the current value of
+     register SRCREG.  The two registers must be the same size.  */
+  void raw_supply_reg (int regnum, int srcreg);
+
   void raw_supply_unsigned (int regnum, ULONGEST val);
 
   void invalidate (int regnum);
