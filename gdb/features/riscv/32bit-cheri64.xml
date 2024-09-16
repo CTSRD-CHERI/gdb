@@ -42,4 +42,5 @@
 
   <reg name="pcc" bitsize="64" type="code_capability" group="general"/>
   <reg name="ddc" bitsize="64" type="data_capability" group="general"/>
+  <reg name="tidc" bitsize="64" type="data_capability" group="general"/>
 </feature>

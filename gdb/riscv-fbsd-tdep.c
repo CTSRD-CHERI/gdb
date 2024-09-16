@@ -66,6 +66,7 @@ static const struct regcache_map_entry riscv_fbsd_capregmap[] =
     { 8, RISCV_CA0_REGNUM, 0 },		/* ca0 - a7 */
     { 1, RISCV_PCC_REGNUM, 0 },
     { 1, RISCV_DDC_REGNUM, 0 },
+    { 1, RISCV_TIDC_REGNUM, 0 },
     { 2, REGCACHE_MAP_SKIP, 8 },	/* cap_valid and pad */
     { 0 }
   };
@@ -133,6 +134,8 @@ cap_valid_regno(int idx)
       return RISCV_PCC_REGNUM;
     case 32:
       return RISCV_DDC_REGNUM;
+    case 33:
+      return RISCV_TIDC_REGNUM;
     default:
       return -1;
     }
@@ -411,13 +414,13 @@ riscv_fbsd_get_thread_local_address (struct gdbarch *gdbarch, ptid_t ptid,
 
 static const char *scr_names[32] =
 {
-  "pcc", "ddc", NULL, NULL,
+  "pcc", "ddc", NULL, "utidc",
   "utcc", "utdc", "uscratchc", "uepcc",
-  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, "stidc",
   "stcc", "stdc", "sscratchc", "sepcc",
   NULL, NULL, NULL, NULL,
   NULL, NULL, NULL, NULL,
-  NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, "mtidc",
   "mtcc", "mtdc", "mscratchc", "mepcc"
 };
 

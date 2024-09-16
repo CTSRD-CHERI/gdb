@@ -434,6 +434,7 @@ struct riscv_creg_feature : public riscv_register_feature
       { RISCV_CNULL_REGNUM + 31, { "ct6", "c31" } },
       { RISCV_CNULL_REGNUM + 32, { "pcc" } },
       { RISCV_CNULL_REGNUM + 33, { "ddc" } },
+      { RISCV_CNULL_REGNUM + 34, { "tidc" } },
     };
   }
 

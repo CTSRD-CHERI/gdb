@@ -43,5 +43,6 @@ create_feature_riscv_64bit_cheri128 (struct target_desc *result, long regnum)
   tdesc_create_reg (feature, "ct6", regnum++, 1, "general", 128, "data_capability");
   tdesc_create_reg (feature, "pcc", regnum++, 1, "general", 128, "code_capability");
   tdesc_create_reg (feature, "ddc", regnum++, 1, "general", 128, "data_capability");
+  tdesc_create_reg (feature, "tidc", regnum++, 1, "general", 128, "data_capability");
   return regnum;
 }
