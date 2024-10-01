@@ -2520,19 +2520,15 @@ const struct riscv_opcode riscv_capmode_opcodes[] =
 {"camominu.d.aqrl", 64, INSN_CLASS_A, "d,t,0(XCs)", MATCH_AMOMINU_D|MASK_AQRL, MASK_AMOMINU_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
 
 /* Single-precision floating-point instruction subset.  */
-{"cflw",      32, INSN_CLASS_F_AND_C, "D,Cm(XCCc)", MATCH_C_FLWSP, MASK_C_FLWSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_4_BYTE },
-{"cflw",      32, INSN_CLASS_F_AND_C, "CD,Ck(XCCs)", MATCH_C_FLW, MASK_C_FLW, match_opcode, INSN_ALIAS|INSN_DREF|INSN_4_BYTE },
 {"cflw",       0, INSN_CLASS_F,   "D,o(XCs)",   MATCH_FLW, MASK_FLW, match_opcode, INSN_DREF|INSN_4_BYTE },
-{"cfsw",      32, INSN_CLASS_F_AND_C, "CT,CM(XCCc)", MATCH_C_FSWSP, MASK_C_FSWSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_4_BYTE },
-{"cfsw",      32, INSN_CLASS_F_AND_C, "CD,Ck(XCCs)", MATCH_C_FSW, MASK_C_FSW, match_opcode, INSN_ALIAS|INSN_DREF|INSN_4_BYTE },
 {"cfsw",       0, INSN_CLASS_F,   "T,q(XCs)",   MATCH_FSW, MASK_FSW, match_opcode, INSN_DREF|INSN_4_BYTE },
 
 /* Double-precision floating-point instruction subset.  */
-{"cfld",       0, INSN_CLASS_D_AND_C, "D,Cn(XCCc)", MATCH_C_FLDSP, MASK_C_FLDSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
-{"cfld",       0, INSN_CLASS_D_AND_C, "CD,Cl(XCCs)", MATCH_C_FLD, MASK_C_FLD, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
+{"cfld",      32, INSN_CLASS_D_AND_C, "D,Cn(XCCc)", MATCH_C_FLDSP, MASK_C_FLDSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
+{"cfld",      32, INSN_CLASS_D_AND_C, "CD,Cl(XCCs)", MATCH_C_FLD, MASK_C_FLD, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
 {"cfld",       0, INSN_CLASS_D,   "D,o(XCs)",   MATCH_FLD, MASK_FLD, match_opcode, INSN_DREF|INSN_8_BYTE },
-{"cfsd",       0, INSN_CLASS_D_AND_C, "CT,CN(XCCc)", MATCH_C_FSDSP, MASK_C_FSDSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
-{"cfsd",       0, INSN_CLASS_D_AND_C, "CD,Cl(XCCs)", MATCH_C_FSD, MASK_C_FSD, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
+{"cfsd",      32, INSN_CLASS_D_AND_C, "CT,CN(XCCc)", MATCH_C_FSDSP, MASK_C_FSDSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
+{"cfsd",      32, INSN_CLASS_D_AND_C, "CD,Cl(XCCs)", MATCH_C_FSD, MASK_C_FSD, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
 {"cfsd",       0, INSN_CLASS_D,   "T,q(XCs)",   MATCH_FSD, MASK_FSD, match_opcode, INSN_DREF|INSN_8_BYTE },
 
 /* Quad-precision floating-point instruction subset.  */
