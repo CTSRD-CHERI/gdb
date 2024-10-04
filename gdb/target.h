@@ -1337,12 +1337,12 @@ struct target_ops
 
     /* Read a capability from ADDR.  */
     virtual gdb::byte_vector read_capability (CORE_ADDR addr)
-      TARGET_DEFAULT_NORETURN (tcomplain ());
+      TARGET_DEFAULT_RETURN (gdb::byte_vector ());
 
     /* Write CAPABILITY to ADDR.  */
     virtual bool write_capability (CORE_ADDR addr,
 				   gdb::array_view<const gdb_byte> buffer)
-      TARGET_DEFAULT_NORETURN (tcomplain ());
+      TARGET_DEFAULT_RETURN (false);
   };
 
 /* Deleter for std::unique_ptr.  See comments in

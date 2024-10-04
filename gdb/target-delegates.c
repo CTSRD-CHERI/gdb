@@ -4599,7 +4599,7 @@ target_ops::read_capability (CORE_ADDR arg0)
 gdb::byte_vector
 dummy_target::read_capability (CORE_ADDR arg0)
 {
-  tcomplain ();
+  return gdb::byte_vector ();
 }
 
 gdb::byte_vector
@@ -4625,7 +4625,7 @@ target_ops::write_capability (CORE_ADDR arg0, gdb::array_view<const gdb_byte> ar
 bool
 dummy_target::write_capability (CORE_ADDR arg0, gdb::array_view<const gdb_byte> arg1)
 {
-  tcomplain ();
+  return false;
 }
 
 bool
