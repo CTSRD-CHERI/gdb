@@ -87,6 +87,7 @@ public:
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
   void files_info () override;
+  void gots_info (regex_t *pattern) override;
 
   bool thread_alive (ptid_t ptid) override;
   const struct target_desc *read_description () override;
@@ -957,6 +958,12 @@ void
 core_target::files_info ()
 {
   print_section_info (&m_core_section_table, core_bfd);
+}
+
+void
+core_target::gots_info (regex_t *pattern)
+{
+  print_got_info (&m_core_section_table, pattern);
 }
 
 /* Helper method for core_target::xfer_partial.  */

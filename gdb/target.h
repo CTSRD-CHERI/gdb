@@ -521,6 +521,8 @@ struct target_ops
 
     virtual void files_info ()
       TARGET_DEFAULT_IGNORE ();
+    virtual void gots_info (regex_t *)
+      TARGET_DEFAULT_IGNORE ();
     virtual int insert_breakpoint (struct gdbarch *,
 				 struct bp_target_info *)
       TARGET_DEFAULT_NORETURN (noprocess ());

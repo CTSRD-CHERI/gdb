@@ -34,6 +34,7 @@
 #include "gdbthread.h"
 #include "progspace.h"
 #include "progspace-and-thread.h"
+#include "valprint.h"
 #include "gdb_bfd.h"
 #include "gcore.h"
 #include "source.h"
@@ -77,6 +78,7 @@ struct exec_target final : public target_ops
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
   void files_info () override;
+  void gots_info (regex_t *pattern) override;
 
   bool has_memory () override;
   gdb::unique_xmalloc_ptr<char> make_corefile_notes (bfd *, int *) override;
@@ -990,6 +992,15 @@ exec_target::files_info ()
     gdb_puts (_("\t<no file loaded>\n"));
 }
 
+void
+exec_target::gots_info (regex_t *pattern)
+{
+  if (current_program_space->exec_bfd ())
+    print_got_info (&current_program_space->target_sections (), pattern);
+  else
+    gdb_puts (_("\t<no file loaded>\n"));
+}
+
 static void
 set_section_command (const char *args, int from_tty)
 {
@@ -1059,6 +1070,61 @@ int
 exec_target::find_memory_regions (find_memory_region_ftype func, void *data)
 {
   return objfile_find_memory_regions (this, func, data);
+}
+
+/* Display entries from a single GOT section.  */
+
+static void
+display_got (const target_section &p)
+{
+  struct bfd_section *psect = p.the_bfd_section;
+  bfd *bfd = psect->owner;
+
+  gdb_printf ("section `%s' in `%ps':\n",
+	      bfd_section_name (psect),
+	      styled_string (file_name_style.style (),
+			     bfd_get_filename (bfd)));
+
+  struct value_print_options opts;
+  get_formatted_print_options (&opts, 0);
+
+  gdbarch *gdbarch = gdbarch_from_bfd (bfd);
+  struct type *val_type = builtin_type (gdbarch)->builtin_data_ptr;
+
+  CORE_ADDR addr = p.addr;
+  unsigned int idx = 0;
+
+  while (addr < p.endaddr)
+    {
+      gdb_printf ("[%u] = ", idx);
+
+      value *val = value_at_lazy (val_type, addr);
+      value_print (val, gdb_stdout, &opts);
+      gdb_printf ("\n");
+
+      addr += val_type->length ();
+      idx++;
+    }
+}
+
+void
+print_got_info (const target_section_table *t, regex_t *pattern)
+{
+  for (const target_section &p : *t)
+    {
+      struct bfd_section *psect = p.the_bfd_section;
+      bfd *bfd = psect->owner;
+
+      if (bfd_get_flavour (bfd) != bfd_target_elf_flavour)
+	continue;
+
+      if (pattern != nullptr
+	  && regexec (pattern, bfd_get_filename (bfd), 0, nullptr, 0) != 0)
+	continue;
+
+      if (startswith (bfd_section_name (psect), ".got"))
+	display_got (p);
+    }
 }
 
 void _initialize_exec ();

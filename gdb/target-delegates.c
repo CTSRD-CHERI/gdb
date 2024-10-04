@@ -40,6 +40,7 @@ struct dummy_target : public target_ops
   void store_registers (struct regcache *arg0, int arg1) override;
   void prepare_to_store (struct regcache *arg0) override;
   void files_info () override;
+  void gots_info (regex_t *arg0) override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
   int remove_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1, enum remove_bp_reason arg2) override;
   bool stopped_by_sw_breakpoint () override;
@@ -217,6 +218,7 @@ struct debug_target : public target_ops
   void store_registers (struct regcache *arg0, int arg1) override;
   void prepare_to_store (struct regcache *arg0) override;
   void files_info () override;
+  void gots_info (regex_t *arg0) override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
   int remove_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1, enum remove_bp_reason arg2) override;
   bool stopped_by_sw_breakpoint () override;
@@ -608,6 +610,27 @@ debug_target::files_info ()
   gdb_printf (gdb_stdlog, "-> %s->files_info (...)\n", this->beneath ()->shortname ());
   this->beneath ()->files_info ();
   gdb_printf (gdb_stdlog, "<- %s->files_info (", this->beneath ()->shortname ());
+  gdb_puts (")\n", gdb_stdlog);
+}
+
+void
+target_ops::gots_info (regex_t *arg0)
+{
+  this->beneath ()->gots_info (arg0);
+}
+
+void
+dummy_target::gots_info (regex_t *arg0)
+{
+}
+
+void
+debug_target::gots_info (regex_t *arg0)
+{
+  gdb_printf (gdb_stdlog, "-> %s->gots_info (...)\n", this->beneath ()->shortname ());
+  this->beneath ()->gots_info (arg0);
+  gdb_printf (gdb_stdlog, "<- %s->gots_info (", this->beneath ()->shortname ());
+  target_debug_print_regex_t_p (arg0);
   gdb_puts (")\n", gdb_stdlog);
 }
 

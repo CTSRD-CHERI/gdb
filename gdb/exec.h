@@ -98,6 +98,12 @@ extern void exec_set_section_address (const char *, int, CORE_ADDR);
 extern void print_section_info (const target_section_table *table,
 				bfd *abfd);
 
+/* Prints info about all GOT sections defined in the TABLE if they
+   belong to a bfd whose name matches PATTERN.  */
+
+extern void print_got_info (const target_section_table *table,
+			    regex_t *pattern);
+
 /* Helper function that attempts to open the symbol file at EXEC_FILE_HOST.
    If successful, it proceeds to add the symbol file as the main symbol file.
 

@@ -2439,6 +2439,55 @@ info_target_command (const char *args, int from_tty)
     }
 }
 
+/* Optionally free a regex_t on destruction.  */
+
+class regex_free
+{
+public:
+  ~regex_free ()
+  {
+    if (m_regex != nullptr)
+      regfree(m_regex);
+  }
+
+  void set (regex_t *regex)
+  {
+    m_regex = regex;
+  }
+
+private:
+  regex_t *m_regex = nullptr;
+};
+
+static void
+info_gots_command (const char *args, int from_tty)
+{
+  regex_t regex;
+  regex_free regex_free;
+
+  if (args != nullptr)
+    {
+      if (regcomp (&regex, args, REG_EXTENDED) != 0)
+	error (_("Invalid pattern"));
+      regex_free.set (&regex);
+    }
+
+  for (target_ops *t = current_inferior ()->top_target ();
+       t != NULL;
+       t = t->beneath ())
+    {
+      if (!t->has_memory ())
+	continue;
+
+      if ((int) (t->stratum ()) <= (int) dummy_stratum)
+	continue;
+
+      t->gots_info (args != nullptr ? &regex : nullptr);
+      if (t->has_all_memory ())
+	break;
+    }
+}
+
 /* This function is called before any new inferior is created, e.g.
    by running a program, attaching, or connecting to a target.
    It cleans up any state from previous invocations which might
@@ -4539,6 +4588,7 @@ _initialize_target ()
 
   add_info ("target", info_target_command, targ_desc);
   add_info ("files", info_target_command, targ_desc);
+  add_info ("gots", info_gots_command, targ_desc);
 
   add_setshow_zuinteger_cmd ("target", class_maintenance, &targetdebug, _("\
 Set target debugging."), _("\
