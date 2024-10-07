@@ -9429,6 +9429,9 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 	{
 	  hdr = &elf_tdata (abfd)->dynverref_hdr;
 
+	  if (hdr->sh_info == 0)
+	    goto skip;
+
 	  if (hdr->sh_info > hdr->sh_size / sizeof (Elf_External_Verneed))
 	    {
 	    error_return_bad_verref:
@@ -9581,6 +9584,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
       contents = NULL;
     }
 
+skip:
   if (elf_dynverdef (abfd) != 0 || elf_tdata (abfd)->dt_verdef != NULL)
     {
       Elf_Internal_Shdr *hdr;
