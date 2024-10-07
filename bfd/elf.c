@@ -2716,11 +2716,13 @@ bfd_section_from_shdr (bfd *abfd, unsigned int shindex)
 	 Unusual, but possible.  Warn, but continue.  */
       if (elf_onesymtab (abfd) != 0)
 	{
+#if 0
 	  _bfd_error_handler
 	    /* xgettext:c-format */
 	    (_("%pB: warning: multiple symbol tables detected"
 	       " - ignoring the table in section %u"),
 	     abfd, shindex);
+#endif
 	  goto success;
 	}
       elf_onesymtab (abfd) = shindex;
@@ -2801,11 +2803,13 @@ bfd_section_from_shdr (bfd *abfd, unsigned int shindex)
 	 Unusual, but possible.  Warn, but continue.  */
       if (elf_dynsymtab (abfd) != 0)
 	{
+#if 0
 	  _bfd_error_handler
 	    /* xgettext:c-format */
 	    (_("%pB: warning: multiple dynamic symbol tables detected"
 	       " - ignoring the table in section %u"),
 	     abfd, shindex);
+#endif
 	  goto success;
 	}
       elf_dynsymtab (abfd) = shindex;
