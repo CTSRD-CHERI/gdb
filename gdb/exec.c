@@ -1122,8 +1122,7 @@ print_got_info (const target_section_table *t, regex_t *pattern)
 	  && regexec (pattern, bfd_get_filename (bfd), 0, nullptr, 0) != 0)
 	continue;
 
-      if (startswith (bfd_section_name (psect), ".got")
-	  || strstr (bfd_section_name (psect), ".got") != nullptr)
+      if (startswith (bfd_section_name (psect), ".got"))
 	display_got (p);
     }
 }
