@@ -942,6 +942,9 @@ insert_section_p (const struct bfd *abfd,
 	 there is no reason to insert it into the section map.  */
       return 0;
     }
+  if (startswith (bfd_section_name (section), ".1.") ||
+      startswith (bfd_section_name (section), ".2."))
+     return 0;
 
   return 1;
 }
