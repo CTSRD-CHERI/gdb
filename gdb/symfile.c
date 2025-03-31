@@ -110,6 +110,8 @@ static int simple_read_overlay_table (void);
 
 static int simple_overlay_update_1 (struct obj_section *);
 
+static void symfile_find_compartment_sections (struct objfile *objfile);
+
 static void symfile_find_segment_sections (struct objfile *objfile);
 
 /* List of all available sym_fns.  On gdb startup, each object file reader
@@ -304,6 +306,12 @@ init_objfile_sect_indices (struct objfile *objfile)
      one or two segments.  */
 
   symfile_find_segment_sections (objfile);
+
+  /* An ELF binary with compartments might not have one or more
+     sections in the default compartment.  In that case, use the first
+     matching section from any compartment.  */
+
+  symfile_find_compartment_sections (objfile);
 
   /* Except when explicitly adding symbol files at some address,
      section_offsets contains nothing but zeros, so it doesn't matter
@@ -3740,6 +3748,32 @@ symfile_find_segment_sections (struct objfile *objfile)
 	  if (objfile->sect_index_bss == -1)
 	    objfile->sect_index_bss = sect->index;
 	}
+    }
+}
+
+static void
+symfile_find_compartment_sections (struct objfile *objfile)
+{
+  bfd *abfd = objfile->obfd.get ();
+  asection *sect;
+
+  for (sect = abfd->sections; sect != NULL; sect = sect->next)
+    {
+      if (objfile->sect_index_text == -1
+	  && startswith (bfd_section_name (sect), ".text."))
+	objfile->sect_index_text = sect->index;
+
+      if (objfile->sect_index_data == -1
+	  && startswith (bfd_section_name (sect), ".data."))
+	objfile->sect_index_data = sect->index;
+
+      if (objfile->sect_index_bss == -1
+	  && startswith (bfd_section_name (sect), ".bss."))
+	objfile->sect_index_bss = sect->index;
+
+      if (objfile->sect_index_rodata == -1
+	  && startswith (bfd_section_name (sect), ".rodata."))
+	objfile->sect_index_rodata = sect->index;
     }
 }
 
