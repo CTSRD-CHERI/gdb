@@ -2664,6 +2664,48 @@ static reloc_howto_type elfNN_aarch64_howto_table[] =
 	 ALL_ONES,		/* dst_mask */
 	 false),		/* pcrel_offset */
 
+  HOWTO64 (MORELLO_R (CODE_CAPINIT),	/* type */
+	 0,			/* rightshift */
+	 4,			/* size (0 = byte, 1 = short, 2 = long) */
+	 0,			/* bitsize */
+	 false,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 MORELLO_R_STR (CODE_CAPINIT),	/* name */
+	 false,			/* partial_inplace */
+	 ALL_ONES,		/* src_mask */
+	 ALL_ONES,		/* dst_mask */
+	 false),		/* pcrel_offset */
+
+  HOWTO64 (MORELLO_R (FUNC_RELATIVE),	/* type */
+	 0,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 64,			/* bitsize */
+	 false,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_bitfield,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 MORELLO_R_STR (FUNC_RELATIVE),	/* name */
+	 true,			/* partial_inplace */
+	 ALL_ONES,		/* src_mask */
+	 ALL_ONES,		/* dst_mask */
+	 false),		/* pcrel_offset */
+
+  HOWTO64 (AARCH64_R (FUNC_RELATIVE),	/* type */
+	 0,			/* rightshift */
+	 4,			/* size */
+	 64,			/* bitsize */
+	 false,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_bitfield,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 AARCH64_R_STR (FUNC_RELATIVE),	/* name */
+	 true,			/* partial_inplace */
+	 0,			/* src_mask */
+	 ALL_ONES,		/* dst_mask */
+	 false),		/* pcrel_offset */
+
   EMPTY_HOWTO (0),
 };
 

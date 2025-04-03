@@ -7638,6 +7638,18 @@ ENUMDOC
   Morello TLS relocation, instructs the dynamic loader to initialize an offset
   and size for a given symbol.
 ENUM
+  BFD_RELOC_MORELLO_CODE_CAPINIT
+ENUMDOC
+  Morello Code Pointer Capability initialization.
+ENUM
+  BFD_RELOC_MORELLO_FUNC_RELATIVE
+ENUMDOC
+  Morello relative relocation for function pointer capabilities.
+ENUM
+  BFD_RELOC_AARCH64_FUNC_RELATIVE
+ENUMDOC
+  Morello relative relocation for function pointer address.
+ENUM
   BFD_RELOC_AARCH64_RELOC_END
 ENUMDOC
   AArch64 pseudo relocation code to mark the end of the AArch64

@@ -7158,6 +7158,15 @@ TLS descriptor function.  */
 and size for a given symbol.  */
   BFD_RELOC_MORELLO_TPREL128,
 
+/* Morello Code Pointer Capability initialization.  */
+  BFD_RELOC_MORELLO_CODE_CAPINIT,
+
+/* Morello relative relocation for function pointer capabilities.  */
+  BFD_RELOC_MORELLO_FUNC_RELATIVE,
+
+/* Morello relative relocation for function pointer address.  */
+  BFD_RELOC_AARCH64_FUNC_RELATIVE,
+
 /* AArch64 pseudo relocation code to mark the end of the AArch64
 relocation enumerators that have direct mapping to ELF reloc codes.
 There are a few more enumerators after this one; those are mainly
