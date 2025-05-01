@@ -4648,20 +4648,23 @@ aarch64_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
 
   int p_regnum = regnum - gdbarch_num_regs (gdbarch);
 
-  if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
-    return q_name[p_regnum - AARCH64_Q0_REGNUM];
+  if (p_regnum < tdep->fpu_pseudo_count)
+    {
+      if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
+	return q_name[p_regnum - AARCH64_Q0_REGNUM];
 
-  if (p_regnum >= AARCH64_D0_REGNUM && p_regnum < AARCH64_D0_REGNUM + 32)
-    return d_name[p_regnum - AARCH64_D0_REGNUM];
+      if (p_regnum >= AARCH64_D0_REGNUM && p_regnum < AARCH64_D0_REGNUM + 32)
+	return d_name[p_regnum - AARCH64_D0_REGNUM];
 
-  if (p_regnum >= AARCH64_S0_REGNUM && p_regnum < AARCH64_S0_REGNUM + 32)
-    return s_name[p_regnum - AARCH64_S0_REGNUM];
+      if (p_regnum >= AARCH64_S0_REGNUM && p_regnum < AARCH64_S0_REGNUM + 32)
+	return s_name[p_regnum - AARCH64_S0_REGNUM];
 
-  if (p_regnum >= AARCH64_H0_REGNUM && p_regnum < AARCH64_H0_REGNUM + 32)
-    return h_name[p_regnum - AARCH64_H0_REGNUM];
+      if (p_regnum >= AARCH64_H0_REGNUM && p_regnum < AARCH64_H0_REGNUM + 32)
+	return h_name[p_regnum - AARCH64_H0_REGNUM];
 
-  if (p_regnum >= AARCH64_B0_REGNUM && p_regnum < AARCH64_B0_REGNUM + 32)
-    return b_name[p_regnum - AARCH64_B0_REGNUM];
+      if (p_regnum >= AARCH64_B0_REGNUM && p_regnum < AARCH64_B0_REGNUM + 32)
+	return b_name[p_regnum - AARCH64_B0_REGNUM];
+    }
 
   /* W pseudo-registers? */
   if (is_w_pseudo_register (gdbarch, regnum))
@@ -4721,20 +4724,23 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
 
   int p_regnum = regnum - gdbarch_num_regs (gdbarch);
 
-  if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
-    return aarch64_vnq_type (gdbarch);
+  if (p_regnum < tdep->fpu_pseudo_count)
+    {
+      if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
+	return aarch64_vnq_type (gdbarch);
 
-  if (p_regnum >= AARCH64_D0_REGNUM && p_regnum < AARCH64_D0_REGNUM + 32)
-    return aarch64_vnd_type (gdbarch);
+      if (p_regnum >= AARCH64_D0_REGNUM && p_regnum < AARCH64_D0_REGNUM + 32)
+	return aarch64_vnd_type (gdbarch);
 
-  if (p_regnum >= AARCH64_S0_REGNUM && p_regnum < AARCH64_S0_REGNUM + 32)
-    return aarch64_vns_type (gdbarch);
+      if (p_regnum >= AARCH64_S0_REGNUM && p_regnum < AARCH64_S0_REGNUM + 32)
+	return aarch64_vns_type (gdbarch);
 
-  if (p_regnum >= AARCH64_H0_REGNUM && p_regnum < AARCH64_H0_REGNUM + 32)
-    return aarch64_vnh_type (gdbarch);
+      if (p_regnum >= AARCH64_H0_REGNUM && p_regnum < AARCH64_H0_REGNUM + 32)
+	return aarch64_vnh_type (gdbarch);
 
-  if (p_regnum >= AARCH64_B0_REGNUM && p_regnum < AARCH64_B0_REGNUM + 32)
-    return aarch64_vnb_type (gdbarch);
+      if (p_regnum >= AARCH64_B0_REGNUM && p_regnum < AARCH64_B0_REGNUM + 32)
+	return aarch64_vnb_type (gdbarch);
+    }
 
   if (tdep->has_sve () && p_regnum >= AARCH64_SVE_V0_REGNUM
       && p_regnum < AARCH64_SVE_V0_REGNUM + AARCH64_V_REGS_NUM)
@@ -4770,18 +4776,25 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
 
   int p_regnum = regnum - gdbarch_num_regs (gdbarch);
 
-  if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
-    return group == all_reggroup || group == vector_reggroup;
-  else if (p_regnum >= AARCH64_D0_REGNUM && p_regnum < AARCH64_D0_REGNUM + 32)
-    return (group == all_reggroup || group == vector_reggroup
-	    || group == float_reggroup);
-  else if (p_regnum >= AARCH64_S0_REGNUM && p_regnum < AARCH64_S0_REGNUM + 32)
-    return (group == all_reggroup || group == vector_reggroup
-	    || group == float_reggroup);
-  else if (p_regnum >= AARCH64_H0_REGNUM && p_regnum < AARCH64_H0_REGNUM + 32)
-    return group == all_reggroup || group == vector_reggroup;
-  else if (p_regnum >= AARCH64_B0_REGNUM && p_regnum < AARCH64_B0_REGNUM + 32)
-    return group == all_reggroup || group == vector_reggroup;
+  if (p_regnum < tdep->fpu_pseudo_count)
+    {
+      if (p_regnum >= AARCH64_Q0_REGNUM && p_regnum < AARCH64_Q0_REGNUM + 32)
+	return group == all_reggroup || group == vector_reggroup;
+      else if (p_regnum >= AARCH64_D0_REGNUM
+	       && p_regnum < AARCH64_D0_REGNUM + 32)
+	return (group == all_reggroup || group == vector_reggroup
+		|| group == float_reggroup);
+      else if (p_regnum >= AARCH64_S0_REGNUM
+	       && p_regnum < AARCH64_S0_REGNUM + 32)
+	return (group == all_reggroup || group == vector_reggroup
+		|| group == float_reggroup);
+      else if (p_regnum >= AARCH64_H0_REGNUM
+	       && p_regnum < AARCH64_H0_REGNUM + 32)
+	return group == all_reggroup || group == vector_reggroup;
+      else if (p_regnum >= AARCH64_B0_REGNUM
+	       && p_regnum < AARCH64_B0_REGNUM + 32)
+	return group == all_reggroup || group == vector_reggroup;
+    }
   else if (tdep->has_sve () && p_regnum >= AARCH64_SVE_V0_REGNUM
 	   && p_regnum < AARCH64_SVE_V0_REGNUM + AARCH64_V_REGS_NUM)
     return group == all_reggroup || group == vector_reggroup;
@@ -4992,30 +5005,33 @@ aarch64_pseudo_read_value (gdbarch *gdbarch, frame_info_ptr next_frame,
   /* Offset in the "pseudo-register space".  */
   int pseudo_offset = pseudo_reg_num - gdbarch_num_regs (gdbarch);
 
-  if (pseudo_offset >= AARCH64_Q0_REGNUM
-      && pseudo_offset < AARCH64_Q0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
-					pseudo_offset - AARCH64_Q0_REGNUM);
+  if (pseudo_offset < tdep->fpu_pseudo_count)
+    {
+      if (pseudo_offset >= AARCH64_Q0_REGNUM
+	  && pseudo_offset < AARCH64_Q0_REGNUM + 32)
+	return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					    pseudo_offset - AARCH64_Q0_REGNUM);
 
-  if (pseudo_offset >= AARCH64_D0_REGNUM
-      && pseudo_offset < AARCH64_D0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
-					pseudo_offset - AARCH64_D0_REGNUM);
+      if (pseudo_offset >= AARCH64_D0_REGNUM
+	  && pseudo_offset < AARCH64_D0_REGNUM + 32)
+	return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					    pseudo_offset - AARCH64_D0_REGNUM);
 
-  if (pseudo_offset >= AARCH64_S0_REGNUM
-      && pseudo_offset < AARCH64_S0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
-					pseudo_offset - AARCH64_S0_REGNUM);
+      if (pseudo_offset >= AARCH64_S0_REGNUM
+	  && pseudo_offset < AARCH64_S0_REGNUM + 32)
+	return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					    pseudo_offset - AARCH64_S0_REGNUM);
 
-  if (pseudo_offset >= AARCH64_H0_REGNUM
-      && pseudo_offset < AARCH64_H0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
-					pseudo_offset - AARCH64_H0_REGNUM);
+      if (pseudo_offset >= AARCH64_H0_REGNUM
+	  && pseudo_offset < AARCH64_H0_REGNUM + 32)
+	return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					    pseudo_offset - AARCH64_H0_REGNUM);
 
-  if (pseudo_offset >= AARCH64_B0_REGNUM
-      && pseudo_offset < AARCH64_B0_REGNUM + 32)
-    return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
-					pseudo_offset - AARCH64_B0_REGNUM);
+      if (pseudo_offset >= AARCH64_B0_REGNUM
+	  && pseudo_offset < AARCH64_B0_REGNUM + 32)
+	return aarch64_pseudo_read_value_1 (next_frame, pseudo_reg_num,
+					    pseudo_offset - AARCH64_B0_REGNUM);
+    }
 
   if (tdep->has_sve () && pseudo_offset >= AARCH64_SVE_V0_REGNUM
       && pseudo_offset < AARCH64_SVE_V0_REGNUM + 32)
@@ -5149,30 +5165,33 @@ aarch64_pseudo_write (gdbarch *gdbarch, frame_info_ptr next_frame,
   /* Offset in the "pseudo-register space".  */
   int pseudo_offset = pseudo_reg_num - gdbarch_num_regs (gdbarch);
 
-  if (pseudo_offset >= AARCH64_Q0_REGNUM
-      && pseudo_offset < AARCH64_Q0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, next_frame,
-				   pseudo_offset - AARCH64_Q0_REGNUM, buf);
+  if (pseudo_offset < tdep->fpu_pseudo_count)
+    {
+      if (pseudo_offset >= AARCH64_Q0_REGNUM
+	  && pseudo_offset < AARCH64_Q0_REGNUM + 32)
+	return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				       pseudo_offset - AARCH64_Q0_REGNUM, buf);
 
-  if (pseudo_offset >= AARCH64_D0_REGNUM
-      && pseudo_offset < AARCH64_D0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, next_frame,
-				   pseudo_offset - AARCH64_D0_REGNUM, buf);
+      if (pseudo_offset >= AARCH64_D0_REGNUM
+	  && pseudo_offset < AARCH64_D0_REGNUM + 32)
+	return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				       pseudo_offset - AARCH64_D0_REGNUM, buf);
 
-  if (pseudo_offset >= AARCH64_S0_REGNUM
-      && pseudo_offset < AARCH64_S0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, next_frame,
-				   pseudo_offset - AARCH64_S0_REGNUM, buf);
+      if (pseudo_offset >= AARCH64_S0_REGNUM
+	  && pseudo_offset < AARCH64_S0_REGNUM + 32)
+	return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				       pseudo_offset - AARCH64_S0_REGNUM, buf);
 
-  if (pseudo_offset >= AARCH64_H0_REGNUM
-      && pseudo_offset < AARCH64_H0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, next_frame,
-				   pseudo_offset - AARCH64_H0_REGNUM, buf);
+      if (pseudo_offset >= AARCH64_H0_REGNUM
+	  && pseudo_offset < AARCH64_H0_REGNUM + 32)
+	return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				       pseudo_offset - AARCH64_H0_REGNUM, buf);
 
-  if (pseudo_offset >= AARCH64_B0_REGNUM
-      && pseudo_offset < AARCH64_B0_REGNUM + 32)
-    return aarch64_pseudo_write_1 (gdbarch, next_frame,
-				   pseudo_offset - AARCH64_B0_REGNUM, buf);
+      if (pseudo_offset >= AARCH64_B0_REGNUM
+	  && pseudo_offset < AARCH64_B0_REGNUM + 32)
+	return aarch64_pseudo_write_1 (gdbarch, next_frame,
+				       pseudo_offset - AARCH64_B0_REGNUM, buf);
+    }
 
   if (tdep->has_sve () && pseudo_offset >= AARCH64_SVE_V0_REGNUM
       && pseudo_offset < AARCH64_SVE_V0_REGNUM + 32)
@@ -6394,6 +6413,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       num_pseudo_regs += 32;	/* add the Hn scalar register pseudos */
       num_pseudo_regs += 32;	/* add the Bn scalar register pseudos */
     }
+  int fpu_pseudo_count = num_pseudo_regs;
 
   int first_sme_regnum = -1;
   int first_sme2_regnum = -1;
@@ -6588,6 +6608,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->lowest_pc = 0x20;
   tdep->jb_pc = -1;		/* Longjump support not enabled by default.  */
   tdep->jb_elt_size = 8;
+  tdep->fpu_pseudo_count = fpu_pseudo_count;
   tdep->vq = vq;
   tdep->pauth_reg_base = first_pauth_regnum;
   tdep->pauth_reg_count = pauth_masks;

@@ -128,6 +128,8 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
   int (*aarch64_syscall_record) (struct regcache *regcache,
 				 unsigned long svc_number) = nullptr;
 
+  int fpu_pseudo_count = 0;
+
   /* The VQ value for SVE targets, or zero if SVE is not supported.  */
   uint64_t vq = 0;
 
