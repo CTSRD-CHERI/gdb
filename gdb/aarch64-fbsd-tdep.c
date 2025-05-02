@@ -660,8 +660,19 @@ aarch64_fbsd_fetch_compart_offsets (struct gdbarch *gdbarch,
 				     language_c, NULL).symbol;
       if (compart_sym == NULL)
 	error (_("Unable to find struct compart symbol"));
-      data->compart_name_off = lookup_struct_elt (compart_sym->type (),
-						  "name", 0).offset / 8;
+      try
+	{
+	  struct_elt info_elt = lookup_struct_elt (compart_sym->type (), "info",
+						   0);
+	  data->compart_name_off = (lookup_struct_elt (info_elt.field->type (),
+						      "rcc_name", 0).offset
+				    + info_elt.offset) / 8;
+	}
+      catch (const gdb_exception_error &)
+	{
+	  data->compart_name_off = lookup_struct_elt (compart_sym->type (),
+						      "name", 0).offset / 8;
+	}
       data->compart_libs_off = lookup_struct_elt (compart_sym->type (),
 						  "libs", 0).offset / 8;
       data->compart_size = compart_sym->type ()->length ();
@@ -682,7 +693,7 @@ aarch64_fbsd_fetch_compart_offsets (struct gdbarch *gdbarch,
 
       /* Assume default layout.  */
       data->compart_name_off = 0;
-      data->compart_libs_off = 16;
+      data->compart_libs_off = 48;
 
       data->r_comparts_size_off = 84;
       data->r_comparts_off = 96;
