@@ -624,8 +624,6 @@ struct fbsd_comparts_data
   LONGEST compart_size = 0;
   LONGEST compart_name_off = 0;
   LONGEST compart_libs_off = 0;
-  LONGEST compart_imports_off = 0;
-  LONGEST compart_trusts_off = 0;
 
   /* Additional fields in r_debug.  */
   LONGEST r_comparts_size_off = 0;
@@ -666,10 +664,6 @@ aarch64_fbsd_fetch_compart_offsets (struct gdbarch *gdbarch,
 						  "name", 0).offset / 8;
       data->compart_libs_off = lookup_struct_elt (compart_sym->type (),
 						  "libs", 0).offset / 8;
-      data->compart_imports_off = lookup_struct_elt (compart_sym->type (),
-						     "imports", 0).offset / 8;
-      data->compart_trusts_off = lookup_struct_elt (compart_sym->type (),
-						    "trusts", 0).offset / 8;
       data->compart_size = compart_sym->type ()->length ();
 
       data->r_comparts_size_off = 84;
@@ -689,8 +683,6 @@ aarch64_fbsd_fetch_compart_offsets (struct gdbarch *gdbarch,
       /* Assume default layout.  */
       data->compart_name_off = 0;
       data->compart_libs_off = 16;
-      data->compart_imports_off = 48;
-      data->compart_trusts_off = 80;
 
       data->r_comparts_size_off = 84;
       data->r_comparts_off = 96;
@@ -790,26 +782,6 @@ aarch64_fbsd_fetch_compart_info (struct gdbarch *gdbarch,
     {
       c->libraries
 	= aarch64_fetch_string_base (gdbarch, c->addr + data->compart_libs_off);
-    }
-  catch (const gdb_exception_error &e)
-    {
-    }
-
-  try
-    {
-      c->imports
-	= aarch64_fetch_string_base (gdbarch,
-				     c->addr + data->compart_imports_off);
-    }
-  catch (const gdb_exception_error &e)
-    {
-    }
-
-  try
-    {
-      c->trusts
-	= aarch64_fetch_string_base (gdbarch,
-				     c->addr + data->compart_trusts_off);
     }
   catch (const gdb_exception_error &e)
     {

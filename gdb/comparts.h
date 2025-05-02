@@ -39,12 +39,6 @@ struct compart
 
   /* List of libraries belonging to this compartment.  */
   std::vector<std::string> libraries;
-
-  /* List of symbols that can be imported.  */
-  std::vector<std::string> imports;
-
-  /* List of symbols trusted by the library.  */
-  std::vector<std::string> trusts;
 };
 
 typedef std::unique_ptr<compart> compart_up;
