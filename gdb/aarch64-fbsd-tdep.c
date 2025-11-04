@@ -286,21 +286,33 @@ const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
 
 /* Implement the "init" method of struct tramp_frame.  */
 
+static CORE_ADDR
+fetch_c18n_trusted_frame (bool benchmark_abi, frame_info_ptr this_frame)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  /* Fetch the address of the executive DDC which points to the
+     trusted frame (or restricted DDC for the benchmark ABI).  */
+  int regno = benchmark_abi
+	      ? AARCH64_RDDC_REGNUM(tdep->cap_reg_base)
+	      : AARCH64_EDDC_REGNUM(tdep->cap_reg_base);
+  return get_frame_register_unsigned (this_frame, regno);
+}
+
 static void
-aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
-			     frame_info_ptr this_frame,
-			     struct trad_frame_cache *this_cache,
-			     CORE_ADDR func)
+aarch64_fbsd_c18nframe_init_common (bool benchmark_abi,
+				    frame_info_ptr this_frame,
+				    struct trad_frame_cache *this_cache,
+				    CORE_ADDR func)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[8];
 
-  /* Fetch the address of the executive DDC which points to the
-     trusted frame.  */
-  int eddc_regno = AARCH64_EDDC_REGNUM(tdep->cap_reg_base);
-  CORE_ADDR sp = get_frame_register_unsigned (this_frame, eddc_regno);
+  /* Fetch the address of the trusted frame.  */
+  CORE_ADDR sp = fetch_c18n_trusted_frame (benchmark_abi, this_frame);
 
   /* Saved X registers.  */
   trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_gregmap, sp,
@@ -324,6 +336,24 @@ aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
 				  tdep->cap_reg_ecsp);
 
   trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static void
+aarch64_fbsd_c18nframe_init (const struct tramp_frame *self,
+			     frame_info_ptr this_frame,
+			     struct trad_frame_cache *this_cache,
+			     CORE_ADDR func)
+{
+  aarch64_fbsd_c18nframe_init_common (false, this_frame, this_cache, func);
+}
+
+static void
+aarch64_fbsd_benchmark_c18nframe_init (const struct tramp_frame *self,
+				       frame_info_ptr this_frame,
+				       struct trad_frame_cache *this_cache,
+				       CORE_ADDR func)
+{
+  aarch64_fbsd_c18nframe_init_common (true, this_frame, this_cache, func);
 }
 
 static bool
@@ -357,18 +387,16 @@ fetch_c18n_stack_info (struct gdbarch *gdbarch, CORE_ADDR idx_addr,
 }
 
 static void
-aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
-				   struct ui_out *uiout)
+aarch64_fbsd_c18nframe_print_info_common (bool benchmark_abi,
+					  frame_info_ptr this_frame,
+					  struct ui_out *uiout)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
-  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
   std::string name;
   LONGEST id;
 
-  /* Fetch the address of the executive DDC which points to the
-     trusted frame.  */
-  int eddc_regno = AARCH64_EDDC_REGNUM(tdep->cap_reg_base);
-  CORE_ADDR sp = get_frame_register_unsigned (this_frame, eddc_regno);
+  /* Fetch the address of the trusted frame.  */
+  CORE_ADDR sp = fetch_c18n_trusted_frame (benchmark_abi, this_frame);
 
   uiout->text (", from ");
   if (fetch_c18n_stack_info (gdbarch, sp + 240, id, name))
@@ -401,6 +429,20 @@ aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
     uiout->text ("<unknown>");
 }
 
+static void
+aarch64_fbsd_c18nframe_print_info (frame_info_ptr this_frame,
+				   struct ui_out *uiout)
+{
+  aarch64_fbsd_c18nframe_print_info_common (false, this_frame, uiout);
+}
+
+static void
+aarch64_fbsd_benchmark_c18nframe_print_info (frame_info_ptr this_frame,
+					     struct ui_out *uiout)
+{
+  aarch64_fbsd_c18nframe_print_info_common (true, this_frame, uiout);
+}
+
 static const struct tramp_frame aarch64_fbsd_c18nframe =
 {
   COMPARTMENT_FRAME,
@@ -415,6 +457,22 @@ static const struct tramp_frame aarch64_fbsd_c18nframe =
   nullptr,
   nullptr,
   aarch64_fbsd_c18nframe_print_info
+};
+
+static const struct tramp_frame aarch64_fbsd_benchmark_c18nframe =
+{
+  COMPARTMENT_FRAME,
+  4,
+  {
+    {0xc29b4332, ULONGEST_MAX},		/* mrs     c18, rddc_el0  */
+    {0x42c72a51, ULONGEST_MAX},		/* ldp     c17, c10, [c18, #224]  */
+    {0x42c6324b, ULONGEST_MAX},		/* ldp     c11, c12, [c18, #192]  */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_benchmark_c18nframe_init,
+  nullptr,
+  nullptr,
+  aarch64_fbsd_benchmark_c18nframe_print_info
 };
 
 /* Register set definitions.  */
@@ -818,6 +876,7 @@ aarch64_fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_cheriabi_sigframe);
       tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_c18nframe);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_benchmark_c18nframe);
     }
   else
     {
