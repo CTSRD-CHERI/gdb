@@ -284,6 +284,16 @@ const struct regcache_map_entry aarch64_fbsd_c18n_capregmap[] =
     { 0 }
   };
 
+const struct regcache_map_entry aarch64_fbsd_benchmark_c18n_capregmap[] =
+  {
+    { 1, AARCH64_C0_REGNUM(0) + 29, 16 }, /* c29 */
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 10, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c28 */
+    { 2, REGCACHE_MAP_SKIP, 16 }, /* sp and osp */
+    { 1, AARCH64_RDDC_REGNUM(0), 16 }, /* previous */
+    { 0 }
+  };
+
 /* Implement the "init" method of struct tramp_frame.  */
 
 static CORE_ADDR
@@ -320,10 +330,17 @@ aarch64_fbsd_c18nframe_init_common (bool benchmark_abi,
 			     (aarch64_fbsd_c18n_gregmap));
 
   /* Saved C registers.  */
-  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap, sp,
-			     regcache_map_entry_size
-			     (aarch64_fbsd_c18n_capregmap),
-			     tdep->cap_reg_base);
+  if (benchmark_abi)
+    trad_frame_set_reg_regmap (this_cache,
+			       aarch64_fbsd_benchmark_c18n_capregmap, sp,
+			       regcache_map_entry_size
+			       (aarch64_fbsd_benchmark_c18n_capregmap),
+			       tdep->cap_reg_base);
+  else
+    trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_c18n_capregmap, sp,
+			       regcache_map_entry_size
+			       (aarch64_fbsd_c18n_capregmap),
+			       tdep->cap_reg_base);
 
   bool executive = c18nframe_pcc_executive (this_frame, sp + 32);
   if (!executive)
