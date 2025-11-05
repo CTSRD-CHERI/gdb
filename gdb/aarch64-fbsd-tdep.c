@@ -342,15 +342,21 @@ aarch64_fbsd_c18nframe_init_common (bool benchmark_abi,
 			       (aarch64_fbsd_c18n_capregmap),
 			       tdep->cap_reg_base);
 
-  bool executive = c18nframe_pcc_executive (this_frame, sp + 32);
+  bool executive = c18nframe_pcc_executive (this_frame, sp + 16);
   if (!executive)
     {
+      trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM, sp + 192);
       trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp + 192);
       trad_frame_set_reg_addr (this_cache, tdep->cap_reg_rcsp, sp + 192);
     }
   else
+    {
+      ULONGEST esp = get_frame_register_unsigned (this_frame,
+						  tdep->cap_reg_ecsp);
+      trad_frame_set_reg_value (this_cache, AARCH64_SP_REGNUM, esp);
       trad_frame_set_reg_realreg (this_cache, tdep->cap_reg_csp,
 				  tdep->cap_reg_ecsp);
+    }
 
   trad_frame_set_id (this_cache, frame_id_build (sp, func));
 }
