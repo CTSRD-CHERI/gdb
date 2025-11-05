@@ -349,6 +349,12 @@ aarch64_fbsd_c18nframe_init_common (bool benchmark_abi,
       trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp + 192);
       trad_frame_set_reg_addr (this_cache, tdep->cap_reg_rcsp, sp + 192);
     }
+  else if (benchmark_abi)
+    {
+      trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM, sp + 192);
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp + 192);
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_ecsp, sp + 192);
+    }
   else
     {
       ULONGEST esp = get_frame_register_unsigned (this_frame,
