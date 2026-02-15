@@ -184,6 +184,17 @@ trad_frame_set_reg_value_bytes (struct trad_frame_cache *this_trad_cache,
   this_trad_cache->prev_regs[regnum].set_value_bytes (bytes);
 }
 
+void
+trad_frame_set_reg_value_bytes_tag (struct trad_frame_cache *this_trad_cache,
+				    int regnum,
+				    gdb::array_view<const gdb_byte> bytes,
+				    bool tag)
+{
+  /* External interface for users of trad_frame_cache
+     (who cannot access the prev_regs object directly).  */
+  this_trad_cache->prev_regs[regnum].set_value_bytes_tag (bytes, tag);
+}
+
 
 
 struct value *
@@ -206,6 +217,13 @@ trad_frame_get_prev_register (frame_info_ptr this_frame,
     /* The register's value is available as a sequence of bytes.  */
     return frame_unwind_got_bytes (this_frame, regnum,
 				   this_saved_regs[regnum].value_bytes ());
+  else if (this_saved_regs[regnum].is_value_bytes_tag ())
+    {
+      /* The register's value is available as a sequence of bytes and a tag.  */
+      auto bytes_tag = this_saved_regs[regnum].value_bytes_tag ();
+      return frame_unwind_got_bytes_tag (this_frame, regnum, bytes_tag.first,
+					 bytes_tag.second);
+    }
   else
     return frame_unwind_got_optimized (this_frame, regnum);
 }

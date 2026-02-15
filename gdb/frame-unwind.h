@@ -235,6 +235,8 @@ struct value *frame_unwind_got_constant (frame_info_ptr frame, int regnum,
 
 struct value *frame_unwind_got_bytes (frame_info_ptr frame, int regnum,
 				      const gdb_byte *buf);
+struct value *frame_unwind_got_bytes_tag (frame_info_ptr frame, int regnum,
+					  const gdb_byte *buf, bool tag);
 
 /* Return a value which indicates that FRAME's saved version of REGNUM
    has a known constant (computed) value of ADDR.  Convert the

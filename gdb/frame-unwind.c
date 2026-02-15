@@ -323,6 +323,18 @@ frame_unwind_got_bytes (frame_info_ptr frame, int regnum, const gdb_byte *buf)
   return reg_val;
 }
 
+struct value *
+frame_unwind_got_bytes_tag (frame_info_ptr frame, int regnum,
+			    const gdb_byte *buf, bool tag)
+{
+  struct gdbarch *gdbarch = frame_unwind_arch (frame);
+  struct value *reg_val;
+
+  reg_val = frame_unwind_got_bytes (frame, regnum, buf);
+  reg_val->set_tag (tag);
+  return reg_val;
+}
+
 /* Return a value which indicates that FRAME's saved version of REGNUM
    has a known constant (computed) value of ADDR.  Convert the
    CORE_ADDR to a target address if necessary.  */

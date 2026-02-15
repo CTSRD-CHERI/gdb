@@ -57,6 +57,9 @@ void trad_frame_set_reg_value (struct trad_frame_cache *this_cache,
 void trad_frame_set_reg_value_bytes (struct trad_frame_cache *this_trad_cache,
 				     int regnum,
 				     gdb::array_view<const gdb_byte> bytes);
+void trad_frame_set_reg_value_bytes_tag (
+  struct trad_frame_cache *this_trad_cache, int regnum,
+  gdb::array_view<const gdb_byte> bytes, bool tag);
 
 struct value *trad_frame_get_register (struct trad_frame_cache *this_trad_cache,
 				       frame_info_ptr this_frame,
@@ -74,7 +77,9 @@ enum class trad_frame_saved_reg_kind
   /* Register value is at an address.  */
   ADDR,
   /* Register value is a sequence of bytes.  */
-  VALUE_BYTES
+  VALUE_BYTES,
+  /* Register value is a sequence of bytes and a tag.  */
+  VALUE_BYTES_TAG
 };
 
 /* A struct that describes a saved register in a frame.  */
@@ -124,6 +129,19 @@ struct trad_frame_saved_reg
     m_reg.value_bytes = data;
   }
 
+  /* Encode that the saved register's value is stored as a sequence of bytes
+     and a tag.  */
+  void set_value_bytes_tag (gdb::array_view<const gdb_byte> bytes, bool tag)
+  {
+    /* Allocate the space and copy the data bytes.  */
+    gdb_byte *data = FRAME_OBSTACK_CALLOC (bytes.size () + 1, gdb_byte);
+    data[0] = tag;
+    memcpy (data + 1, bytes.data (), bytes.size ());
+
+    m_kind = trad_frame_saved_reg_kind::VALUE_BYTES_TAG;
+    m_reg.value_bytes = data;
+  }
+
   /* Getters */
 
   LONGEST value () const
@@ -148,6 +166,12 @@ struct trad_frame_saved_reg
   {
     gdb_assert (m_kind == trad_frame_saved_reg_kind::VALUE_BYTES);
     return m_reg.value_bytes;
+  }
+
+  std::pair<const gdb_byte *, bool> value_bytes_tag () const
+  {
+    gdb_assert (m_kind == trad_frame_saved_reg_kind::VALUE_BYTES_TAG);
+    return std::make_pair (m_reg.value_bytes + 1, m_reg.value_bytes[0]);
   }
 
   /* Convenience functions, return true if the register has been
@@ -175,6 +199,11 @@ struct trad_frame_saved_reg
   bool is_value_bytes () const
   {
     return m_kind == trad_frame_saved_reg_kind::VALUE_BYTES;
+  }
+
+  bool is_value_bytes_tag () const
+  {
+    return m_kind == trad_frame_saved_reg_kind::VALUE_BYTES_TAG;
   }
 
 private:
