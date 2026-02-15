@@ -38,6 +38,7 @@
 #include "solib.h"
 #include "target.h"
 #include "trad-frame.h"
+#include "tramp-frame.h"
 
 #include "kgdb.h"
 
@@ -438,6 +439,114 @@ static const struct frame_unwind aarch64_fbsd_trapframe_unwind = {
   aarch64_fbsd_trapframe_sniffer
 };
 
+static const struct regcache_map_entry aarch64_fbsd_kernel_c18n_gregmap[] =
+  {
+    { 1, REGCACHE_MAP_SKIP, 16 }, /* rcsp */
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 0 }
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_kernel_c18n_capregmap[] =
+  {
+    { 1, AARCH64_RCSP_REGNUM(0), 16 },
+    { 1, AARCH64_PCC_REGNUM(0), 16 },
+    { 0 }
+  };
+
+static int
+c18nframe_pcc_executive (frame_info_ptr this_frame, CORE_ADDR pcc_addr)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+  struct value *val = frame_unwind_got_memory (this_frame, tdep->cap_reg_pcc,
+					       pcc_addr);
+  val->fetch_lazy ();
+  capability cap = aarch64_capability_from_value (val);
+  return cap.check_permissions (CAP_PERM_EXECUTIVE);
+}
+
+static void
+aarch64_fbsd_kernel_c18nframe_init (const struct tramp_frame *self,
+				    frame_info_ptr this_frame,
+				    struct trad_frame_cache *this_cache,
+				    CORE_ADDR func)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  /* Fetch the address of the frame.  */
+  struct value *ecspval = get_frame_register_value (this_frame,
+						    tdep->cap_reg_ecsp);
+  if (ecspval->lazy ())
+    ecspval->fetch_lazy ();
+  capability ecsp = aarch64_capability_from_value (ecspval);
+  CORE_ADDR sp = ecsp.get_value ();
+
+  /* Saved X registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_kernel_c18n_gregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_kernel_c18n_gregmap));
+
+  /* Saved C registers.  */
+  trad_frame_set_reg_regmap (this_cache, aarch64_fbsd_kernel_c18n_capregmap, sp,
+			     regcache_map_entry_size
+			     (aarch64_fbsd_kernel_c18n_capregmap),
+			     tdep->cap_reg_base);
+
+  ecsp.set_value (sp + 32);
+  struct value *ecspval_adjusted = ecspval->copy ();
+  aarch64_value_from_capability (ecsp, ecspval_adjusted);
+  trad_frame_set_reg_value_bytes_tag (this_cache, tdep->cap_reg_ecsp,
+				      ecspval_adjusted->contents (),
+				      ecspval_adjusted->tag ());
+
+  bool executive = c18nframe_pcc_executive (this_frame, sp + 16);
+  if (!executive)
+    {
+      trad_frame_set_reg_addr (this_cache, AARCH64_SP_REGNUM, sp);
+      trad_frame_set_reg_addr (this_cache, tdep->cap_reg_csp, sp);
+    }
+  else
+    {
+      trad_frame_set_reg_value (this_cache, AARCH64_SP_REGNUM,
+				ecsp.get_value ());
+      trad_frame_set_reg_value_bytes_tag (this_cache, tdep->cap_reg_csp,
+					  ecspval_adjusted->contents (),
+					  ecspval_adjusted->tag ());
+    }
+
+  trad_frame_set_id (this_cache, frame_id_build (sp, func));
+}
+
+static void
+aarch64_fbsd_kernel_c18nframe_print_info (frame_info_ptr this_frame,
+					  struct ui_out *uiout)
+{
+  /* No compartment names / IDs currently available */
+}
+
+static const struct tramp_frame aarch64_fbsd_kernel_c18nframe =
+{
+  COMPARTMENT_FRAME,
+  4,
+  {
+    {0xc29f4170, ULONGEST_MAX},		/* mrs     c16, rcsp_el0  */
+    {0xc2c11211, ULONGEST_MAX},		/* gclim   x17, c16  */
+    {0xc2d14211, ULONGEST_MAX},		/* scvalue c17, c16, x17  */
+    {0xa21f0230, ULONGEST_MAX},		/* str     c16, [c17, #-16]  */
+    {0x22c17bf0, ULONGEST_MAX},		/* ldp     c16, c30, [csp], #32  */
+    {0xc28f4170, ULONGEST_MAX},		/* msr     rcsp_el0, c16  */
+    {0xaa1f03f0, ULONGEST_MAX},		/* mov     x16, xzr  */
+    {0xaa1f03f1, ULONGEST_MAX},		/* mov     x17, xzr  */
+    {0xc2c253c3, ULONGEST_MAX},		/* retr    c30  */
+    {TRAMP_SENTINEL_INSN, ULONGEST_MAX}
+  },
+  aarch64_fbsd_kernel_c18nframe_init,
+  nullptr,
+  nullptr,
+  aarch64_fbsd_kernel_c18nframe_print_info
+};
+
 /* Implement the 'init_osabi' method of struct gdb_osabi_handler.  */
 
 static void
@@ -453,7 +562,10 @@ aarch64_fbsd_kernel_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->jb_pc = 13;
 
   if (tdep->abi == AARCH64_ABI_AAPCS64_CAP)
-    fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_cheriabi_pcb);
+    {
+      fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_cheriabi_pcb);
+      tramp_frame_prepend_unwinder (gdbarch, &aarch64_fbsd_kernel_c18nframe);
+    }
   else
     fbsd_vmcore_set_supply_pcb (gdbarch, aarch64_fbsd_supply_pcb);
   fbsd_vmcore_set_cpu_pcb_addr (gdbarch, kgdb_trgt_stop_pcb);
