@@ -504,9 +504,13 @@ pass_on_stack (struct regcache *regcache, const gdb_byte *val,
   if (align > 16)
     align = 16;
 
+#ifdef __CHERI_PURE_CAPABILITY__
+  *addr = __builtin_align_up(*addr, align);
+#else
   CORE_ADDR align_addr = (CORE_ADDR) (*addr);
   align_addr = align_up (align_addr, align);
   *addr = (gdb_byte *) align_addr;
+#endif
   memcpy (*addr, val, len);
   *addr += len;
 }
