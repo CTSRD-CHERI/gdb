@@ -1773,7 +1773,7 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 
       /* Update the read buffer with this inserted breakpoint's
 	 shadow.  */
-      memcpy (readbuf + bp_addr - memaddr,
+      memcpy (readbuf + (bp_addr - memaddr),
 	      target_info->shadow_contents + bptoffset, bp_size);
     }
   else
@@ -1784,7 +1784,7 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 
       /* Update the shadow with what we want to write to memory.  */
       memcpy (target_info->shadow_contents + bptoffset,
-	      writebuf_org + bp_addr - memaddr, bp_size);
+	      writebuf_org + (bp_addr - memaddr), bp_size);
 
       /* Determine appropriate breakpoint contents and size for this
 	 address.  */
@@ -1792,7 +1792,7 @@ one_breakpoint_xfer_memory (gdb_byte *readbuf, gdb_byte *writebuf,
 
       /* Update the final write buffer with this inserted
 	 breakpoint's INSN.  */
-      memcpy (writebuf + bp_addr - memaddr, bp + bptoffset, bp_size);
+      memcpy (writebuf + (bp_addr - memaddr), bp + bptoffset, bp_size);
     }
 }
 
