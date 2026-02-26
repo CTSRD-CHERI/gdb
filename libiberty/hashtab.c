@@ -987,17 +987,21 @@ iterative_hash (const void *k_in /* the key */,
   return c;
 }
 
+#ifndef __CHERI_PURE_CAPABILITY__
+#define ptraddr_t	intptr_t
+#endif
+
 /* Returns a hash code for pointer P. Simplified version of evahash */
 
 static hashval_t
 hash_pointer (const void *p)
 {
-  intptr_t v = (intptr_t) p;
+  ptraddr_t v = (ptraddr_t) p;
   unsigned a, b, c;
 
   a = b = 0x9e3779b9;
-  a += v >> (sizeof (intptr_t) * CHAR_BIT / 2);
-  b += v & (((intptr_t) 1 << (sizeof (intptr_t) * CHAR_BIT / 2)) - 1);
+  a += v >> (sizeof (ptraddr_t) * CHAR_BIT / 2);
+  b += v & (((ptraddr_t) 1 << (sizeof (ptraddr_t) * CHAR_BIT / 2)) - 1);
   c = 0x42135234;
   mix (a, b, c);
   return c;
