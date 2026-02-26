@@ -1140,7 +1140,7 @@ static hashval_t
 hash_abbrev (const void *p)
 {
   const struct abbrev_offset_entry *ent = p;
-  return htab_hash_pointer ((void *) ent->offset);
+  return htab_hash_pointer ((void *)(uintptr_t) ent->offset);
 }
 
 static int
