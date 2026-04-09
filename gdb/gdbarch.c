@@ -140,6 +140,7 @@ struct gdbarch
   gdbarch_set_capability_address_ftype *set_capability_address = nullptr;
   gdbarch_get_capability_roots_ftype *get_capability_roots = nullptr;
   gdbarch_can_read_pointers_ftype *can_read_pointers = nullptr;
+  gdbarch_get_capability_bounds_ftype *get_capability_bounds = nullptr;
   gdbarch_current_comparts_ftype *current_comparts = default_current_comparts;
   gdbarch_fetch_compart_info_ftype *fetch_compart_info = default_fetch_compart_info;
   gdbarch_fetch_tls_load_module_address_ftype *fetch_tls_load_module_address = nullptr;
@@ -415,6 +416,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of set_capability_address, has predicate.  */
   /* Skip verify of get_capability_roots, invalid_p == 0 */
   /* Skip verify of can_read_pointers, invalid_p == 0 */
+  /* Skip verify of get_capability_bounds, invalid_p == 0 */
   /* Skip verify of current_comparts, invalid_p == 0 */
   /* Skip verify of fetch_compart_info, invalid_p == 0 */
   /* Skip verify of fetch_tls_load_module_address, has predicate.  */
@@ -916,6 +918,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: can_read_pointers = <%s>\n",
 	      host_address_to_string (gdbarch->can_read_pointers));
+  gdb_printf (file,
+	      "gdbarch_dump: get_capability_bounds = <%s>\n",
+	      host_address_to_string (gdbarch->get_capability_bounds));
   gdb_printf (file,
 	      "gdbarch_dump: current_comparts = <%s>\n",
 	      host_address_to_string (gdbarch->current_comparts));
@@ -3191,6 +3196,23 @@ set_gdbarch_can_read_pointers (struct gdbarch *gdbarch,
 			       gdbarch_can_read_pointers_ftype can_read_pointers)
 {
   gdbarch->can_read_pointers = can_read_pointers;
+}
+
+std::pair<CORE_ADDR, ULONGEST>
+gdbarch_get_capability_bounds (struct gdbarch *gdbarch, struct value *val)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->get_capability_bounds != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_get_capability_bounds called\n");
+  return gdbarch->get_capability_bounds (gdbarch, val);
+}
+
+void
+set_gdbarch_get_capability_bounds (struct gdbarch *gdbarch,
+				   gdbarch_get_capability_bounds_ftype get_capability_bounds)
+{
+  gdbarch->get_capability_bounds = get_capability_bounds;
 }
 
 compart_list

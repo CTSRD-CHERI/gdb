@@ -673,6 +673,12 @@ typedef bool (gdbarch_can_read_pointers_ftype) (struct gdbarch *gdbarch, struct 
 extern bool gdbarch_can_read_pointers (struct gdbarch *gdbarch, struct value *val);
 extern void set_gdbarch_can_read_pointers (struct gdbarch *gdbarch, gdbarch_can_read_pointers_ftype *can_read_pointers);
 
+/* Returns the base address and length of the capability in VAL. */
+
+typedef std::pair<CORE_ADDR, ULONGEST> (gdbarch_get_capability_bounds_ftype) (struct gdbarch *gdbarch, struct value *val);
+extern std::pair<CORE_ADDR, ULONGEST> gdbarch_get_capability_bounds (struct gdbarch *gdbarch, struct value *val);
+extern void set_gdbarch_get_capability_bounds (struct gdbarch *gdbarch, gdbarch_get_capability_bounds_ftype *get_capability_bounds);
+
 /* Fetch the list of intra-process compartments for the current inferior. */
 
 typedef compart_list (gdbarch_current_comparts_ftype) (struct gdbarch *gdbarch);

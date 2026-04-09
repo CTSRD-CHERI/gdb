@@ -1240,6 +1240,18 @@ Return true if the capability in VAL can be used to load other capabilities.
 
 Method(
     comment="""
+Returns the base address and length of the capability in VAL.
+""",
+    type="std::pair<CORE_ADDR, ULONGEST>",
+    name="get_capability_bounds",
+    params=[
+        ("struct value *", "val"),
+    ],
+    invalid=False,
+)
+
+Method(
+    comment="""
 Fetch the list of intra-process compartments for the current inferior.
 """,
     type="compart_list",
