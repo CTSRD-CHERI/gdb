@@ -325,7 +325,7 @@ extern enum return_value_convention default_gdbarch_return_value
       struct regcache *regcache, struct value **read_value,
       struct value *write_value);
 
-/* Default implementation of gdbarch_print_cap_attributes.  */
+/* Default implementation of gdbarch_print_cap.  */
 extern void default_print_cap (struct gdbarch *gdbarch,
 			       const gdb_byte *contents, bool tag, bool compact,
 			       struct ui_file *stream);
