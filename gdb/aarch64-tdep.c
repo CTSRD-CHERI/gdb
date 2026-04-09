@@ -6125,6 +6125,34 @@ morello_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents,
   gdb_printf (stream, "%s", cap.metadata_str ().c_str ());
 }
 
+/* Print various fields of a capability as JSON fields.  */
+
+static void
+morello_print_cap_json (struct gdbarch *gdbarch, const gdb_byte *contents,
+			bool tag, struct ui_file *stream)
+{
+  uint128_t dummy_cap;
+  memcpy (&dummy_cap, contents, sizeof(dummy_cap));
+  capability cap (dummy_cap, tag);
+  gdb_printf (stream, " \"address\": %s,", pulongest (cap.get_value ()));
+  gdb_printf (stream, " \"base\": %s,", pulongest (cap.get_base ()));
+  gdb_printf (stream, " \"top\": %s,", pulongest (cap.get_limit ()));
+  gdb_printf (stream, " \"tag\": %s,", tag ? "true" : "false");
+  gdb_printf (stream, " \"sealed\": %s,", cap.is_sealed () ? "true" : "false");
+  gdb_printf (stream, " \"perm_load\": %s,",
+	      cap.check_permissions (CAP_PERM_LOAD) ? "true" : "false");
+  gdb_printf (stream, " \"perm_store\": %s,",
+	      cap.check_permissions (CAP_PERM_STORE) ? "true" : "false");
+  gdb_printf (stream, " \"perm_execute\": %s,",
+	      cap.check_permissions (CAP_PERM_EXECUTE) ? "true" : "false");
+  gdb_printf (stream, " \"perm_load_cap\": %s,",
+	      cap.check_permissions (CAP_PERM_LOAD_CAP) ? "true" : "false");
+  gdb_printf (stream, " \"perm_store_cap\": %s,",
+	      cap.check_permissions (CAP_PERM_STORE_CAP) ? "true" : "false");
+  gdb_printf (stream, " \"perm_executive\": %s,",
+	      cap.check_permissions (CAP_PERM_EXECUTIVE) ? "true" : "false");
+}
+
 /* Set the address of a capability value.  */
 
 static void
@@ -6138,6 +6166,46 @@ morello_set_capability_address (struct gdbarch *gdbarch, struct value *val,
   cap.set_value (addr);
 
   aarch64_value_from_capability (cap, val);
+}
+
+/* Set of general-purpose capability registers.  */
+
+static std::set<int>
+morello_get_capability_roots (struct gdbarch *gdbarch)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  std::set<int> roots;
+  for (int regnum = AARCH64_C0_REGNUM (tdep->cap_reg_base);
+       regnum <= AARCH64_CLR_REGNUM (tdep->cap_reg_base); regnum++)
+    roots.insert (regnum);
+  roots.insert (tdep->cap_reg_pcc);
+  roots.insert (tdep->cap_reg_csp);
+  roots.insert (tdep->cap_reg_ctpidr);
+  roots.insert (tdep->cap_reg_ctpidr + 1);  /* DDC */
+  roots.insert (AARCH64_CID_REGNUM (tdep->cap_reg_base));
+  return roots;
+}
+
+/* Returns true if the capability in VAL can load other capabilities.  */
+
+static bool
+morello_can_read_pointers (struct gdbarch *gdbarch, struct value *val)
+{
+  capability cap = aarch64_capability_from_value (val);
+
+  return cap.get_tag () && !cap.is_sealed () &&
+    cap.check_permissions (CAP_PERM_LOAD | CAP_PERM_LOAD_CAP);
+}
+
+/* Returns the base address and length of a capability.  */
+
+static std::pair<CORE_ADDR, ULONGEST>
+morello_get_capability_bounds (struct gdbarch *gdbarch, struct value *val)
+{
+  capability cap = aarch64_capability_from_value (val);
+
+  return { cap.get_base (), cap.get_length () };
 }
 
 /* Given ABFD, try to determine if we are dealing with a symbol file
@@ -6873,6 +6941,11 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_set_capability_address (gdbarch,
 					  morello_set_capability_address);
 
+      set_gdbarch_get_capability_roots (gdbarch, morello_get_capability_roots);
+      set_gdbarch_can_read_pointers (gdbarch, morello_can_read_pointers);
+      set_gdbarch_get_capability_bounds (gdbarch,
+					 morello_get_capability_bounds);
+
       set_gdbarch_address_class_type_flags
 	(gdbarch, aarch64_address_class_type_flags);
       set_gdbarch_address_class_name_to_type_flags
@@ -6888,6 +6961,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       /* Printing capabilities.  */
       set_gdbarch_print_cap (gdbarch, morello_print_cap);
       set_gdbarch_print_cap_attributes (gdbarch, morello_print_cap_attributes);
+      set_gdbarch_print_cap_json (gdbarch, morello_print_cap_json);
 
       /* For marking special symbols indicating a C64 region.  */
       set_gdbarch_elf_make_msymbol_special (gdbarch,
