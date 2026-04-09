@@ -193,6 +193,37 @@ fbsd_nat_target::find_memory_regions (find_memory_region_ftype func,
   return 0;
 }
 
+/* Return vector of named memory mappings.  */
+
+std::vector<named_memory_region>
+fbsd_nat_target::get_named_memory_regions ()
+{
+  /* First, request a list of regions from the exec target.  */
+  std::vector<named_memory_region> sections =
+    this->beneath ()->get_named_memory_regions ();
+
+  /* Second, build a list of regions from VM mappings.  */
+  pid_t pid = inferior_ptid.pid ();
+  int nitems;
+  gdb::unique_xmalloc_ptr<struct kinfo_vmentry>
+    vmentl (kinfo_getvmmap (pid, &nitems));
+  if (vmentl == NULL)
+    return sections;
+
+  std::vector<named_memory_region> mappings;
+  struct kinfo_vmentry *kve = vmentl.get ();
+  for (int i = 0; i < nitems; i++, kve++)
+    {
+      if (kve->kve_path[0] == '\0')
+	continue;
+      mappings.emplace_back (kve->kve_path, kve->kve_start, kve->kve_end);
+    }
+
+  /* Finally, merge the two lists. */
+  return merge_named_memory_regions (std::move (sections),
+				     std::move (mappings));
+}
+
 /* Fetch the command line for a running process.  */
 
 static gdb::unique_xmalloc_ptr<char>

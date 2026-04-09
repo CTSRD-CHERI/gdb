@@ -52,6 +52,8 @@ public:
 
   int find_memory_regions (find_memory_region_ftype func, void *data) override;
 
+  std::vector<named_memory_region> get_named_memory_regions () override;
+
   bool info_proc (const char *, enum info_proc_what) override;
 
   enum target_xfer_status xfer_partial (enum target_object object,
