@@ -138,6 +138,7 @@ struct gdbarch
   gdbarch_print_cap_json_ftype *print_cap_json = default_print_cap_json;
   gdbarch_print_cap_attributes_ftype *print_cap_attributes = default_print_cap_attributes;
   gdbarch_set_capability_address_ftype *set_capability_address = nullptr;
+  gdbarch_get_capability_roots_ftype *get_capability_roots = nullptr;
   gdbarch_current_comparts_ftype *current_comparts = default_current_comparts;
   gdbarch_fetch_compart_info_ftype *fetch_compart_info = default_fetch_compart_info;
   gdbarch_fetch_tls_load_module_address_ftype *fetch_tls_load_module_address = nullptr;
@@ -411,6 +412,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of print_cap_json, invalid_p == 0 */
   /* Skip verify of print_cap_attributes, invalid_p == 0 */
   /* Skip verify of set_capability_address, has predicate.  */
+  /* Skip verify of get_capability_roots, invalid_p == 0 */
   /* Skip verify of current_comparts, invalid_p == 0 */
   /* Skip verify of fetch_compart_info, invalid_p == 0 */
   /* Skip verify of fetch_tls_load_module_address, has predicate.  */
@@ -906,6 +908,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: set_capability_address = <%s>\n",
 	      host_address_to_string (gdbarch->set_capability_address));
+  gdb_printf (file,
+	      "gdbarch_dump: get_capability_roots = <%s>\n",
+	      host_address_to_string (gdbarch->get_capability_roots));
   gdb_printf (file,
 	      "gdbarch_dump: current_comparts = <%s>\n",
 	      host_address_to_string (gdbarch->current_comparts));
@@ -3147,6 +3152,23 @@ set_gdbarch_set_capability_address (struct gdbarch *gdbarch,
 				    gdbarch_set_capability_address_ftype set_capability_address)
 {
   gdbarch->set_capability_address = set_capability_address;
+}
+
+std::set<int>
+gdbarch_get_capability_roots (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->get_capability_roots != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_get_capability_roots called\n");
+  return gdbarch->get_capability_roots (gdbarch);
+}
+
+void
+set_gdbarch_get_capability_roots (struct gdbarch *gdbarch,
+				  gdbarch_get_capability_roots_ftype get_capability_roots)
+{
+  gdbarch->get_capability_roots = get_capability_roots;
 }
 
 compart_list

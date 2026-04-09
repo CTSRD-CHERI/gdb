@@ -1218,6 +1218,16 @@ Set the address of a capability in VAL to ADDR.
 
 Method(
     comment="""
+Return set of general-purpose capability registers.
+""",
+    type="std::set<int>",
+    name="get_capability_roots",
+    params=[],
+    invalid=False,
+)
+
+Method(
+    comment="""
 Fetch the list of intra-process compartments for the current inferior.
 """,
     type="compart_list",

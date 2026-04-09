@@ -661,6 +661,12 @@ typedef void (gdbarch_set_capability_address_ftype) (struct gdbarch *gdbarch, st
 extern void gdbarch_set_capability_address (struct gdbarch *gdbarch, struct value *val, CORE_ADDR addr);
 extern void set_gdbarch_set_capability_address (struct gdbarch *gdbarch, gdbarch_set_capability_address_ftype *set_capability_address);
 
+/* Return set of general-purpose capability registers. */
+
+typedef std::set<int> (gdbarch_get_capability_roots_ftype) (struct gdbarch *gdbarch);
+extern std::set<int> gdbarch_get_capability_roots (struct gdbarch *gdbarch);
+extern void set_gdbarch_get_capability_roots (struct gdbarch *gdbarch, gdbarch_get_capability_roots_ftype *get_capability_roots);
+
 /* Fetch the list of intra-process compartments for the current inferior. */
 
 typedef compart_list (gdbarch_current_comparts_ftype) (struct gdbarch *gdbarch);
