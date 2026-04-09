@@ -1135,6 +1135,15 @@ default_print_cap_attributes (struct gdbarch *gdbarch, const gdb_byte *contents,
 
 /* See arch-utils.h.  */
 
+void
+default_print_cap_json (struct gdbarch *gdbarch, const gdb_byte *contents,
+			bool tag, struct ui_file *stream)
+{
+  return;
+}
+
+/* See arch-utils.h.  */
+
 compart_list
 default_current_comparts (struct gdbarch *gdbarch)
 {

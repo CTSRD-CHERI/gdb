@@ -135,6 +135,7 @@ struct gdbarch
   CORE_ADDR deprecated_function_start_offset = 0;
   gdbarch_remote_register_number_ftype *remote_register_number = default_remote_register_number;
   gdbarch_print_cap_ftype *print_cap = default_print_cap;
+  gdbarch_print_cap_json_ftype *print_cap_json = default_print_cap_json;
   gdbarch_print_cap_attributes_ftype *print_cap_attributes = default_print_cap_attributes;
   gdbarch_set_capability_address_ftype *set_capability_address = nullptr;
   gdbarch_current_comparts_ftype *current_comparts = default_current_comparts;
@@ -407,6 +408,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of deprecated_function_start_offset, invalid_p == 0 */
   /* Skip verify of remote_register_number, invalid_p == 0 */
   /* Skip verify of print_cap, invalid_p == 0 */
+  /* Skip verify of print_cap_json, invalid_p == 0 */
   /* Skip verify of print_cap_attributes, invalid_p == 0 */
   /* Skip verify of set_capability_address, has predicate.  */
   /* Skip verify of current_comparts, invalid_p == 0 */
@@ -892,6 +894,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: print_cap = <%s>\n",
 	      host_address_to_string (gdbarch->print_cap));
+  gdb_printf (file,
+	      "gdbarch_dump: print_cap_json = <%s>\n",
+	      host_address_to_string (gdbarch->print_cap_json));
   gdb_printf (file,
 	      "gdbarch_dump: print_cap_attributes = <%s>\n",
 	      host_address_to_string (gdbarch->print_cap_attributes));
@@ -3084,6 +3089,23 @@ set_gdbarch_print_cap (struct gdbarch *gdbarch,
 		       gdbarch_print_cap_ftype print_cap)
 {
   gdbarch->print_cap = print_cap;
+}
+
+void
+gdbarch_print_cap_json (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag, struct ui_file *stream)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->print_cap_json != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_print_cap_json called\n");
+  gdbarch->print_cap_json (gdbarch, contents, tag, stream);
+}
+
+void
+set_gdbarch_print_cap_json (struct gdbarch *gdbarch,
+			    gdbarch_print_cap_json_ftype print_cap_json)
+{
+  gdbarch->print_cap_json = print_cap_json;
 }
 
 void

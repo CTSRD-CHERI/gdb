@@ -639,6 +639,13 @@ typedef void (gdbarch_print_cap_ftype) (struct gdbarch *gdbarch, const gdb_byte 
 extern void gdbarch_print_cap (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag, bool compact, struct ui_file *stream);
 extern void set_gdbarch_print_cap (struct gdbarch *gdbarch, gdbarch_print_cap_ftype *print_cap);
 
+/* Print various fields of a capability containing CONTENTS and TAG to STREAM as
+   JSON fields. */
+
+typedef void (gdbarch_print_cap_json_ftype) (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag, struct ui_file *stream);
+extern void gdbarch_print_cap_json (struct gdbarch *gdbarch, const gdb_byte *contents, bool tag, struct ui_file *stream);
+extern void set_gdbarch_print_cap_json (struct gdbarch *gdbarch, gdbarch_print_cap_json_ftype *print_cap_json);
+
 /* Print additional attributes for a capability containing CONTENTS and
    TAG to STREAM. */
 

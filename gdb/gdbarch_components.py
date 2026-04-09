@@ -1173,6 +1173,22 @@ Print value of a capability containing CONTENTS and TAG to STREAM.
 
 Method(
     comment="""
+Print various fields of a capability containing CONTENTS and TAG to STREAM as
+JSON fields.
+""",
+    type="void",
+    name="print_cap_json",
+    params=[
+        ("const gdb_byte *", "contents"),
+        ("bool", "tag"),
+        ("struct ui_file *", "stream"),
+    ],
+    predefault="default_print_cap_json",
+    invalid=False,
+)
+
+Method(
+    comment="""
 Print additional attributes for a capability containing CONTENTS and
 TAG to STREAM.
 """,
