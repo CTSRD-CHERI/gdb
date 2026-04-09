@@ -1228,6 +1228,18 @@ Return set of general-purpose capability registers.
 
 Method(
     comment="""
+Return true if the capability in VAL can be used to load other capabilities.
+""",
+    type="bool",
+    name="can_read_pointers",
+    params=[
+        ("struct value *", "val"),
+    ],
+    invalid=False,
+)
+
+Method(
+    comment="""
 Fetch the list of intra-process compartments for the current inferior.
 """,
     type="compart_list",

@@ -667,6 +667,12 @@ typedef std::set<int> (gdbarch_get_capability_roots_ftype) (struct gdbarch *gdba
 extern std::set<int> gdbarch_get_capability_roots (struct gdbarch *gdbarch);
 extern void set_gdbarch_get_capability_roots (struct gdbarch *gdbarch, gdbarch_get_capability_roots_ftype *get_capability_roots);
 
+/* Return true if the capability in VAL can be used to load other capabilities. */
+
+typedef bool (gdbarch_can_read_pointers_ftype) (struct gdbarch *gdbarch, struct value *val);
+extern bool gdbarch_can_read_pointers (struct gdbarch *gdbarch, struct value *val);
+extern void set_gdbarch_can_read_pointers (struct gdbarch *gdbarch, gdbarch_can_read_pointers_ftype *can_read_pointers);
+
 /* Fetch the list of intra-process compartments for the current inferior. */
 
 typedef compart_list (gdbarch_current_comparts_ftype) (struct gdbarch *gdbarch);
