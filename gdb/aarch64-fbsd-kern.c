@@ -421,11 +421,19 @@ aarch64_fbsd_trapframe_sniffer (const struct frame_unwind *self,
   const char *name;
 
   find_pc_partial_function (get_frame_func (this_frame), &name, NULL, NULL);
-  return (name && ((strcmp (name, "handle_el1h_sync") == 0)
+  return (name && ((strcmp (name, "handle_el1t_sync") == 0)
+		   || (strcmp (name, "handle_el1t_irq") == 0)
+		   || (strcmp (name, "handle_el1t_fiq") == 0)
+		   || (strcmp (name, "handle_el1t_serror") == 0)
+		   || (strcmp (name, "handle_el1h_sync") == 0)
 		   || (strcmp (name, "handle_el1h_irq") == 0)
+		   || (strcmp (name, "handle_el1h_fiq") == 0)
+		   || (strcmp (name, "handle_el1h_serror") == 0)
 		   || (strcmp (name, "handle_el0_sync") == 0)
 		   || (strcmp (name, "handle_el0_irq") == 0)
+		   || (strcmp (name, "handle_el0_fiq") == 0)
 		   || (strcmp (name, "handle_el0_error") == 0)
+		   || (strcmp (name, "handle_empty_exception") == 0)
 		   || (strcmp (name, "fork_trampoline") == 0)));
 }
 
