@@ -45,6 +45,7 @@
 struct aarch64_fbsd_kern_info
 {
   LONGEST osreldate = 0;
+  bool c18n = false;
 };
 
 /* Per-program-space data key.  */
@@ -65,6 +66,9 @@ get_aarch64_fbsd_kern_info (void)
 
   info = aarch64_fbsd_kern_pspace_data.emplace (current_program_space);
   info->osreldate = parse_and_eval_long ("osreldate");
+  info->c18n = lookup_minimal_symbol ("compartment_entries",
+				      (const char *) NULL,
+				      (struct objfile *) NULL).minsym != NULL;
   return info;
 }
 
@@ -107,6 +111,38 @@ static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri_alias[] =
 static const struct regset aarch64_fbsd_pcbregset_cheri_alias =
   {
     aarch64_fbsd_pcbmap_cheri_alias,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri_c18n[] =
+  {
+    { 11, AARCH64_C0_REGNUM(0) + 19, 16 }, /* c19 ... c29 */
+    { 1, AARCH64_CLR_REGNUM(0), 16 },
+    { 1, AARCH64_ECSP_REGNUM(0), 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* tpidr */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* tpidrro */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* cid */
+    { 1, AARCH64_RCSP_REGNUM(0), 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd_pcbregset_cheri_c18n =
+  {
+    aarch64_fbsd_pcbmap_cheri_c18n,
+    regcache_supply_regset, regcache_collect_regset
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_pcbmap_cheri_c18n_alias[] =
+  {
+    { 11, AARCH64_X0_REGNUM + 19, 16 }, /* x19 ... x29 */
+    { 1, AARCH64_LR_REGNUM, 16 },
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 0 }
+  };
+
+static const struct regset aarch64_fbsd_pcbregset_cheri_c18n_alias =
+  {
+    aarch64_fbsd_pcbmap_cheri_c18n_alias,
     regcache_supply_regset, regcache_collect_regset
   };
 
@@ -195,7 +231,13 @@ aarch64_fbsd_supply_cheriabi_pcb(struct regcache *regcache, CORE_ADDR pcb_addr)
   regcache->raw_supply_zeroed (AARCH64_PC_REGNUM);
   regcache->raw_supply_zeroed (tdep->cap_reg_pcc);
 
-  if (info->osreldate >= 1400084)
+  if (info->c18n)
+    {
+      pcbregset_cheri = &aarch64_fbsd_pcbregset_cheri_c18n;
+      pcbregset_cheri_alias = &aarch64_fbsd_pcbregset_cheri_c18n_alias;
+      len = regcache_map_entry_size (aarch64_fbsd_pcbmap_cheri_c18n);
+    }
+  else if (info->osreldate >= 1400084)
     {
       pcbregset_cheri = &aarch64_fbsd_pcbregset_cheri;
       pcbregset_cheri_alias = &aarch64_fbsd_pcbregset_cheri_alias;
@@ -275,6 +317,40 @@ static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri_alias[] 
     { 0 }
   };
 
+static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri_c18n[] =
+  {
+    { 1, AARCH64_ECSP_REGNUM (0), 16 },
+    { 1, AARCH64_CLR_REGNUM (0), 16 },
+    { 1, AARCH64_PCC_REGNUM (0), 16 },
+    { 1, AARCH64_EDDC_REGNUM (0), 16 },
+    { 1, AARCH64_RCSP_REGNUM(0), 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* rddc */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* rctpidr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* cpsr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_C0_REGNUM (0), 16 }, /* c0 ... c29 */
+    { 0 }
+  };
+
+static const struct regcache_map_entry aarch64_fbsd_trapframe_map_cheri_c18n_alias[] =
+  {
+    { 1, AARCH64_SP_REGNUM, 16 },
+    { 1, AARCH64_LR_REGNUM, 16 },
+    { 1, AARCH64_PC_REGNUM, 16 },
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* ddc */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* rcsp */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* rddc */
+    { 1, REGCACHE_MAP_SKIP, 16 },	/* rctpidr */
+    { 1, AARCH64_CPSR_REGNUM, 8 },
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* esr */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* far */
+    { 1, REGCACHE_MAP_SKIP, 8 },	/* pad */
+    { 30, AARCH64_X0_REGNUM, 16 }, /* x0 ... x29 */
+    { 0 }
+  };
+
 /* In kernels prior to __FreeBSD_version 1400084, struct trapframe
    used an alternate layout.  */
 
@@ -333,7 +409,14 @@ aarch64_fbsd_trapframe_cache (frame_info_ptr this_frame, void **this_cache)
   const struct regcache_map_entry *trapframe_map;
   const struct regcache_map_entry *trapframe_map_cheri;
   const struct regcache_map_entry *trapframe_map_cheri_alias;
-  if (info->osreldate >= 1400084)
+  if (info->c18n)
+    {
+      /* XXX: Probably shouldn't be set nor used? */
+      trapframe_map = aarch64_fbsd_trapframe_map;
+      trapframe_map_cheri = aarch64_fbsd_trapframe_map_cheri_c18n;
+      trapframe_map_cheri_alias = aarch64_fbsd_trapframe_map_cheri_c18n_alias;
+    }
+  else if (info->osreldate >= 1400084)
     {
       trapframe_map = aarch64_fbsd_trapframe_map;
       trapframe_map_cheri = aarch64_fbsd_trapframe_map_cheri;
