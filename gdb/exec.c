@@ -77,6 +77,7 @@ struct exec_target final : public target_ops
 					const gdb_byte *writebuf,
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
+  std::vector<named_memory_region> get_named_memory_regions () override;
   void files_info () override;
   void gots_info (regex_t *pattern) override;
 
@@ -982,6 +983,12 @@ print_section_info (const target_section_table *t, bfd *abfd)
     }
 }
 
+std::vector<named_memory_region>
+exec_target::get_named_memory_regions ()
+{
+  return section_regions (&current_program_space->target_sections ());
+}
+
 void
 exec_target::files_info ()
 {
@@ -1125,6 +1132,33 @@ print_got_info (const target_section_table *t, regex_t *pattern)
 	  || startswith (bfd_section_name (psect), ".captable"))
 	display_got (p);
     }
+}
+
+std::vector<named_memory_region>
+section_regions (const target_section_table *t)
+{
+  std::vector<named_memory_region> regions;
+  for (const target_section &p : *t)
+    {
+      /* Ignore empty sections.  */
+      if (p.addr == p.endaddr)
+	continue;
+
+      struct bfd_section *psect = p.the_bfd_section;
+
+      /* Ignore .tbss sections.  They are not actually mapped into
+	 memory (and possibly shouldn't be included in the target
+	 section table).  */
+      if ((bfd_section_flags (psect) & (SEC_THREAD_LOCAL | SEC_HAS_CONTENTS))
+	  == SEC_THREAD_LOCAL)
+	continue;
+
+      bfd *bfd = psect->owner;
+      std::string name = string_printf ("%s:%s", bfd_get_filename (bfd),
+					bfd_section_name (psect));
+      regions.emplace_back (std::move (name), p.addr, p.endaddr);
+    }
+  return regions;
 }
 
 void _initialize_exec ();

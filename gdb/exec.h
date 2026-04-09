@@ -91,6 +91,11 @@ extern enum target_xfer_status
 /* Set the loaded address of a section.  */
 extern void exec_set_section_address (const char *, int, CORE_ADDR);
 
+/* Returns named memory regions for sections from TABLE.  */
+
+extern std::vector<named_memory_region>
+  section_regions (const target_section_table *table);
+
 /* Prints info about all sections defined in the TABLE.  ABFD is
    special cased --- it's filename is omitted; if it is the executable
    file, its entry point is printed.  */
