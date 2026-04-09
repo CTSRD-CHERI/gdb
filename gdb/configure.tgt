@@ -60,7 +60,7 @@ case "${targ}" in
 aarch64*-*-*)
 	cpu_obs="aarch32-tdep.o aarch64-tdep.o arch/aarch32.o \
 		 arch/aarch64-insn.o arch/aarch64.o  ravenscar-thread.o \
-		 aarch64-ravenscar-thread.o";;
+		 aarch64-ravenscar-thread.o cheri-tdep.o";;
 
 alpha*-*-*)
 	# Target: Alpha
@@ -106,7 +106,7 @@ loongarch*-*-*)
 
 riscv*-*-*)
 	cpu_obs="riscv-tdep.o riscv-none-tdep.o arch/riscv.o \
-	         ravenscar-thread.o riscv-ravenscar-thread.o";;
+	         ravenscar-thread.o riscv-ravenscar-thread.o cheri-tdep.o";;
 
 x86_64-*-*)
 	cpu_obs="${i386_tobjs} ${amd64_tobjs}";;
