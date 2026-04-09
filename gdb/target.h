@@ -236,6 +236,36 @@ enum target_xfer_status
   /* Keep list in sync with target_xfer_status_to_string.  */
 };
 
+/* Returned from target_get_named_memory_regions.  */
+
+struct named_memory_region
+{
+  named_memory_region (std::string name, CORE_ADDR start, CORE_ADDR end)
+    : name (name), start (start), end (end) {}
+
+  /* Name of memory region.  */
+  std::string name;
+
+  /* Base address of memory region.  */
+  CORE_ADDR start = 0;
+
+  /* Last address of memory region.  */
+  CORE_ADDR end = 0;
+
+  bool operator< (const named_memory_region &other) const
+  {
+    return this->start < other.start;
+  }
+};
+
+/* Merge two vectors of named memory regions.  When regions from the
+   vectors overlap, prefer the region from FIRST.  If necessary,
+   regions in SECOND will be split into multiple regions.  */
+
+std::vector<named_memory_region>
+merge_named_memory_regions (std::vector<named_memory_region> &&first,
+			    std::vector<named_memory_region> &&second);
+
 /* Return the string form of STATUS.  */
 
 extern const char *
@@ -518,6 +548,9 @@ struct target_ops
       TARGET_DEFAULT_NORETURN (noprocess ());
     virtual void prepare_to_store (struct regcache *)
       TARGET_DEFAULT_NORETURN (noprocess ());
+
+    virtual std::vector<named_memory_region> get_named_memory_regions ()
+      TARGET_DEFAULT_RETURN (std::vector<named_memory_region> ());
 
     virtual void files_info ()
       TARGET_DEFAULT_IGNORE ();
@@ -1545,6 +1578,10 @@ extern void target_store_registers (struct regcache *regcache, int regs);
    debugged.  */
 
 extern void target_prepare_to_store (regcache *regcache);
+
+/* Return a list of named memory regions.  */
+
+extern std::vector<named_memory_region> target_get_named_memory_regions ();
 
 /* Determine current address space of thread PTID.  */
 

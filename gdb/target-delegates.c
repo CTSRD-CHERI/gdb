@@ -39,6 +39,7 @@ struct dummy_target : public target_ops
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
   void prepare_to_store (struct regcache *arg0) override;
+  std::vector<named_memory_region> get_named_memory_regions () override;
   void files_info () override;
   void gots_info (regex_t *arg0) override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
@@ -217,6 +218,7 @@ struct debug_target : public target_ops
   void fetch_registers (struct regcache *arg0, int arg1) override;
   void store_registers (struct regcache *arg0, int arg1) override;
   void prepare_to_store (struct regcache *arg0) override;
+  std::vector<named_memory_region> get_named_memory_regions () override;
   void files_info () override;
   void gots_info (regex_t *arg0) override;
   int insert_breakpoint (struct gdbarch *arg0, struct bp_target_info *arg1) override;
@@ -591,6 +593,31 @@ debug_target::prepare_to_store (struct regcache *arg0)
   gdb_printf (gdb_stdlog, "<- %s->prepare_to_store (", this->beneath ()->shortname ());
   target_debug_print_regcache_p (arg0);
   gdb_puts (")\n", gdb_stdlog);
+}
+
+std::vector<named_memory_region>
+target_ops::get_named_memory_regions ()
+{
+  return this->beneath ()->get_named_memory_regions ();
+}
+
+std::vector<named_memory_region>
+dummy_target::get_named_memory_regions ()
+{
+  return std::vector<named_memory_region> ();
+}
+
+std::vector<named_memory_region>
+debug_target::get_named_memory_regions ()
+{
+  gdb_printf (gdb_stdlog, "-> %s->get_named_memory_regions (...)\n", this->beneath ()->shortname ());
+  std::vector<named_memory_region> result
+    = this->beneath ()->get_named_memory_regions ();
+  gdb_printf (gdb_stdlog, "<- %s->get_named_memory_regions (", this->beneath ()->shortname ());
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_std_vector_named_memory_region (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
 }
 
 void

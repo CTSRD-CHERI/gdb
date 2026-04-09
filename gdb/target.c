@@ -244,6 +244,14 @@ target_prepare_to_store (regcache *regcache)
 
 /* See target.h.  */
 
+std::vector<named_memory_region>
+target_get_named_memory_regions ()
+{
+  return current_inferior ()->top_target ()->get_named_memory_regions ();
+}
+
+/* See target.h.  */
+
 bool
 target_supports_enable_disable_tracepoint ()
 {
@@ -1883,6 +1891,107 @@ target_write_raw_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, ssize_t len)
     return 0;
   else
     return -1;
+}
+
+/* See target.h  */
+
+std::vector<named_memory_region>
+merge_named_memory_regions (std::vector<named_memory_region> &&first,
+			    std::vector<named_memory_region> &&second)
+{
+  if (first.empty())
+    return second;
+  if (second.empty())
+    return first;
+
+  std::sort (first.begin (), first.end ());
+  std::sort (second.begin (), second.end ());
+
+  std::vector<named_memory_region> v;
+  auto fit = first.begin ();
+  auto sit = second.begin ();
+
+  /* Merge entries from the two lists as long as neither list has been
+     fully traversed.  */
+  CORE_ADDR next_start = 0;
+  while (fit != first.end () && sit != second.end ())
+    {
+      /* If *fit starts at the next start address or is before *sit,
+	 just append it and skip to the next fit.  */
+      if (fit->start == next_start || fit->start <= sit->start)
+	{
+	  v.emplace_back (std::move (fit->name), fit->start, fit->end);
+	  next_start = fit->end;
+	  fit++;
+	  continue;
+	}
+
+      /* If next_start is beyond *sit, skip to the next *sit.  */
+      if (next_start >= sit->end)
+	{
+	  sit++;
+	  continue;
+	}
+
+      gdb_assert (sit->start < fit->start);
+
+      /* Some portion of *sit's range is going to be added as a range.
+	 Figure out the start address of that range.  */
+      CORE_ADDR start;
+
+      if (next_start > sit->start)
+	start = next_start;
+      else
+	start = sit->start;
+
+      /* If *sit ends before *fit starts, append it (with a possibly
+	 different start address) and skip to the next *sit.  */
+      if (sit->end <= fit->start)
+	{
+	  /* This is the last use of *sit, so it's ok to claim the
+	     name.  */
+	  v.emplace_back (std::move (sit->name), start, sit->end);
+	  next_start = sit->end;
+	  sit++;
+	  continue;
+	}
+
+      /* Append a range from start up to fit->start.  Note that this
+	 may not be the last use of *sit, so copy the name and do not
+	 advance sit.  */
+      v.emplace_back (sit->name, start, fit->start);
+      next_start = fit->start;
+    }
+
+  /* Append any remaining elements from first, but move the names.  */
+  while (fit != first.end ())
+    {
+      v.emplace_back (std::move (fit->name), fit->start, fit->end);
+      fit++;
+    }
+
+  /* If there are any remaining elements from second, append them also
+     moving the names.  However, the first element may need its start
+     address adjusted.  */
+  if (sit != second.end ())
+    {
+      CORE_ADDR start;
+
+      if (next_start > sit->start)
+	start = next_start;
+      else
+	start = sit->start;
+      v.emplace_back (std::move (sit->name), start, sit->end);
+      sit++;
+
+      while (sit != second.end ())
+	{
+	  v.emplace_back (std::move (sit->name), sit->start, sit->end);
+	  sit++;
+	}
+    }
+
+  return v;
 }
 
 /* Fetch the target's memory map.  */

@@ -116,6 +116,8 @@
   target_debug_do_print (host_address_to_string (X))
 #define target_debug_print_std_vector_mem_region(X) \
   target_debug_do_print (host_address_to_string (X.data ()))
+#define target_debug_print_std_vector_named_memory_region(X)	\
+  target_debug_do_print (host_address_to_string (X.data ()))
 #define target_debug_print_std_vector_static_tracepoint_marker(X)	\
   target_debug_do_print (host_address_to_string (X.data ()))
 #define target_debug_print_const_target_desc_p(X)	\
