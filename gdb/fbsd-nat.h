@@ -126,6 +126,8 @@ public:
   bool supports_disable_randomization () override;
 
 #ifdef PIOD_READ_CHERI_CAP
+  bool fetch_memtags (CORE_ADDR addr, size_t len, gdb::byte_vector &tags,
+		      int type) override;
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
   bool write_capability (CORE_ADDR addr,
 			 gdb::array_view<const gdb_byte> buffer) override;

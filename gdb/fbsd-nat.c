@@ -2577,6 +2577,74 @@ fbsd_nat_target::supports_disable_randomization ()
 }
 
 #ifdef PIOD_READ_CHERI_CAP
+bool
+fbsd_nat_target::fetch_memtags (CORE_ADDR addr, size_t len,
+				gdb::byte_vector &tags, int type)
+{
+  if (type != static_cast<int> (memtag_type::cheri))
+    return false;
+
+  int capsize = sizeof (ptraddr_t) * 2;
+  if (capsize == 0 || addr % capsize != 0 || len % capsize != 0)
+    return false;
+
+  /* Fetch a page at a time.  */
+  gdb::byte_vector packed_tags (PAGE_SIZE / capsize / TARGET_CHAR_BIT);
+
+  while (len != 0)
+    {
+      /* Memory range to scan.  */
+      size_t offset = addr % (capsize * 8);
+      addr -= offset;
+      len += offset;
+
+      size_t todo = PAGE_SIZE - addr % PAGE_SIZE;
+      if (todo > len)
+	todo = len;
+
+      size_t tagslen = howmany (todo, capsize * 8);
+      gdb_assert (tagslen <= packed_tags.size ());
+
+      struct ptrace_io_desc piod;
+      piod.piod_op = PIOD_READ_CHERI_TAGS;
+      piod.piod_offs = (void *) (uintptr_t) addr;
+      piod.piod_addr = packed_tags.data ();
+      piod.piod_len = tagslen;
+      if (ptrace (PT_IO, get_ptrace_pid (inferior_ptid),
+		  (PTRACE_TYPE_ARG3) &piod, 0) == -1)
+	return false;
+
+      /* Unpack the tags.  */
+      offset = (offset / capsize) % 8;
+      gdb_byte *tagp = packed_tags.data ();
+      gdb_byte tag = *tagp >> offset;
+      u_int bits = 8 - offset;
+      for (size_t i = offset; i < todo / capsize; i++)
+	{
+	  if (bits == 0)
+	    {
+	      tagp++;
+	      tag = *tagp;
+	      bits = 8;
+	    }
+	  tags.push_back (tag & 1);
+	  tag >>= 1;
+	  bits--;
+
+	  /* Only read next byte of bits at the top of the next
+	     iteration if needed to avoid reading off the end of
+	     packed_tags.  */
+	}
+
+      addr += todo;
+      len -= todo;
+      if (len == 0)
+	return true;
+    }
+
+  return false;
+}
+
 gdb::byte_vector
 fbsd_nat_target::read_capability (CORE_ADDR addr)
 {
