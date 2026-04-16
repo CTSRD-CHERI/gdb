@@ -170,6 +170,10 @@ private: /* per-core data */
   /* FIXME: kettenis/20031023: Eventually this field should
      disappear.  */
   struct gdbarch *m_core_gdbarch = NULL;
+
+  /* Helper function for fetch_memtags.  */
+  bool fetch_memtags_cheri (CORE_ADDR address, size_t len,
+			    gdb::byte_vector &tags);
 };
 
 core_target::core_target ()
@@ -1383,12 +1387,88 @@ core_target::supports_memory_tagging ()
   return (bfd_get_section_by_name (core_bfd, "memtag") != nullptr);
 }
 
+/* Helper function to fetch CHERI memory tags.  */
+
+bool
+core_target::fetch_memtags_cheri (CORE_ADDR address, size_t len,
+				  gdb::byte_vector &tags)
+{
+  struct gdbarch *gdbarch = target_gdbarch ();
+  int capsize = gdbarch_capability_bit (gdbarch) / TARGET_CHAR_BIT;
+
+  if (capsize == 0 || address % capsize != 0 || len % capsize != 0)
+    return false;
+
+  memtag_section_info info;
+  info.memtag_section = nullptr;
+
+  while (get_next_core_memtag_section (core_bfd, "memtag.cheri",
+				       info.memtag_section, address, info))
+  {
+    asection *section = info.memtag_section;
+
+    /* Address range available from the section.  */
+    CORE_ADDR memoff = address - section->vma;
+    ULONGEST memlen = section->rawsize - memoff;
+    if (memlen > len)
+      memlen = len;
+
+    /* How many capabilities are covered by the address range.  */
+    CORE_ADDR capoff = memoff / capsize;
+    ULONGEST caplen = memlen / capsize;
+
+    /* Number of bytes in the file covered by the address range.  */
+    file_ptr fileoff = memoff / TARGET_CHAR_BIT;
+    ULONGEST filelen = memlen / TARGET_CHAR_BIT;
+    if (memoff % TARGET_CHAR_BIT != 0)
+      filelen++;
+
+    gdb::byte_vector tags_read (filelen);
+
+    /* Read the packed tags.  */
+    if (!bfd_get_section_contents (section->owner, section, tags_read.data (),
+				   fileoff, filelen))
+      error (_("Couldn't read contents from memtag section."));
+
+    /* Unpack the tags.  */
+    gdb_byte *tagp = tags_read.data ();
+    gdb_byte tag = *tagp >> (capoff % TARGET_CHAR_BIT);
+    u_int bits = TARGET_CHAR_BIT - (capoff % TARGET_CHAR_BIT);
+    for (ULONGEST i = 0; i < caplen; i++)
+      {
+	if (bits == 0)
+	  {
+	    tagp++;
+	    tag = *tagp;
+	    bits = TARGET_CHAR_BIT;
+	  }
+	tags.push_back (tag & 1);
+	tag >>= 1;
+	bits--;
+
+	/* Only read next byte of bits at the top of the next
+	   iteration if needed to avoid reading off the end of
+	   tags_read.  */
+      }
+
+    address += memlen;
+    len -= memlen;
+    if (len == 0)
+      return true;
+  }
+
+  return false;
+}
+
 /* Implementation of the "fetch_memtags" target_ops method.  */
 
 bool
 core_target::fetch_memtags (CORE_ADDR address, size_t len,
 			    gdb::byte_vector &tags, int type)
 {
+  if (type == static_cast<int> (memtag_type::cheri))
+    return fetch_memtags_cheri (address, len, tags);
+
   struct gdbarch *gdbarch = target_gdbarch ();
 
   /* Make sure we have a way to decode the memory tag notes.  */
