@@ -139,6 +139,10 @@ enum class memtag_type
      the physical address space.  Allocation tags are used to validate memory
      accesses via pointers containing logical tags.  */
   allocation,
+
+  /* CHERI capability tag, the tag is associated with each capability of
+     memory in the physical address space.  */
+  cheri,
 };
 
 /* Callback types for 'read_core_file_mappings' gdbarch method.  */
