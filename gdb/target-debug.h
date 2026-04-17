@@ -195,6 +195,13 @@ target_debug_print_target_waitstatus_p (struct target_waitstatus *status)
   target_debug_do_print ((X) ? "step" : "continue")
 
 static void
+target_debug_print_target_memtag_range (const target_memtag_range &range)
+{
+  gdb_printf (gdb_stdlog, "{ %s %s }", core_addr_to_string (range.address),
+	      pulongest (range.len));
+}
+
+static void
 target_debug_print_target_wait_flags (target_wait_flags options)
 {
   std::string str = target_options_to_string (options);

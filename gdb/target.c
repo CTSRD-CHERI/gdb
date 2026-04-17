@@ -839,6 +839,14 @@ target_store_memtags (CORE_ADDR address, size_t len,
   return current_inferior ()->top_target ()->store_memtags (address, len, tags, type);
 }
 
+target_memtag_range
+target_first_memtag_range (CORE_ADDR address, size_t len, int type)
+{
+  gdb_assert (len != 0 && address + len > address);
+  return current_inferior ()->top_target ()->first_memtag_range (address, len,
+								 type);
+}
+
 x86_xsave_layout
 target_fetch_x86_xsave_layout ()
 {

@@ -198,6 +198,7 @@ struct dummy_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  target_memtag_range first_memtag_range (CORE_ADDR arg0, size_t arg1, int arg2) override;
   x86_xsave_layout fetch_x86_xsave_layout () override;
   gdb::byte_vector read_capability (CORE_ADDR arg0) override;
   bool write_capability (CORE_ADDR arg0, gdb::array_view<const gdb_byte> arg1) override;
@@ -377,6 +378,7 @@ struct debug_target : public target_ops
   bool supports_memory_tagging () override;
   bool fetch_memtags (CORE_ADDR arg0, size_t arg1, gdb::byte_vector &arg2, int arg3) override;
   bool store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector &arg2, int arg3) override;
+  target_memtag_range first_memtag_range (CORE_ADDR arg0, size_t arg1, int arg2) override;
   x86_xsave_layout fetch_x86_xsave_layout () override;
   gdb::byte_vector read_capability (CORE_ADDR arg0) override;
   bool write_capability (CORE_ADDR arg0, gdb::array_view<const gdb_byte> arg1) override;
@@ -4588,6 +4590,36 @@ debug_target::store_memtags (CORE_ADDR arg0, size_t arg1, const gdb::byte_vector
   target_debug_print_int (arg3);
   gdb_puts (") = ", gdb_stdlog);
   target_debug_print_bool (result);
+  gdb_puts ("\n", gdb_stdlog);
+  return result;
+}
+
+target_memtag_range
+target_ops::first_memtag_range (CORE_ADDR arg0, size_t arg1, int arg2)
+{
+  return this->beneath ()->first_memtag_range (arg0, arg1, arg2);
+}
+
+target_memtag_range
+dummy_target::first_memtag_range (CORE_ADDR arg0, size_t arg1, int arg2)
+{
+  return target_memtag_range ();
+}
+
+target_memtag_range
+debug_target::first_memtag_range (CORE_ADDR arg0, size_t arg1, int arg2)
+{
+  gdb_printf (gdb_stdlog, "-> %s->first_memtag_range (...)\n", this->beneath ()->shortname ());
+  target_memtag_range result
+    = this->beneath ()->first_memtag_range (arg0, arg1, arg2);
+  gdb_printf (gdb_stdlog, "<- %s->first_memtag_range (", this->beneath ()->shortname ());
+  target_debug_print_CORE_ADDR (arg0);
+  gdb_puts (", ", gdb_stdlog);
+  target_debug_print_size_t (arg1);
+  gdb_puts (", ", gdb_stdlog);
+  target_debug_print_int (arg2);
+  gdb_puts (") = ", gdb_stdlog);
+  target_debug_print_target_memtag_range (result);
   gdb_puts ("\n", gdb_stdlog);
   return result;
 }

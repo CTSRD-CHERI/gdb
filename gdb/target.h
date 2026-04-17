@@ -266,6 +266,13 @@ std::vector<named_memory_region>
 merge_named_memory_regions (std::vector<named_memory_region> &&first,
 			    std::vector<named_memory_region> &&second);
 
+/* Returned from target_first_memtag_range.  */
+struct target_memtag_range
+{
+  CORE_ADDR address = 0;
+  size_t len = 0;
+};
+
 /* Return the string form of STATUS.  */
 
 extern const char *
@@ -1364,6 +1371,13 @@ struct target_ops
 				const gdb::byte_vector &tags, int type)
       TARGET_DEFAULT_NORETURN (tcomplain ());
 
+    /* Return the first memory range contained in the memory range
+       [ADDRESS, ADDRESS + LEN) that contains memory tags of type
+       TYPE.  */
+    virtual target_memtag_range first_memtag_range (CORE_ADDR address,
+						    size_t len, int type)
+      TARGET_DEFAULT_RETURN (target_memtag_range ());
+
     /* Return the x86 XSAVE extended state area layout.  */
     virtual x86_xsave_layout fetch_x86_xsave_layout ()
       TARGET_DEFAULT_RETURN (x86_xsave_layout ());
@@ -2359,6 +2373,9 @@ extern bool target_fetch_memtags (CORE_ADDR address, size_t len,
 
 extern bool target_store_memtags (CORE_ADDR address, size_t len,
 				  const gdb::byte_vector &tags, int type);
+
+extern target_memtag_range target_first_memtag_range (CORE_ADDR address,
+						      size_t len, int type);
 
 extern x86_xsave_layout target_fetch_x86_xsave_layout ();
 
