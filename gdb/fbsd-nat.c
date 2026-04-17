@@ -2645,6 +2645,52 @@ fbsd_nat_target::fetch_memtags (CORE_ADDR addr, size_t len,
   return false;
 }
 
+target_memtag_range
+fbsd_nat_target::first_memtag_range (CORE_ADDR address, size_t len, int type)
+{
+  if (type != static_cast<int> (memtag_type::cheri))
+    return {};
+
+  int capsize = sizeof (uintcap_t);
+  if (address % capsize != 0)
+    {
+      CORE_ADDR delta = capsize - address % capsize;
+      if (len <= delta)
+	return {};
+
+      address += delta;
+      len -= delta;
+    }
+  len = len / capsize * capsize;
+  if (len == 0)
+    return {};
+
+  pid_t pid = inferior_ptid.pid ();
+  int nitems;
+  gdb::unique_xmalloc_ptr<struct kinfo_vmentry>
+    vmentl (kinfo_getvmmap (pid, &nitems));
+  if (vmentl == NULL)
+    return {};
+
+  CORE_ADDR end = address + len;
+  struct kinfo_vmentry *kve = vmentl.get ();
+  for (int i = 0; i < nitems; i++, kve++)
+    {
+      if (end > kve->kve_start && address < kve->kve_end
+	  && kve->kve_flags & KVME_FLAG_HASCAP
+	  && kve->kve_protection & KVME_PROT_CAP)
+	{
+	  if (address < kve->kve_start)
+	    address = kve->kve_start;
+	  if (end > kve->kve_end)
+	    end = kve->kve_end;
+	  return { address, end - address };
+	}
+    }
+
+  return {};
+}
+
 gdb::byte_vector
 fbsd_nat_target::read_capability (CORE_ADDR addr)
 {

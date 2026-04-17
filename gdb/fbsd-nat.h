@@ -128,6 +128,8 @@ public:
 #ifdef PIOD_READ_CHERI_CAP
   bool fetch_memtags (CORE_ADDR addr, size_t len, gdb::byte_vector &tags,
 		      int type) override;
+  target_memtag_range first_memtag_range (CORE_ADDR address,
+					  size_t len, int type) override;
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
   bool write_capability (CORE_ADDR addr,
 			 gdb::array_view<const gdb_byte> buffer) override;
