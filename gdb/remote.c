@@ -995,6 +995,9 @@ public:
   bool store_memtags (CORE_ADDR address, size_t len,
 		      const gdb::byte_vector &tags, int type) override;
 
+  target_memtag_range first_memtag_range (CORE_ADDR address, size_t len,
+					  int type) override;
+
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
   bool write_capability (CORE_ADDR addr,
 			 gdb::array_view<const gdb_byte> buffer) override;
@@ -15281,6 +15284,18 @@ remote_target::store_memtags (CORE_ADDR address, size_t len,
 
   /* Verify if the request was successful.  */
   return packet_check_result (rs->buf.data ()) == PACKET_OK;
+}
+
+/* Implementation of the "first_memtag_range" target_ops method.  */
+
+target_memtag_range
+remote_target::first_memtag_range (CORE_ADDR address, size_t len, int type)
+{
+  if (!m_features.remote_memory_tagging_p ())
+    return {};
+
+  /* TODO: No packet for this yet, so just claim the full range.  */
+  return { address, len };
 }
 
 /* Return true if remote target T is non-stop.  */
