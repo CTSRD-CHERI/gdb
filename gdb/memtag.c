@@ -67,3 +67,46 @@ get_next_core_memtag_section (bfd *abfd, const char *section_name,
     }
   return false;
 }
+
+/* See memtag.h */
+
+bool
+get_first_core_memtag_section (bfd *abfd, const char *section_name,
+			       CORE_ADDR address, size_t len,
+			       memtag_section_info &info)
+{
+  CORE_ADDR end = address + len;
+
+  asection *section = bfd_get_section_by_name (abfd, section_name);
+  while (section != nullptr)
+    {
+      size_t memtag_range_size = section->rawsize;
+      size_t tags_size = bfd_section_size (section);
+
+      /* Empty memory range or empty tag dump should not happen.  Warn about
+	 it but keep going through the sections.  */
+      if (memtag_range_size == 0 || tags_size == 0)
+	{
+	  warning (_("Found memtag section with empty memory "
+		     "range or empty tag dump"));
+	  continue;
+	}
+      else
+	{
+	  CORE_ADDR start_address = bfd_section_vma (section);
+	  CORE_ADDR end_address = start_address + memtag_range_size;
+
+	  /* Does this section overlap with the requested address
+	     range?  */
+	  if (end > start_address && address < end_address)
+	    {
+	      info.start_address = start_address;
+	      info.end_address = end_address;
+	      info.memtag_section = section;
+	      return true;
+	    }
+	}
+      section = bfd_get_next_section_by_name (abfd, section);
+    }
+  return false;
+}

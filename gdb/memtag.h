@@ -47,4 +47,18 @@ bool get_next_core_memtag_section (bfd *abfd, const char *section_name,
 				   asection *section, CORE_ADDR address,
 				   memtag_section_info &info);
 
+/* Helper function to find a memory tag section in a core file.
+
+   Return TRUE if there is a memory tag section named SECTION_NAME
+   that overlaps with the range [ADDRESS, ADDRESS + LEN).  Return
+   FALSE otherwise.
+
+   If a matching memory tag section containing ADDRESS is found, fill
+   INFO with data about the first such section.  Otherwise leave it
+   unchanged.  */
+
+bool get_first_core_memtag_section (bfd *abfd, const char *section_name,
+				    CORE_ADDR address, size_t len,
+				    memtag_section_info &info);
+
 #endif /* MEMTAG_H */

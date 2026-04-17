@@ -112,6 +112,9 @@ public:
   bool fetch_memtags (CORE_ADDR address, size_t len,
 		      gdb::byte_vector &tags, int type) override;
 
+  target_memtag_range first_memtag_range (CORE_ADDR address,
+					  size_t len, int type) override;
+
   x86_xsave_layout fetch_x86_xsave_layout () override;
 
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
@@ -1504,6 +1507,28 @@ core_target::fetch_memtags (CORE_ADDR address, size_t len,
   }
 
   return false;
+}
+
+/* Implementation of the "first_memtag_range" target_ops method.  */
+
+target_memtag_range
+core_target::first_memtag_range (CORE_ADDR address, size_t len, int type)
+{
+  const char *section_name = "memtag";
+  if (type == static_cast<int> (memtag_type::cheri))
+    section_name = "memtag.cheri";
+
+  memtag_section_info info;
+  if (!get_first_core_memtag_section (core_bfd, section_name, address, len,
+				      info))
+    return {};
+
+  CORE_ADDR end = address + len;
+  if (address < info.start_address)
+    address = info.start_address;
+  if (end > info.end_address)
+    end = info.end_address;
+  return { address, end - address };
 }
 
 /* Implementation of the "fetch_x86_xsave_layout" target_ops method.  */
