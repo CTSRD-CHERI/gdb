@@ -1628,6 +1628,54 @@ fbsd_read_core_file_mappings
     }
 }
 
+/* Implement the "core_named_memory_regions" gdbarch method.  */
+
+static std::vector<named_memory_region>
+fbsd_core_named_memory_regions (struct gdbarch *gdbarch, struct bfd *cbfd)
+{
+  asection *section;
+  unsigned char *descdata, *descend;
+  size_t note_size;
+
+  section = bfd_get_section_by_name (cbfd, ".note.freebsdcore.vmmap");
+  if (section == NULL)
+    return {};
+
+  note_size = bfd_section_size (section);
+  if (note_size < 4)
+    return {};
+
+  gdb::def_vector<unsigned char> contents (note_size);
+  if (!bfd_get_section_contents (core_bfd, section, contents.data (),
+				 0, note_size))
+    return {};
+
+  descdata = contents.data ();
+  descend = descdata + note_size;
+
+  /* Skip over the structure size.  */
+  descdata += 4;
+
+  std::vector<named_memory_region> mappings;
+  while (descdata + KVE_PATH < descend)
+    {
+      ULONGEST structsize = bfd_get_32 (core_bfd, descdata + KVE_STRUCTSIZE);
+      if (structsize < KVE_PATH)
+	return {};
+
+      const char *path = reinterpret_cast<char *>(descdata) + KVE_PATH;
+      if (path[0] != '\0')
+	{
+	  ULONGEST start = bfd_get_64 (core_bfd, descdata + KVE_START);
+	  ULONGEST end = bfd_get_64 (core_bfd, descdata + KVE_END);
+	  mappings.emplace_back (path, start, end);
+	}
+
+      descdata += structsize;
+    }
+  return mappings;
+}
+
 /* default_auxv_parse almost works, but we want to parse entries that
    pass pointers and extract the address instead of returning just
    the first N bytes as an address.  */
@@ -2577,6 +2625,8 @@ fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_make_corefile_notes (gdbarch, fbsd_make_corefile_notes);
   set_gdbarch_core_info_proc (gdbarch, fbsd_core_info_proc);
   set_gdbarch_read_core_file_mappings (gdbarch, fbsd_read_core_file_mappings);
+  set_gdbarch_core_named_memory_regions (gdbarch,
+					 fbsd_core_named_memory_regions);
 
   set_gdbarch_auxv_parse (gdbarch, fbsd_auxv_parse);
   set_gdbarch_print_auxv_entry (gdbarch, fbsd_print_auxv_entry);
