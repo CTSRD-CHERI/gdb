@@ -4153,6 +4153,32 @@ riscv_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return -1;
 }
 
+/* Generate capability object from VAL.  */
+
+static void
+riscv_capability_from_value (struct value *val, cc128_cap_t &cap)
+{
+  gdbarch *gdbarch = val->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int xlen = riscv_isa_xlen (gdbarch);
+  const gdb_byte *buf = val->contents ().data ();
+  ULONGEST pesbt = extract_unsigned_integer (buf + xlen, xlen, byte_order);
+  ULONGEST address = extract_unsigned_integer (buf, xlen, byte_order);
+  cc128_decompress_mem(pesbt, address, val->tag (), &cap);
+}
+
+static void
+riscv_capability_from_value (struct value *val, cc64_cap_t &cap)
+{
+  gdbarch *gdbarch = val->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int xlen = riscv_isa_xlen (gdbarch);
+  const gdb_byte *buf = val->contents ().data ();
+  ULONGEST pesbt = extract_unsigned_integer (buf + xlen, xlen, byte_order);
+  ULONGEST address = extract_unsigned_integer (buf, xlen, byte_order);
+  cc64_decompress_mem(pesbt, address, val->tag (), &cap);
+}
+
 /* Implementation of `address_class_type_flags' gdbarch method.  */
 
 static type_instance_flags
@@ -4431,6 +4457,112 @@ riscv_cheri_print_cap_attributes (struct gdbarch *gdbarch,
       cc64_cap_t cap;
       cc64_decompress_mem(pesbt, address, tag, &cap);
       riscv_cheri_print_compact_attributes (gdbarch, &cap, stream);
+    }
+}
+
+/* Print various fields of a capability as JSON fields.  */
+
+template<class Cap>
+static void
+riscv_cheri_print_json_attributes (struct gdbarch *gdbarch, Cap *cap,
+				   struct ui_file *stream)
+{
+  gdb_printf (stream, " \"address\": %s,", pulongest (cap->address ()));
+  gdb_printf (stream, " \"base\": %s,", pulongest (cap->base ()));
+  gdb_printf (stream, " \"top\": %s,", pulongest (cap->top64 ()));
+  gdb_printf (stream, " \"tag\": %s,", cap->cr_tag ? "true" : "false");
+  gdb_printf (stream, " \"sealed\": %s,", cap->is_sealed () ? "true" : "false");
+  gdb_printf (stream, " \"perm_load\": %s,",
+	      cap->permissions () & CC128_PERM_LOAD  ? "true" : "false");
+  gdb_printf (stream, " \"perm_store\": %s,",
+	      cap->permissions () & CC128_PERM_STORE ? "true" : "false");
+  gdb_printf (stream, " \"perm_execute\": %s,",
+	      cap->permissions () & CC128_PERM_EXECUTE ? "true" : "false");
+  gdb_printf (stream, " \"perm_load_cap\": %s,",
+	      cap->permissions () & CC128_PERM_LOAD_CAP ? "true" : "false");
+  gdb_printf (stream, " \"perm_store_cap\": %s,",
+	      cap->permissions () & CC128_PERM_STORE_CAP ? "true" : "false");
+}
+
+static void
+riscv_cheri_print_cap_json (struct gdbarch *gdbarch, const gdb_byte *contents,
+			    bool tag, struct ui_file *stream)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int xlen = riscv_isa_xlen (gdbarch);
+
+  ULONGEST pesbt = extract_unsigned_integer (contents + xlen, xlen, byte_order);
+  ULONGEST address = extract_unsigned_integer (contents, xlen, byte_order);
+
+  if (xlen == 8)
+    {
+      cc128_cap_t cap;
+      cc128_decompress_mem(pesbt, address, tag, &cap);
+      riscv_cheri_print_json_attributes (gdbarch, &cap, stream);
+    }
+  else
+    {
+      cc64_cap_t cap;
+      cc64_decompress_mem(pesbt, address, tag, &cap);
+      riscv_cheri_print_json_attributes (gdbarch, &cap, stream);
+    }
+}
+
+/* Set of general-purpose capability registers.  */
+
+static std::set<int>
+riscv_cheri_get_capability_roots (struct gdbarch *gdbarch)
+{
+  riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
+
+  std::set<int> roots;
+  for (int regnum = RISCV_CNULL_REGNUM; regnum <= RISCV_LAST_CHERI_REGNUM;
+       regnum++)
+    roots.insert (regnum);
+  return roots;
+}
+
+/* Returns true if the capability in VAL can load other capabilities.  */
+
+static bool
+riscv_cheri_can_read_pointers (struct gdbarch *gdbarch, struct value *val)
+{
+  int xlen = riscv_isa_xlen (gdbarch);
+  if (xlen == 8)
+    {
+      cc128_cap_t cap;
+      riscv_capability_from_value (val, cap);
+      return cap.cr_tag && !cap.is_sealed () &&
+	(cap.permissions () & (CC128_PERM_LOAD | CC128_PERM_LOAD_CAP))
+	 == (CC128_PERM_LOAD | CC128_PERM_LOAD_CAP);
+    }
+  else
+    {
+      cc64_cap_t cap;
+      riscv_capability_from_value (val, cap);
+      return cap.cr_tag && !cap.is_sealed () &&
+	(cap.permissions () & (CC64_PERM_LOAD | CC64_PERM_LOAD_CAP))
+	 == (CC64_PERM_LOAD | CC64_PERM_LOAD_CAP);
+    }
+}
+
+/* Returns the base address and length of a capability.  */
+
+static std::pair<CORE_ADDR, ULONGEST>
+riscv_cheri_get_capability_bounds (struct gdbarch *gdbarch, struct value *val)
+{
+  int xlen = riscv_isa_xlen (gdbarch);
+  if (xlen == 8)
+    {
+      cc128_cap_t cap;
+      riscv_capability_from_value (val, cap);
+      return { cap.base (), cap.length () };
+    }
+  else
+    {
+      cc64_cap_t cap;
+      riscv_capability_from_value (val, cap);
+      return { cap.base (), cap.length () };
     }
 }
 
@@ -4809,6 +4941,12 @@ riscv_gdbarch_init (struct gdbarch_info info,
       set_gdbarch_print_cap (gdbarch, riscv_cheri_print_cap);
       set_gdbarch_print_cap_attributes (gdbarch,
 					riscv_cheri_print_cap_attributes);
+      set_gdbarch_print_cap_json (gdbarch, riscv_cheri_print_cap_json);
+      set_gdbarch_get_capability_roots (gdbarch,
+					riscv_cheri_get_capability_roots);
+      set_gdbarch_can_read_pointers (gdbarch, riscv_cheri_can_read_pointers);
+      set_gdbarch_get_capability_bounds (gdbarch,
+					 riscv_cheri_get_capability_bounds);
     }
 
   /* Internal <-> external register number maps.  */
