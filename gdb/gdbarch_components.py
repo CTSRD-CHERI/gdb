@@ -2860,6 +2860,19 @@ Read core file mappings
 
 Method(
     comment="""
+Return list of named memory regions from core file mappings
+""",
+    type="std::vector<named_memory_region>",
+    name="core_named_memory_regions",
+    params=[
+        ("struct bfd *", "cbfd"),
+    ],
+    predefault="default_core_named_memory_regions",
+    invalid=False,
+)
+
+Method(
+    comment="""
 Return true if the target description for all threads should be read from the
 target description core file note(s).  Return false if the target description
 for all threads should be inferred from the core file contents/sections.

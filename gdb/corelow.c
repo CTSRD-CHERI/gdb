@@ -86,6 +86,7 @@ public:
 					const gdb_byte *writebuf,
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
+  std::vector<named_memory_region> get_named_memory_regions () override;
   void files_info () override;
   void gots_info (regex_t *pattern) override;
 
@@ -952,6 +953,19 @@ core_target::fetch_registers (struct regcache *regcache, int regno)
   for (int i = 0; i < gdbarch_num_regs (regcache->arch ()); i++)
     if (regcache->get_register_status (i) == REG_UNKNOWN)
       regcache->raw_supply (i, NULL);
+}
+
+std::vector<named_memory_region>
+core_target::get_named_memory_regions ()
+{
+  std::vector<named_memory_region> sections =
+    section_regions (&m_core_section_table);
+
+  std::vector<named_memory_region> mappings =
+    gdbarch_core_named_memory_regions (m_core_gdbarch, core_bfd);
+
+  return merge_named_memory_regions (std::move (sections),
+				     std::move (mappings));
 }
 
 void

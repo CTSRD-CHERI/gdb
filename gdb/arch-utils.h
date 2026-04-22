@@ -305,6 +305,11 @@ extern void default_read_core_file_mappings
    read_core_file_mappings_pre_loop_ftype pre_loop_cb,
    read_core_file_mappings_loop_ftype loop_cb);
 
+/* Default implementation of gdbarch core_named_memory_regions method.  */
+extern std::vector<named_memory_region> default_core_named_memory_regions
+  (struct gdbarch *gdbarch,
+   struct bfd *cbfd);
+
 /* Default implementation of gdbarch
    use_target_description_from_corefile_notes.  */
 extern bool default_use_target_description_from_corefile_notes

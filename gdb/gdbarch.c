@@ -264,6 +264,7 @@ struct gdbarch
   gdbarch_type_align_ftype *type_align = default_type_align;
   gdbarch_get_pc_address_flags_ftype *get_pc_address_flags = default_get_pc_address_flags;
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
+  gdbarch_core_named_memory_regions_ftype *core_named_memory_regions = default_core_named_memory_regions;
   gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes = default_use_target_description_from_corefile_notes;
 };
 
@@ -540,6 +541,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of type_align, invalid_p == 0 */
   /* Skip verify of get_pc_address_flags, invalid_p == 0 */
   /* Skip verify of read_core_file_mappings, invalid_p == 0 */
+  /* Skip verify of core_named_memory_regions, invalid_p == 0 */
   /* Skip verify of use_target_description_from_corefile_notes, invalid_p == 0 */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
@@ -1424,6 +1426,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: read_core_file_mappings = <%s>\n",
 	      host_address_to_string (gdbarch->read_core_file_mappings));
+  gdb_printf (file,
+	      "gdbarch_dump: core_named_memory_regions = <%s>\n",
+	      host_address_to_string (gdbarch->core_named_memory_regions));
   gdb_printf (file,
 	      "gdbarch_dump: use_target_description_from_corefile_notes = <%s>\n",
 	      host_address_to_string (gdbarch->use_target_description_from_corefile_notes));
@@ -5619,6 +5624,23 @@ set_gdbarch_read_core_file_mappings (struct gdbarch *gdbarch,
 				     gdbarch_read_core_file_mappings_ftype read_core_file_mappings)
 {
   gdbarch->read_core_file_mappings = read_core_file_mappings;
+}
+
+std::vector<named_memory_region>
+gdbarch_core_named_memory_regions (struct gdbarch *gdbarch, struct bfd *cbfd)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->core_named_memory_regions != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_core_named_memory_regions called\n");
+  return gdbarch->core_named_memory_regions (gdbarch, cbfd);
+}
+
+void
+set_gdbarch_core_named_memory_regions (struct gdbarch *gdbarch,
+				       gdbarch_core_named_memory_regions_ftype core_named_memory_regions)
+{
+  gdbarch->core_named_memory_regions = core_named_memory_regions;
 }
 
 bool

@@ -54,6 +54,7 @@ struct stap_parse_info;
 struct expr_builder;
 struct ravenscar_arch_ops;
 struct mem_range;
+struct named_memory_region;
 struct syscalls_info;
 struct thread_info;
 struct ui_out;

@@ -1093,6 +1093,13 @@ default_read_core_file_mappings
 }
 
 /* See arch-utils.h.  */
+std::vector<named_memory_region>
+default_core_named_memory_regions (struct gdbarch *gdbarch, struct bfd *cbfd)
+{
+  return {};
+}
+
+/* See arch-utils.h.  */
 bool
 default_use_target_description_from_corefile_notes (struct gdbarch *gdbarch,
 						    struct bfd *corefile_bfd)

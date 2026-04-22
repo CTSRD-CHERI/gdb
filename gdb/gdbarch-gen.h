@@ -1792,6 +1792,12 @@ typedef void (gdbarch_read_core_file_mappings_ftype) (struct gdbarch *gdbarch, s
 extern void gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb);
 extern void set_gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, gdbarch_read_core_file_mappings_ftype *read_core_file_mappings);
 
+/* Return list of named memory regions from core file mappings */
+
+typedef std::vector<named_memory_region> (gdbarch_core_named_memory_regions_ftype) (struct gdbarch *gdbarch, struct bfd *cbfd);
+extern std::vector<named_memory_region> gdbarch_core_named_memory_regions (struct gdbarch *gdbarch, struct bfd *cbfd);
+extern void set_gdbarch_core_named_memory_regions (struct gdbarch *gdbarch, gdbarch_core_named_memory_regions_ftype *core_named_memory_regions);
+
 /* Return true if the target description for all threads should be read from the
    target description core file note(s).  Return false if the target description
    for all threads should be inferred from the core file contents/sections.
