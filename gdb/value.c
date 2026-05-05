@@ -3431,6 +3431,7 @@ pack_unsigned_long (gdb_byte *buf, struct type *type, ULONGEST num)
     case TYPE_CODE_REF:
     case TYPE_CODE_RVALUE_REF:
     case TYPE_CODE_PTR:
+    case TYPE_CODE_CAPABILITY:
       store_typed_address (buf, type, (CORE_ADDR) num);
       break;
 
