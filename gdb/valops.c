@@ -604,9 +604,9 @@ value_cast (struct type *type, struct value *arg2)
 
       return value_from_mpz (to_type, longest);
     }
-  else if (code1 == TYPE_CODE_PTR && (code2 == TYPE_CODE_INT  
-				      || code2 == TYPE_CODE_ENUM 
-				      || code2 == TYPE_CODE_RANGE))
+  else if ((code1 == TYPE_CODE_PTR || code1 == TYPE_CODE_CAPABILITY)
+	   && (code2 == TYPE_CODE_INT || code2 == TYPE_CODE_ENUM
+	       || code2 == TYPE_CODE_RANGE))
     {
       /* type->length () is the length of a pointer, but we really
 	 want the length of an address! -- we are really dealing with
