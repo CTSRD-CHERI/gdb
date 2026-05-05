@@ -47,7 +47,7 @@ update_compart_list (int from_tty)
 {
   unsigned int entry_generation = get_frame_cache_generation ();
 
-  if (entry_generation == current_program_space->compart_generation)
+  if (entry_generation == current_program_space->compartments_generation)
     return;
 
   gdbarch *gdbarch = target_gdbarch ();
@@ -55,8 +55,8 @@ update_compart_list (int from_tty)
 
   if (inferior.empty ())
     {
-      current_program_space->compart_list.clear ();
-      current_program_space->compart_generation = entry_generation;
+      current_program_space->compartments.clear ();
+      current_program_space->compartments_generation = entry_generation;
       return;
     }
 
@@ -75,8 +75,8 @@ update_compart_list (int from_tty)
 
   auto inf_it = inferior.begin ();
   auto inf_end = inferior.end ();
-  auto gdb_it = current_program_space->compart_list.begin ();
-  auto gdb_end = current_program_space->compart_list.end ();
+  auto gdb_it = current_program_space->compartments.begin ();
+  auto gdb_end = current_program_space->compartments.end ();
 
   while (gdb_it != gdb_end && inf_it != inf_end)
     {
@@ -135,8 +135,8 @@ update_compart_list (int from_tty)
       inf_it++;
     }
 
-  current_program_space->compart_list = std::move(new_list);
-  current_program_space->compart_generation = entry_generation;
+  current_program_space->compartments = std::move(new_list);
+  current_program_space->compartments_generation = entry_generation;
 }
 
 /* Implement the "info compartments" command.  Walk through the
@@ -164,7 +164,7 @@ info_compartments_command (const char *pattern, int from_tty)
 
   int nr_comparts = 0;
   int max_name = strlen ("Name");
-  for (const compart_up &compart : current_program_space->compart_list)
+  for (const compart_up &compart : current_program_space->compartments)
     {
       if (pattern && !re_exec (compart->name.c_str ()))
 	continue;
@@ -182,7 +182,7 @@ info_compartments_command (const char *pattern, int from_tty)
 
     uiout->table_body ();
 
-    for (const compart_up &compart : current_program_space->compart_list)
+    for (const compart_up &compart : current_program_space->compartments)
       {
 	if (pattern && !re_exec (compart->name.c_str ()))
 	  continue;
@@ -227,7 +227,7 @@ compart_info (LONGEST id)
 {
   update_compart_list (0);
 
-  for (const compart_up &compart : current_program_space->compart_list)
+  for (const compart_up &compart : current_program_space->compartments)
     {
       if (compart->id == id)
 	return (compart.get ());

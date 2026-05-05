@@ -376,10 +376,10 @@ struct program_space
   std::vector<std::string> deleted_solibs;
 
   /* Compartment list generation.  */
-  unsigned int compart_generation = UINT_MAX;
+  unsigned int compartments_generation = UINT_MAX;
 
   /* List of compartments in this space.  Managed by comparts.c.  */
-  compart_list compart_list;
+  compart_list compartments;
 
   /* Per pspace data-pointers required by other GDB modules.  */
   registry<program_space> registry_fields;
