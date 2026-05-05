@@ -151,7 +151,7 @@ extract_long_unsigned_integer (const gdb_byte *addr, int orig_len,
 CORE_ADDR
 extract_typed_address (const gdb_byte *buf, struct type *type)
 {
-  gdb_assert (type->is_pointer_or_reference ());
+  gdb_assert (type->is_pointer_or_reference () || is_capability (type));
   return gdbarch_pointer_to_address (type->arch (), type, buf);
 }
 
@@ -198,7 +198,7 @@ template void store_integer (gdb::array_view<gdb_byte> dst,
 void
 store_typed_address (gdb_byte *buf, struct type *type, CORE_ADDR addr)
 {
-  gdb_assert (type->is_pointer_or_reference ());
+  gdb_assert (type->is_pointer_or_reference () || is_capability (type));
   gdbarch_address_to_pointer (type->arch (), type, buf, addr);
 }
 
