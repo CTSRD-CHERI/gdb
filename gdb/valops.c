@@ -529,18 +529,6 @@ value_cast (struct type *type, struct value *arg2)
 	    || code1 == TYPE_CODE_DECFLOAT || code1 == TYPE_CODE_ENUM
 	    || code1 == TYPE_CODE_RANGE);
 
-  /* Handle casting capabilities/capability pointers to other scalar types.
-     For now we truncate the capability value to the size of the target
-     type.  */
-  if (to_scalar && (code2 == TYPE_CODE_CAPABILITY
-      || (code2 == TYPE_CODE_PTR && TYPE_CAPABILITY (type2))))
-    {
-      if (type->is_unsigned ())
-	return value_from_ulongest (to_type, value_as_long (arg2));
-      else
-	return value_from_longest (to_type, value_as_long (arg2));
-    }
-
   if ((code1 == TYPE_CODE_STRUCT || code1 == TYPE_CODE_UNION)
       && (code2 == TYPE_CODE_STRUCT || code2 == TYPE_CODE_UNION)
       && type->name () != 0)
@@ -583,7 +571,7 @@ value_cast (struct type *type, struct value *arg2)
     }
   else if ((code1 == TYPE_CODE_INT || code1 == TYPE_CODE_ENUM
 	    || code1 == TYPE_CODE_RANGE)
-	   && (scalar || code2 == TYPE_CODE_PTR
+	   && (scalar || code2 == TYPE_CODE_PTR || code2 == TYPE_CODE_CAPABILITY
 	       || code2 == TYPE_CODE_MEMBERPTR))
     {
       gdb_mpz longest;
@@ -594,7 +582,7 @@ value_cast (struct type *type, struct value *arg2)
 	 expressions just as the compiler would --- and the compiler
 	 sees a cast as a simple reinterpretation of the pointer's
 	 bits.  */
-      if (code2 == TYPE_CODE_PTR)
+      if (code2 == TYPE_CODE_PTR || code2 == TYPE_CODE_CAPABILITY)
 	longest = extract_unsigned_integer (arg2->contents (),
 					    type_byte_order (type2));
       else
