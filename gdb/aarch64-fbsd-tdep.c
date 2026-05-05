@@ -318,8 +318,6 @@ aarch64_fbsd_c18nframe_init_common (bool benchmark_abi,
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  gdb_byte buf[8];
 
   /* Fetch the address of the trusted frame.  */
   CORE_ADDR sp = fetch_c18n_trusted_frame (benchmark_abi, this_frame);
