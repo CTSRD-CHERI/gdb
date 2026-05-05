@@ -182,12 +182,18 @@ enum
    format.  */
 
 #define	KVE_STRUCTSIZE		0x0
+#define	KVE_TYPE		0x4
 #define	KVE_START		0x8
 #define	KVE_END			0x10
 #define	KVE_OFFSET		0x18
 #define	KVE_FLAGS		0x2c
 #define	KVE_PROTECTION		0x38
 #define	KVE_PATH		0x88
+
+/* A subset of types for the 'kve_path' field in struct kinfo_vmentry.
+   These match the KVE_TYPE_* constants in <sys/user.h>.  */
+
+#define	KINFO_VME_TYPE_VNODE	2
 
 /* Flags in the 'kve_protection' field in struct kinfo_vmentry.  These
    match the KVME_PROT_* constants in <sys/user.h>.  */
@@ -1546,6 +1552,82 @@ fbsd_core_info_proc (struct gdbarch *gdbarch, const char *args,
     fbsd_core_info_proc_status (gdbarch);
 }
 
+/* Implement the "read_core_file_mappings" gdbarch method.  */
+
+static void
+fbsd_read_core_file_mappings
+  (struct gdbarch *gdbarch, struct bfd *cbfd,
+   read_core_file_mappings_pre_loop_ftype pre_loop_cb,
+   read_core_file_mappings_loop_ftype loop_cb)
+{
+  asection *section = bfd_get_section_by_name (cbfd, ".note.freebsdcore.vmmap");
+  if (section == nullptr)
+    return;
+
+  size_t note_size = bfd_section_size (section);
+  if (note_size < 4)
+    {
+      warning (_("malformed core note - too short for header"));
+      return;
+    }
+
+  gdb::def_vector<unsigned char> contents (note_size);
+  if (!bfd_get_section_contents (cbfd, section, contents.data (), 0, note_size))
+    {
+      warning (_("could not get core note contents"));
+      return;
+    }
+
+  unsigned char *descdata = contents.data ();
+  unsigned char *descend = descdata + note_size;
+
+  /* Skip over the structure size.  */
+  descdata += 4;
+
+  ULONGEST count = 0;
+  while (descdata + KVE_PATH < descend)
+    {
+      ULONGEST structsize = bfd_get_32 (cbfd, descdata + KVE_STRUCTSIZE);
+      if (structsize < KVE_PATH)
+	{
+	  warning (_("malformed core note - vmmap entry too small"));
+	  return;
+	}
+
+      LONGEST type = bfd_get_signed_32 (cbfd, descdata + KVE_TYPE);
+      LONGEST prot = bfd_get_signed_32 (cbfd, descdata + KVE_PROTECTION);
+      if (type == KINFO_VME_TYPE_VNODE && prot != 0
+	  && descdata[KVE_PATH] != '\0')
+	count++;
+
+      descdata += structsize;
+    }
+
+  pre_loop_cb (count);
+
+  descdata = contents.data () + 4;
+  count = 0;
+  while (descdata + KVE_PATH < descend)
+    {
+      ULONGEST structsize = bfd_get_32 (cbfd, descdata + KVE_STRUCTSIZE);
+
+      LONGEST type = bfd_get_signed_32 (cbfd, descdata + KVE_TYPE);
+      LONGEST prot = bfd_get_signed_32 (cbfd, descdata + KVE_PROTECTION);
+      if (type == KINFO_VME_TYPE_VNODE && prot != 0
+	  && descdata[KVE_PATH] != '\0')
+	{
+	  ULONGEST start = bfd_get_64 (cbfd, descdata + KVE_START);
+	  ULONGEST end = bfd_get_64 (cbfd, descdata + KVE_END);
+	  ULONGEST offset = bfd_get_64 (cbfd, descdata + KVE_OFFSET);
+	  loop_cb (count, start, end, offset, (char *) descdata + KVE_PATH,
+		   nullptr);
+	  count++;
+	}
+
+      descdata += structsize;
+    }
+}
+
 /* default_auxv_parse almost works, but we want to parse entries that
    pass pointers and extract the address instead of returning just
    the first N bytes as an address.  */
@@ -2494,6 +2576,8 @@ fbsd_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_xfer_siginfo (gdbarch, fbsd_core_xfer_siginfo);
   set_gdbarch_make_corefile_notes (gdbarch, fbsd_make_corefile_notes);
   set_gdbarch_core_info_proc (gdbarch, fbsd_core_info_proc);
+  set_gdbarch_read_core_file_mappings (gdbarch, fbsd_read_core_file_mappings);
+
   set_gdbarch_auxv_parse (gdbarch, fbsd_auxv_parse);
   set_gdbarch_print_auxv_entry (gdbarch, fbsd_print_auxv_entry);
   set_gdbarch_get_siginfo_type (gdbarch, fbsd_get_siginfo_type);
