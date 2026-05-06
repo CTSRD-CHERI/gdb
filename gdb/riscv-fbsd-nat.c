@@ -31,11 +31,15 @@
 #include "riscv-fbsd-tdep.h"
 #include "inf-ptrace.h"
 
+#if __has_feature(capabilities) || defined(__HAVE_CAPREG)
+#define	HAVE_CAPREG
+#endif
+
 struct riscv_fbsd_nat_target final : public fbsd_nat_target
 {
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   const struct target_desc *read_description () override;
 #endif
 };
@@ -55,7 +59,7 @@ riscv_fbsd_nat_target::fetch_registers (struct regcache *regcache,
 				  &riscv_fbsd_gregset);
   fetch_register_set<struct fpreg> (regcache, regnum, PT_GETFPREGS,
 				    &riscv_fbsd_fpregset);
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   if (riscv_isa_clen (regcache->arch ()) != 0)
     fetch_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       &riscv_fbsd_capregset);
@@ -73,14 +77,14 @@ riscv_fbsd_nat_target::store_registers (struct regcache *regcache,
 				  &riscv_fbsd_gregset);
   store_register_set<struct fpreg> (regcache, regnum, PT_GETFPREGS,
 				    PT_SETFPREGS, &riscv_fbsd_fpregset);
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   if (riscv_isa_clen (regcache->arch ()) != 0)
     store_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       PT_SETCAPREGS, &riscv_fbsd_capregset);
 #endif
 }
 
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
 /* Implement the read_description method.  */
 
 const struct target_desc *
@@ -92,7 +96,7 @@ riscv_fbsd_nat_target::read_description ()
   features.xlen = sizeof (reg->ra);
   features.flen = sizeof (uint64_t);
   if (have_register_set<struct capreg> (inferior_ptid, PT_GETCAPREGS))
-    features.clen = sizeof (uintcap_t);
+    features.clen = features.xlen * 2;
 
   return riscv_lookup_target_description (features);
 }
