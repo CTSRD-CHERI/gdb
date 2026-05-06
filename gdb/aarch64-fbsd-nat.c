@@ -43,6 +43,10 @@
 #include <unordered_set>
 #endif
 
+#if __has_feature(capabilities) || defined(__HAVE_CAPREG)
+#define	HAVE_CAPREG
+#endif
+
 #ifdef HAVE_DBREG
 struct aarch64_fbsd_nat_target final
   : public aarch64_nat_target<fbsd_nat_target>
@@ -95,7 +99,7 @@ aarch64_fbsd_nat_target::fetch_registers (struct regcache *regcache,
     fetch_regset<uint64_t> (regcache, regnum, NT_ARM_TLS,
 			    &aarch64_fbsd_tls_regset, tdep->tls_regnum_base);
 
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   if (tdep->has_capability ())
     fetch_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       &aarch64_fbsd_capregset,
@@ -121,7 +125,7 @@ aarch64_fbsd_nat_target::store_registers (struct regcache *regcache,
     store_regset<uint64_t> (regcache, regnum, NT_ARM_TLS,
 			    &aarch64_fbsd_tls_regset, tdep->tls_regnum_base);
 
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   if (tdep->has_capability ())
     store_register_set<struct capreg> (regcache, regnum, PT_GETCAPREGS,
 				       PT_SETCAPREGS, &aarch64_fbsd_capregset,
@@ -139,7 +143,7 @@ aarch64_fbsd_nat_target::read_description ()
 
   aarch64_features features;
   features.tls = have_regset (inferior_ptid, NT_ARM_TLS)? 1 : 0;
-#if __has_feature(capabilities)
+#ifdef HAVE_CAPREG
   features.capability = have_register_set<struct capreg> (inferior_ptid,
 							  PT_GETCAPREGS);
 #endif
