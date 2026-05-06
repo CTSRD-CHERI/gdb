@@ -26,6 +26,7 @@
 #include "regset.h"
 #include <osreldate.h>
 #include <sys/proc.h>
+#include <sys/ptrace.h>
 
 #include <list>
 
@@ -122,7 +123,7 @@ public:
 
   bool supports_disable_randomization () override;
 
-#if __has_feature(capabilities)
+#ifdef PIOD_READ_CHERI_CAP
   gdb::byte_vector read_capability (CORE_ADDR addr) override;
   bool write_capability (CORE_ADDR addr,
 			 gdb::array_view<const gdb_byte> buffer) override;

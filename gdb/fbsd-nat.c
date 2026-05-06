@@ -52,14 +52,6 @@
 #define	PT_SETREGSET	43	/* Set a target register set */
 #endif
 
-#ifndef PIOD_READ_CHERI_CAP
-#define	PIOD_READ_CHERI_CAP	7	/* Read CHERI capabilities */
-#endif
-
-#ifndef PIOD_WRITE_CHERI_CAP
-#define	PIOD_WRITE_CHERI_CAP	8	/* Write CHERI capabilities */
-#endif
-
 /* Information stored about each inferior.  */
 struct fbsd_inferior : public private_inferior
 {
@@ -511,7 +503,6 @@ fbsd_nat_target::info_proc (const char *args, enum info_proc_what what)
 
 /* Return the size of siginfo for the current inferior.  */
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
 union sigval64 {
   int sival_int;
@@ -555,10 +546,15 @@ struct siginfo64
     } __spare__;
   } _reason;
 };
-#else
+#elif defined(PT_GETCAPREGS)
+struct alignas(16) chericap_t {
+  uint64_t addr;
+  uint64_t meta;
+};
+
 union sigval_c {
   int sival_int;
-  void * __capability sival_ptr;
+  chericap_t sival_ptr;
 };
 
 struct siginfo_c {
@@ -568,7 +564,7 @@ struct siginfo_c {
   __pid_t si_pid;
   __uid_t si_uid;
   int si_status;
-  void * __capability si_addr;
+  chericap_t si_addr;
   union sigval_c si_value;
   union
   {
@@ -598,9 +594,8 @@ struct siginfo_c {
   } _reason;
 };
 #endif
-#endif
 
-#if defined(__LP64__) || __has_feature(capabilities)
+#if __SIZEOF_LONG__ == 8
 union sigval32 {
   int sival_int;
   uint32_t sival_ptr;
@@ -653,20 +648,17 @@ struct siginfo32
 static size_t
 fbsd_siginfo_size ()
 {
-#if defined(__LP64__) || __has_feature(capabilities)
+#if __SIZEOF_LONG__ == 8
   struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
 
   /* Is the inferior 32-bit?  If so, use the 32-bit siginfo size.  */
   if (gdbarch_long_bit (gdbarch) == 32)
     return sizeof (struct siginfo32);
-#endif
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
   if (gdbarch_ptr_bit (gdbarch) == 64)
     return sizeof (struct siginfo64);
-#else
-  if (gdbarch_ptr_bit (gdbarch)
-      == sizeof(void * __capability) * TARGET_CHAR_BIT)
+#elif defined(PT_GETCAPREGS)
+  if (gdbarch_ptr_bit (gdbarch) == 128)
     return sizeof (struct siginfo_c);
 #endif
 #endif
@@ -677,7 +669,7 @@ fbsd_siginfo_size ()
    that FreeBSD doesn't support writing to $_siginfo, so this only
    needs to convert one way.  */
 
-#if defined(__LP64__) || __has_feature(capabilities)
+#if __SIZEOF_LONG__ == 8
 static void
 fbsd_convert_siginfo32 (siginfo_t *si, struct siginfo32 *si32)
 {
@@ -731,7 +723,6 @@ fbsd_convert_siginfo32 (siginfo_t *si, struct siginfo32 *si32)
 }
 #endif
 
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
 static void
 fbsd_convert_siginfo64 (siginfo_t *si, struct siginfo64 *si64)
@@ -742,12 +733,9 @@ fbsd_convert_siginfo64 (siginfo_t *si, struct siginfo64 *si64)
   si64->si_pid = si->si_pid;
   si64->si_uid = si->si_uid;
   si64->si_status = si->si_status;
-  si64->si_addr = (__cheri_addr uint64_t)si->si_addr;
+  si64->si_addr = (uintptr_t) si->si_addr;
 
-  /* XXX: Just copy the int for now as I'm not sure how a 64-bit
-     sival_ptr is stored in freebsd64.  */
-  si64->si_value.sival_ptr = 0;
-  si64->si_value.sival_int = si->si_value.sival_int;
+  si64->si_value.sival_ptr = (uintptr_t) si->si_value.sival_ptr;
 
   /* Always copy the spare fields and then possibly overwrite them for
      signal-specific or code-specific fields.  */
@@ -775,7 +763,7 @@ fbsd_convert_siginfo64 (siginfo_t *si, struct siginfo64 *si64)
     break;
   }
 }
-#else
+#elif defined(PT_GETCAPREGS)
 static void
 fbsd_convert_siginfo_c (siginfo_t *si, struct siginfo_c *si_c)
 {
@@ -785,12 +773,11 @@ fbsd_convert_siginfo_c (siginfo_t *si, struct siginfo_c *si_c)
   si_c->si_pid = si->si_pid;
   si_c->si_uid = si->si_uid;
   si_c->si_status = si->si_status;
-  si_c->si_addr = (void * __capability)(uintcap_t)si->si_addr;
+  si_c->si_addr.addr = (uintptr_t) si->si_addr;
+  si_c->si_addr.meta = 0;
 
-  /* It doesn't make sense to try to copy a 64-bit sival_ptr to a
-     capability pointer, so just copy the integer always.  */
-  si_c->si_value.sival_ptr = NULL;
-  si_c->si_value.sival_int = si->si_value.sival_int;
+  si_c->si_value.sival_ptr.addr = (uintptr_t) si->si_value.sival_ptr;
+  si_c->si_value.sival_ptr.meta = 0;
 
   /* Always copy the spare fields and then possibly overwrite them for
      signal-specific or code-specific fields.  */
@@ -819,17 +806,14 @@ fbsd_convert_siginfo_c (siginfo_t *si, struct siginfo_c *si_c)
   }
 }
 #endif
-#endif
 
 union siginfo_buffer {
   siginfo_t si;
-#if defined(__LP64__) || __has_feature(capabilities)
+#if __SIZEOF_LONG__ == 8
   struct siginfo32 si32;
-#endif
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
   struct siginfo64 si64;
-#else
+#elif defined(PT_GETCAPREGS)
   struct siginfo_c si_c;
 #endif
 #endif
@@ -838,22 +822,19 @@ union siginfo_buffer {
 static void
 fbsd_convert_siginfo (siginfo_t *si, union siginfo_buffer *dst)
 {
-#if defined(__LP64__) || __has_feature(capabilities)
+#if __SIZEOF_LONG__ == 8
   struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
 
   /* Is the inferior 32-bit?  If so, convert to si32.  */
   if (gdbarch_long_bit (gdbarch) == 32)
     fbsd_convert_siginfo32(si, &dst->si32);
   else
-#endif
-#if __has_feature(capabilities)
 #ifdef __CHERI_PURE_CAPABILITY__
   if (gdbarch_ptr_bit (gdbarch) == 64)
     fbsd_convert_siginfo64(si, &dst->si64);
   else
-#else
-  if (gdbarch_ptr_bit (gdbarch)
-	   == sizeof(void * __capability) * TARGET_CHAR_BIT)
+#elif defined(PT_GETCAPREGS)
+  if (gdbarch_ptr_bit (gdbarch) == 128)
     fbsd_convert_siginfo_c(si, &dst->si_c);
   else
 #endif
@@ -2564,12 +2545,12 @@ fbsd_nat_target::supports_disable_randomization ()
 #endif
 }
 
-#if __has_feature(capabilities)
+#ifdef PIOD_READ_CHERI_CAP
 gdb::byte_vector
 fbsd_nat_target::read_capability (CORE_ADDR addr)
 {
   struct ptrace_io_desc piod;
-  gdb::byte_vector cap_vec (sizeof (uintcap_t) + 1);
+  gdb::byte_vector cap_vec (sizeof (ptraddr_t) * 2 + 1);
 
   piod.piod_op = PIOD_READ_CHERI_CAP;
   piod.piod_offs = (void *) (uintptr_t) addr;
