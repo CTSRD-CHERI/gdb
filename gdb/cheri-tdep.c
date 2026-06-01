@@ -80,7 +80,7 @@ private:
 struct cheritree_state
 {
   std::vector<named_memory_region> regions;
-  region_cache region_cache;
+  ::region_cache region_cache;
   as_ranges ranges;
   bool first = true;
   bool json = false;
