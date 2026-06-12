@@ -1381,7 +1381,25 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 'D': /* RD, floating point.  */
 	case 'd': USE_BITS (OP_MASK_RD, OP_SH_RD); break;
 	case 'y': USE_BITS (OP_MASK_BS,	OP_SH_BS); break;
-	case 'Y': USE_BITS (OP_MASK_RNUM, OP_SH_RNUM); break;
+	case 'Y':
+	  switch (oparg[1])
+	    {
+	    case '\0':
+	    case ',':
+	      USE_BITS (OP_MASK_RNUM, OP_SH_RNUM);
+	      break;
+	    case 'b':
+	      oparg++;
+	      USE_BITS (OP_MASK_YBNDSWIMM, OP_SH_YBNDSWIMM);
+	      break;
+	    case 's':
+	      oparg++;
+	      USE_BITS (OP_MASK_YSHAMT, OP_SH_YSHAMT);
+	      break;
+	    default:
+	      goto unknown_validate_operand;
+	    }
+	  break;
 	case 'Z': /* RS1, CSR number.  */
 	case 'S': /* RS1, floating point.  */
 	case 's': USE_BITS (OP_MASK_RS1, OP_SH_RS1); break;
@@ -3541,16 +3559,56 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      asarg = expr_parse_end;
 	      continue;
 
-	    case 'Y': /* rnum immediate */
+	    case 'Y':
 	      my_getExpression (imm_expr, asarg);
 	      check_absolute_expr (ip, imm_expr, FALSE);
-	      if ((unsigned long)imm_expr->X_add_number > 10)
-		as_bad(_("Improper rnum immediate (%lu)"),
-		       (unsigned long)imm_expr->X_add_number);
-	      INSERT_OPERAND(RNUM, *ip, imm_expr->X_add_number);
-	      imm_expr->X_op = O_absent;
-	      asarg = expr_parse_end;
-	      continue;
+	      if (oparg[1] == '\0' || oparg[1] == ',') /* rnum immediate */
+		{
+		  if ((unsigned long)imm_expr->X_add_number > 10)
+		    as_bad(_("Improper rnum immediate (%lu)"),
+			   (unsigned long)imm_expr->X_add_number);
+		  INSERT_OPERAND(RNUM, *ip, imm_expr->X_add_number);
+		  imm_expr->X_op = O_absent;
+		  asarg = expr_parse_end;
+		  continue;
+		}
+
+	      switch (*++oparg)
+		{
+		case 'b': /* 'Yb': YBDSNWI immediate */
+		  {
+		    int encoded = 0;
+		    if (imm_expr->X_op == O_constant)
+		      {
+			encoded = riscv_encode_ybndsw_imm (imm_expr->X_add_number);
+			if (encoded < 0)
+			  {
+			    as_bad (_("improper immediate value (%"PRIu64")"),
+				    imm_expr->X_add_number);
+			    break;
+			  }
+		      }
+		    INSERT_OPERAND (YBNDSWIMM, *ip, encoded);
+		  }
+		  asarg = expr_parse_end;
+		  continue;
+
+		case 's': /* 'Ys': SRLIY immediate */
+		  if (imm_expr->X_op == O_constant
+		      && (unsigned long) imm_expr->X_add_number != xlen)
+		    {
+		      as_bad (_("improper shift amount (%"PRIu64")"),
+			      imm_expr->X_add_number);
+		      break;
+		    }
+		  INSERT_OPERAND (YSHAMT, *ip, imm_expr->X_add_number);
+		  asarg = expr_parse_end;
+		  continue;
+
+		default:
+		  goto unknown_riscv_ip_operand;
+		}
+	      break;
 
 	    case 'z':
 	      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
