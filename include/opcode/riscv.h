@@ -474,6 +474,9 @@ enum riscv_insn_class
   INSN_CLASS_XVENTANACONDOPS,
   INSN_CLASS_XCHERI,
   INSN_CLASS_XCHERI_AND_A,
+  INSN_CLASS_RVY,
+  INSN_CLASS_RVY_AND_ZBA,
+  INSN_CLASS_RVY_AND_A,
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -616,5 +619,44 @@ extern const float riscv_fli_numval[32];
 extern const struct riscv_opcode riscv_opcodes[];
 extern const struct riscv_opcode riscv_capmode_opcodes[];
 extern const struct riscv_opcode riscv_insn_types[];
+
+static inline int
+riscv_encode_ybndsw_imm (int imm)
+{
+  if (imm == 4096)
+    return 0;
+  if (imm > 0 && imm <= 255)
+    return imm;
+  if (imm >= 256 && imm <= 504 && (imm % 8) == 0)
+    {
+      unsigned multiple = (imm - 256) >> 3;
+      unsigned odd = multiple & 1;
+      unsigned bits3_0 = multiple >> 1;
+      return 256 | (odd << 4) | bits3_0;
+    }
+  if (imm >= 512 && imm <= 4080 && (imm % 16) == 0)
+    return 256 | (imm >> 4);
+
+  return -1;
+}
+
+static inline int
+riscv_decode_ybndsw_imm (unsigned imm)
+{
+  if (imm == 0)
+    return 4096;
+  if (imm <= 255)
+    return imm;
+
+  unsigned imm7_0 = imm & 0xff;
+  if (imm7_0 <= 31)
+    {
+      return 256 + ((imm & 0xf) << 4) + (((imm >> 4) & 1) << 3);
+    }
+  else
+    {
+      return imm7_0 << 4;
+    }
+}
 
 #endif /* _RISCV_H_ */
