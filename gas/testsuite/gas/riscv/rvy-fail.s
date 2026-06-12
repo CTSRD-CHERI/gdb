@@ -1,0 +1,15 @@
+	srliy	gp, ra, 0
+	srliy	gp, ra, 1
+	srliy	gp, ra, 63
+	srliy	gp, ra, 127
+	srliy	gp, ra, -1
+	ybndswi	gp, ra, 0
+	ybndswi	gp, ra, -1
+	ybndswi	gp, ra, 260
+	ybndswi	gp, ra, 505
+	ybndswi	gp, ra, 511
+	ybndswi	gp, ra, 513
+	ybndswi	gp, ra, 4081
+	ybndswi	gp, ra, 4097
+	srliy	gp, ra, symbol
+	ybndswi	gp, ra, symbol

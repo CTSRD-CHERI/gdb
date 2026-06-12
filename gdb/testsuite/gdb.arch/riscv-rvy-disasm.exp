@@ -1,0 +1,41 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test RISC-V RVY disassembly support.
+
+require {istarget "riscv*-*-*"}
+
+standard_testfile riscv-rvy-disasm.S
+
+set srcfilepath [file join $srcdir $subdir $srcfile]
+set objfile [standard_output_file ${testfile}.o]
+if {[gdb_compile $srcfilepath $objfile object {debug}] != ""} {
+    untested "failed to compile"
+    return -1
+}
+
+clean_restart $objfile
+
+gdb_test "disassemble main" \
+    [multi_line \
+	 "Dump of assembler code for function main:" \
+	 "   $hex <\\+0>:\[ \t\]*yadd\[ \t\]*gp,ra,sp" \
+	 "   $hex <\\+4>:\[ \t\]*yhir\[ \t\]*gp,ra" \
+	 "   $hex <\\+8>:\[ \t\]*ybndswi\[ \t\]*gp,ra,4096" \
+	 "   $hex <\\+12>:\[ \t\]*ybndswi\[ \t\]*gp,ra,256" \
+	 "   $hex <\\+16>:\[ \t\]*addi\[ \t\]*ra,ra,1" \
+	 "   $hex <\\+20>:\[ \t\]*ret" \
+	 "End of assembler dump\\."] \
+    "disassemble RVY instructions"
