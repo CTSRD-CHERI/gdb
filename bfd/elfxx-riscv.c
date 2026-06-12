@@ -1094,6 +1094,7 @@ struct riscv_implicit_subset
 };
 static struct riscv_implicit_subset riscv_implicit_subsets[] =
 {
+  {"y", "i",		check_implicit_always},
   {"e", "i",		check_implicit_always},
   {"i", "zicsr",	check_implicit_for_i},
   {"i", "zifencei",	check_implicit_for_i},
@@ -1214,6 +1215,7 @@ struct riscv_supported_ext
 
 static struct riscv_supported_ext riscv_supported_std_ext[] =
 {
+  {"y",		ISA_SPEC_CLASS_DRAFT,		0, 9, 0 },
   {"e",		ISA_SPEC_CLASS_20191213,	1, 9, 0 },
   {"e",		ISA_SPEC_CLASS_20190608,	1, 9, 0 },
   {"e",		ISA_SPEC_CLASS_2P2,		1, 9, 0 },
@@ -1464,7 +1466,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnh";
+static const char riscv_ext_canonical_order[] = "yeigmafdqlcbkjtpvnh";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
@@ -1786,11 +1788,11 @@ riscv_parse_extensions (riscv_parse_subset_t *rps,
 			const char *arch,
 			const char *p)
 {
-  /* First letter must start with i, e or g.  */
-  if (*p != 'e' && *p != 'i' && *p != 'g')
+  /* First letter must start with i, e, g or y.  */
+  if (*p != 'e' && *p != 'i' && *p != 'g' && *p != 'y')
     {
       rps->error_handler
-	(_("%s: first ISA extension must be `e', `i' or `g'"),
+	(_("%s: first ISA extension must be `e', `i', `g' or `y'"),
 	 arch);
       return NULL;
     }
@@ -2160,9 +2162,10 @@ riscv_arch_str1 (riscv_subset_t *subset,
   if (subset_t == NULL)
     return;
 
-  /* No underline between rvXX and i/e.  */
+  /* No underline between rvXX and i/e/y.  */
   if ((strcasecmp (subset_t->name, "i") == 0)
-      || (strcasecmp (subset_t->name, "e") == 0))
+      || (strcasecmp (subset_t->name, "e") == 0)
+      || (strcasecmp (subset_t->name, "y") == 0))
     underline = "";
 
   snprintf (buf, bufsz, "%s%s%dp%d",
@@ -2176,7 +2179,8 @@ riscv_arch_str1 (riscv_subset_t *subset,
   /* Skip 'i' extension after 'e', or skip extensions which
      versions are unknown.  */
   while (subset_t->next
-	 && ((strcmp (subset_t->name, "e") == 0
+	 && (((strcmp (subset_t->name, "e") == 0
+	       || strcmp (subset_t->name, "y") == 0)
 	      && strcmp (subset_t->next->name, "i") == 0)
 	     || subset_t->next->major_version == RISCV_UNKNOWN_VERSION
 	     || subset_t->next->minor_version == RISCV_UNKNOWN_VERSION))
@@ -2583,6 +2587,14 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_XCHERI_AND_A:
       return (riscv_subset_supports (rps, "xcheri")
 	      && riscv_subset_supports (rps, "a"));
+    case INSN_CLASS_RVY:
+      return riscv_subset_supports (rps, "y");
+    case INSN_CLASS_RVY_AND_ZBA:
+      return (riscv_subset_supports (rps, "y")
+	      && riscv_subset_supports (rps, "zba"));
+    case INSN_CLASS_RVY_AND_A:
+      return (riscv_subset_supports (rps, "y")
+	      && riscv_subset_supports (rps, "a"));
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2829,6 +2841,24 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
 	return _("xcheri' and `a'");
       else if (!riscv_subset_supports (rps, "xcheri"))
 	return "xcheri";
+      else
+	return "a";
+    case INSN_CLASS_RVY:
+      return "y";
+    case INSN_CLASS_RVY_AND_ZBA:
+      if (!riscv_subset_supports (rps, "y")
+	  && !riscv_subset_supports (rps, "zba"))
+	return _("y' and `zba'");
+      else if (!riscv_subset_supports (rps, "y"))
+	return "y";
+      else
+	return "zba";
+    case INSN_CLASS_RVY_AND_A:
+      if (!riscv_subset_supports (rps, "y")
+	  && !riscv_subset_supports (rps, "a"))
+	return _("y' and `a'");
+      else if (!riscv_subset_supports (rps, "y"))
+	return "y";
       else
 	return "a";
     default:
