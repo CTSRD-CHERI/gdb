@@ -583,8 +583,25 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	  }
 
 	case 'Y':
-	  print (info->stream, dis_style_immediate, "0x%x",
-		 EXTRACT_OPERAND (RNUM, l));
+	  if (oparg[1] == '\0')
+	    {
+	      print (info->stream, dis_style_immediate, "0x%x",
+		     EXTRACT_OPERAND (RNUM, l));
+	    }
+	  else if (oparg[1] == 'b')
+	    {
+	      oparg++;
+	      print (info->stream, dis_style_immediate, "%d",
+		     riscv_decode_ybndsw_imm (EXTRACT_OPERAND (YBNDSWIMM, l)));
+	    }
+	  else if (oparg[1] == 's')
+	    {
+	      oparg++;
+	      print (info->stream, dis_style_immediate, "%d",
+		     (int) EXTRACT_OPERAND (YSHAMT, l));
+	    }
+	  else
+	    goto undefined_modifier;
 	  break;
 
 	case 'Z':

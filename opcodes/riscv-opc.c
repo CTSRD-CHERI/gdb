@@ -209,6 +209,12 @@ match_rd_nonzero (const struct riscv_opcode *op, insn_t insn)
 }
 
 static int
+match_rs1_nonzero (const struct riscv_opcode *op, insn_t insn)
+{
+  return match_opcode (op, insn) && ((insn & MASK_RS1) != 0);
+}
+
+static int
 match_c_add (const struct riscv_opcode *op, insn_t insn)
 {
   return match_rd_nonzero (op, insn) && ((insn & MASK_CRS2) != 0);
@@ -2381,6 +2387,60 @@ const struct riscv_opcode riscv_opcodes[] =
 {"amoswap.c.rl",   64, INSN_CLASS_XCHERI_AND_A, "XCd,t,0(s)", MATCH_AMOSWAP_Q | MASK_RL, MASK_AMOSWAP_Q | MASK_AQRL, match_opcode, INSN_DREF|INSN_16_BYTE },
 {"amoswap.c.aqrl", 32, INSN_CLASS_XCHERI_AND_A, "XCd,t,0(s)", MATCH_AMOSWAP_D | MASK_AQRL, MASK_AMOSWAP_D | MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"amoswap.c.aqrl", 64, INSN_CLASS_XCHERI_AND_A, "XCd,t,0(s)", MATCH_AMOSWAP_Q | MASK_AQRL, MASK_AMOSWAP_Q | MASK_AQRL, match_opcode, INSN_DREF|INSN_16_BYTE },
+
+/* RVY extension instructions.  */
+{"packy",       0, INSN_CLASS_RVY, "d,s,t", MATCH_PACKY, MASK_PACKY, match_opcode, 0},
+{"ymv",         0, INSN_CLASS_RVY, "d,s", MATCH_YMV, MASK_YMV, match_opcode, INSN_ALIAS},
+{"yadd",        0, INSN_CLASS_RVY, "d,s,t", MATCH_YADD, MASK_YADD, match_opcode, 0},
+{"yaddrw",      0, INSN_CLASS_RVY, "d,s,t", MATCH_YADDRW, MASK_YADDRW, match_opcode, 0},
+{"ypermc",      0, INSN_CLASS_RVY, "d,s,t", MATCH_YPERMC, MASK_YPERMC, match_opcode, 0},
+{"ybndsw",      0, INSN_CLASS_RVY, "d,s,t", MATCH_YBNDSW, MASK_YBNDSW, match_opcode, 0},
+{"ybndsrw",     0, INSN_CLASS_RVY, "d,s,t", MATCH_YBNDSRW, MASK_YBNDSRW, match_opcode, 0},
+{"ymodeswy",    0, INSN_CLASS_RVY, "", MATCH_YMODESWY, MASK_YMODESWY, match_opcode, 0},
+{"ymodeswi",    0, INSN_CLASS_RVY, "", MATCH_YMODESWI, MASK_YMODESWI, match_opcode, 0},
+{"ymodew",      0, INSN_CLASS_RVY, "d,s,t", MATCH_YMODEW, MASK_YMODEW, match_rd_nonzero, 0},
+{"ysh1add",     0, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH1ADD, MASK_YSH1ADD, match_opcode, 0},
+{"ysh2add",     0, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH2ADD, MASK_YSH2ADD, match_opcode, 0},
+{"ysh3add",     0, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH3ADD, MASK_YSH3ADD, match_opcode, 0},
+{"ysh4add",    64, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH4ADD, MASK_YSH4ADD, match_opcode, 0},
+{"ysh1add.uw", 64, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH1ADD_UW, MASK_YSH1ADD_UW, match_opcode, 0},
+{"ysh2add.uw", 64, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH2ADD_UW, MASK_YSH2ADD_UW, match_opcode, 0},
+{"ysh3add.uw", 64, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH3ADD_UW, MASK_YSH3ADD_UW, match_opcode, 0},
+{"ysh4add.uw", 64, INSN_CLASS_RVY_AND_ZBA, "d,s,t", MATCH_YSH4ADD_UW, MASK_YSH4ADD_UW, match_opcode, 0},
+{"yeq",         0, INSN_CLASS_RVY, "d,s,t", MATCH_YEQ, MASK_YEQ, match_opcode, 0},
+{"yss",         0, INSN_CLASS_RVY, "d,s,t", MATCH_YSS, MASK_YSS, match_opcode, 0},
+{"ysunseal",    0, INSN_CLASS_RVY, "d,s,t", MATCH_YSUNSEAL, MASK_YSUNSEAL, match_opcode, 0},
+{"ybld",        0, INSN_CLASS_RVY, "d,s,t", MATCH_YBLD, MASK_YBLD, match_opcode, 0},
+{"yamask",      0, INSN_CLASS_RVY, "d,s", MATCH_YAMASK, MASK_YAMASK, match_opcode, 0},
+{"ybaser",      0, INSN_CLASS_RVY, "d,s", MATCH_YBASER, MASK_YBASER, match_opcode, 0},
+{"ypermr",      0, INSN_CLASS_RVY, "d,s", MATCH_YPERMR, MASK_YPERMR, match_opcode, 0},
+{"ytopr",       0, INSN_CLASS_RVY, "d,s", MATCH_YTOPR, MASK_YTOPR, match_opcode, 0},
+{"ylenr",       0, INSN_CLASS_RVY, "d,s", MATCH_YLENR, MASK_YLENR, match_opcode, 0},
+{"ytagr",       0, INSN_CLASS_RVY, "d,s", MATCH_YTAGR, MASK_YTAGR, match_opcode, 0},
+{"ytyper",      0, INSN_CLASS_RVY, "d,s", MATCH_YTYPER, MASK_YTYPER, match_opcode, 0},
+{"ymoder",      0, INSN_CLASS_RVY, "d,s", MATCH_YMODER, MASK_YMODER, match_opcode, 0},
+{"ysentry",     0, INSN_CLASS_RVY, "d,s", MATCH_YSENTRY, MASK_YSENTRY, match_opcode, 0},
+{"yaddi",       0, INSN_CLASS_RVY, "d,s,j", MATCH_YADDI, MASK_YADDI, match_opcode, 0},
+{"ly",         32, INSN_CLASS_RVY, "d,o(s)", MATCH_LY, MASK_LY, match_rs1_nonzero, INSN_DREF|INSN_8_BYTE},
+{"ly",         64, INSN_CLASS_RVY, "d,o(s)", MATCH_LY, MASK_LY, match_rs1_nonzero, INSN_DREF|INSN_16_BYTE},
+{"sy",         32, INSN_CLASS_RVY, "t,q(s)", MATCH_SY, MASK_SY, match_rs1_nonzero, INSN_DREF|INSN_8_BYTE},
+{"sy",         64, INSN_CLASS_RVY, "t,q(s)", MATCH_SY, MASK_SY, match_rs1_nonzero, INSN_DREF|INSN_16_BYTE},
+{"lr.y",        0, INSN_CLASS_RVY_AND_A, "d,0(s)", MATCH_LR_Y, MASK_LR_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"lr.y.aq",     0, INSN_CLASS_RVY_AND_A, "d,0(s)", MATCH_LR_Y|MASK_AQ, MASK_LR_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"lr.y.rl",     0, INSN_CLASS_RVY_AND_A, "d,0(s)", MATCH_LR_Y|MASK_RL, MASK_LR_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"lr.y.aqrl",   0, INSN_CLASS_RVY_AND_A, "d,0(s)", MATCH_LR_Y|MASK_AQRL, MASK_LR_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"sc.y",        0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_SC_Y, MASK_SC_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"sc.y.aq",     0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_SC_Y|MASK_AQ, MASK_SC_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"sc.y.rl",     0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_SC_Y|MASK_RL, MASK_SC_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"sc.y.aqrl",   0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_SC_Y|MASK_AQRL, MASK_SC_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"amoswap.y",      0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_AMOSWAP_Y, MASK_AMOSWAP_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"amoswap.y.aq",   0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_AMOSWAP_Y|MASK_AQ, MASK_AMOSWAP_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"amoswap.y.rl",   0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_AMOSWAP_Y|MASK_RL, MASK_AMOSWAP_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"amoswap.y.aqrl", 0, INSN_CLASS_RVY_AND_A, "d,t,0(s)", MATCH_AMOSWAP_Y|MASK_AQRL, MASK_AMOSWAP_Y|MASK_AQRL, match_rs1_nonzero, INSN_DREF},
+{"yhir",       64, INSN_CLASS_RVY, "d,s", MATCH_YHIR_RV64, MASK_YHIR_RV64, match_opcode, INSN_ALIAS},
+{"yhir",       32, INSN_CLASS_RVY, "d,s", MATCH_YHIR_RV32, MASK_YHIR_RV32, match_opcode, INSN_ALIAS},
+{"srliy",       0, INSN_CLASS_RVY, "d,s,Ys", MATCH_SRLIY, MASK_SRLIY, match_opcode, 0},
+{"ybndswi",     0, INSN_CLASS_RVY, "d,s,Yb", MATCH_YBNDSWI, MASK_YBNDSWI, match_opcode, 0},
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}
