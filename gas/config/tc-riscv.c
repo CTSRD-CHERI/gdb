@@ -1464,6 +1464,62 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 'X': /* Vendor-specific operands.  */
 	  switch (*++oparg)
 	    {
+	    case 'C': /* CHERI operands.  */
+	      switch (*++oparg)
+		{
+		case 'C': /* CHERI RVC operands.  */
+		  switch (*++oparg)
+		    {
+		    case 's':
+		    case 'w':
+		      USE_BITS (OP_MASK_CRS1S, OP_SH_CRS1S);
+		      break;
+		    case 't':
+		    case 'x':
+		      USE_BITS (OP_MASK_CRS2S, OP_SH_CRS2S);
+		      break;
+		    case 'c':
+		      break;
+		    case 'V':
+		      USE_BITS (OP_MASK_CRS2, OP_SH_CRS2);
+		      break;
+		    default:
+		      goto unknown_validate_operand;
+		    }
+		  break;
+
+		case 's':
+		  USE_BITS (OP_MASK_RS1, OP_SH_RS1);
+		  break;
+		case 't':
+		  USE_BITS (OP_MASK_RS2, OP_SH_RS2);
+		  break;
+		case 'd':
+		  USE_BITS (OP_MASK_RD, OP_SH_RD);
+		  break;
+		case 'D':
+		  switch (*++oparg)
+		    {
+		    case 's':
+		      USE_BITS (OP_MASK_RS1, OP_SH_RS1);
+		      break;
+		    case 't':
+		      USE_BITS (OP_MASK_RS2, OP_SH_RS2);
+		      break;
+		    default:
+		      goto unknown_validate_operand;
+		    }
+		  break;
+		case 'E':
+		  USE_BITS (OP_MASK_SCR, OP_SH_SCR);
+		  break;
+		case 'I':
+		  USE_BITS (OP_MASK_IMM16, OP_SH_IMM16);
+		  break;
+		default:
+		  goto unknown_validate_operand;
+		}
+	      break;
 	    case 't': /* Vendor-specific (T-head) operands.  */
 	      {
 		size_t n;
@@ -3609,6 +3665,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    case 'X': /* Vendor-specific operands.  */
 	      switch (*++oparg)
 		{
+		case 'C': /* CHERI operands.  */
+		  error.msg = _("CHERI instructions are only supported for disassembly");
+		  break;
+
 		case 't': /* Vendor-specific (T-head) operands.  */
 		  {
 		    size_t n;
