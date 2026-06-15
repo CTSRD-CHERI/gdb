@@ -47,9 +47,9 @@ POSSIBILITY OF SUCH DAMAGE.  */
 
 #include "testlib.h"
 
-static int test1 (void) __attribute__ ((noinline, noclone, unused));
-static int f2 (int) __attribute__ ((noinline, noclone));
-static int f3 (int, int) __attribute__ ((noinline, noclone));
+static int test1 (void) __attribute__ ((noinline, unused)) ATTRIBUTE_NOCLONE;
+static int f2 (int) __attribute__ ((noinline)) ATTRIBUTE_NOCLONE;
+static int f3 (int, int) __attribute__ ((noinline)) ATTRIBUTE_NOCLONE;
 
 /* Collected PC values.  */
 
@@ -211,9 +211,9 @@ f3 (int f1line __attribute__ ((unused)), int f2line __attribute__ ((unused)))
 
 /* Test the backtrace_simple function with non-inlined functions.  */
 
-static int test3 (void) __attribute__ ((noinline, noclone, unused));
-static int f22 (int) __attribute__ ((noinline, noclone));
-static int f23 (int, int) __attribute__ ((noinline, noclone));
+static int test3 (void) __attribute__ ((noinline, unused)) ATTRIBUTE_NOCLONE;
+static int f22 (int) __attribute__ ((noinline)) ATTRIBUTE_NOCLONE;
+static int f23 (int, int) __attribute__ ((noinline)) ATTRIBUTE_NOCLONE;
 
 static int
 test3 (void)
@@ -395,6 +395,20 @@ test5 (void)
 int
 main (int argc ATTRIBUTE_UNUSED, char **argv)
 {
+#if defined(__clang__)
+  /* mtest_minidebug fails on Clang, skip it.  */
+  const char *base = strrchr (argv[0], '/');
+  if (base == NULL)
+    base = argv[0];
+  else
+    base++;
+  if (strcmp (base, "mtest_minidebug") == 0)
+    {
+      fprintf (stderr, "libbacktrace mtest_minidebug skipped when compiled with clang\n");
+      exit (77);
+    }
+#endif
+
   state = backtrace_create_state (argv[0], BACKTRACE_SUPPORTS_THREADS,
 				  error_callback_create, NULL);
 

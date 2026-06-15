@@ -48,6 +48,26 @@ POSSIBILITY OF SUCH DAMAGE.  */
 # define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
 #endif
 
+#if defined(__has_attribute)
+# if __has_attribute(noclone)
+#  define ATTRIBUTE_NOCLONE __attribute__((noclone))
+# elif __has_attribute(optnone)
+/* GCC's noclone attribute prevents the compiler from creating specialized
+	 clones of a function (which would change its name in the backtrace).
+	 Since Clang does not support noclone, we can approximate it with optnone.
+	 This is a big hammer because it disables all optimizations for the function
+	 (preventing cloning, inlining, etc.), but Clang lacks a more fine-grained
+	 alternative. This is safe as we only need to preserve the exact function
+	 name in backtrace test cases. */
+#  define ATTRIBUTE_NOCLONE __attribute__((optnone))
+# else
+#  error "No attribute to prevent cloning/optimization available"
+# endif
+#else
+/* __has_attribute not defined. Assume we are using GCC, so it must exist */
+# define ATTRIBUTE_NOCLONE __attribute__((noclone))
+#endif
+
 /* Used to collect backtrace info.  */
 
 struct info
