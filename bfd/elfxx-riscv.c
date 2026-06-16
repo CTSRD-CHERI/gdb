@@ -2826,7 +2826,7 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
     case INSN_CLASS_XCHERI_AND_A:
       if (!riscv_subset_supports (rps, "xcheri")
 	  && !riscv_subset_supports (rps, "a"))
-	return "xcheri' and `a";
+	return _("xcheri' and `a'");
       else if (!riscv_subset_supports (rps, "xcheri"))
 	return "xcheri";
       else
