@@ -422,6 +422,7 @@ riscv_set_abi_by_arch (void)
 
 /* Handle of the OPCODE hash table.  */
 static htab_t op_hash = NULL;
+static htab_t capmode_op_hash = NULL;
 
 /* Handle of the type of .insn hash table.  */
 static htab_t insn_type_hash = NULL;
@@ -1647,6 +1648,7 @@ md_begin (void)
     as_warn (_("could not set architecture and machine"));
 
   op_hash = init_opcode_hash (riscv_opcodes, false);
+  capmode_op_hash = init_opcode_hash (riscv_capmode_opcodes, false);
   insn_type_hash = init_opcode_hash (riscv_insn_types, true);
 
   reg_names_hash = str_htab_create ();
@@ -3904,8 +3906,22 @@ md_assemble (char *str)
 
   riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
-  const struct riscv_ip_error error = riscv_ip (str, &insn, &imm_expr,
-						&imm_reloc, op_hash);
+  struct riscv_ip_error error;
+  /* If we are using a pure-capability ABI, first try to match instructions
+     defined in the capmode-only opcode table. If that fails (either because
+     the instruction is not in the capmode table, or because the operands
+     didn't match), fall back to the standard opcode table.  */
+  if (purecap_abi)
+    {
+      error = riscv_ip (str, &insn, &imm_expr, &imm_reloc, capmode_op_hash);
+      if (error.msg)
+	{
+	  imm_reloc = BFD_RELOC_UNUSED;
+	  error = riscv_ip (str, &insn, &imm_expr, &imm_reloc, op_hash);
+	}
+    }
+  else
+    error = riscv_ip (str, &insn, &imm_expr, &imm_reloc, op_hash);
 
   if (error.msg)
     {
