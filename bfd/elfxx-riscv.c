@@ -1986,6 +1986,13 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
 	(_("`zfinx' is conflict with the `f/d/q/zfh/zfhmin' extension"));
       no_conflict = false;
     }
+  if (riscv_subset_supports (rps, "xcheri")
+      && riscv_subset_supports (rps, "y"))
+    {
+      rps->error_handler
+	(_("`xcheri' conflicts with the `y' base ISA"));
+      no_conflict = false;
+    }
 
   bool support_zve = false;
   bool support_zvl = false;

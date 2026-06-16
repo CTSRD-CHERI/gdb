@@ -350,14 +350,18 @@ riscv_set_arch (const char *s)
 /* Indicate -mabi option is explictly set.  */
 static bool explicit_mabi = false;
 
+/* Indicate pure-capability ABI is selected.  */
+static bool purecap_abi = false;
+
 /* Set the abi information.  */
 
 static void
-riscv_set_abi (unsigned new_xlen, enum float_abi new_float_abi, bool rve)
+riscv_set_abi (unsigned new_xlen, enum float_abi new_float_abi, bool rve, bool purecap)
 {
   abi_xlen = new_xlen;
   float_abi = new_float_abi;
   rve_abi = rve;
+  purecap_abi = purecap;
 }
 
 /* If the -mabi option isn't set, then set the abi according to the
@@ -368,14 +372,15 @@ riscv_set_abi_by_arch (void)
 {
   if (!explicit_mabi)
     {
+      bool purecap = riscv_subset_supports (&riscv_rps_as, "y");
       if (riscv_subset_supports (&riscv_rps_as, "q"))
-	riscv_set_abi (xlen, FLOAT_ABI_QUAD, false);
+	riscv_set_abi (xlen, FLOAT_ABI_QUAD, false, purecap);
       else if (riscv_subset_supports (&riscv_rps_as, "d"))
-	riscv_set_abi (xlen, FLOAT_ABI_DOUBLE, false);
+	riscv_set_abi (xlen, FLOAT_ABI_DOUBLE, false, purecap);
       else if (riscv_subset_supports (&riscv_rps_as, "e"))
-	riscv_set_abi (xlen, FLOAT_ABI_SOFT, true);
+	riscv_set_abi (xlen, FLOAT_ABI_SOFT, true, purecap);
       else
-	riscv_set_abi (xlen, FLOAT_ABI_SOFT, false);
+	riscv_set_abi (xlen, FLOAT_ABI_SOFT, false, purecap);
     }
   else
     {
@@ -387,6 +392,11 @@ riscv_set_abi_by_arch (void)
 
       if (riscv_subset_supports (&riscv_rps_as, "e") && !rve_abi)
 	as_bad ("only the ilp32e ABI is supported for e extension");
+
+      if (purecap_abi
+	  && !riscv_subset_supports (&riscv_rps_as, "xcheri")
+	  && !riscv_subset_supports (&riscv_rps_as, "y"))
+	as_bad ("pure-capability ABIs require the xcheri or y extension");
 
       if (float_abi == FLOAT_ABI_SINGLE
 	  && !riscv_subset_supports (&riscv_rps_as, "f"))
@@ -3872,23 +3882,39 @@ md_parse_option (int c, const char *arg)
 
     case OPTION_MABI:
       if (strcmp (arg, "ilp32") == 0)
-	riscv_set_abi (32, FLOAT_ABI_SOFT, false);
+	riscv_set_abi (32, FLOAT_ABI_SOFT, false, false);
       else if (strcmp (arg, "ilp32e") == 0)
-	riscv_set_abi (32, FLOAT_ABI_SOFT, true);
+	riscv_set_abi (32, FLOAT_ABI_SOFT, true, false);
       else if (strcmp (arg, "ilp32f") == 0)
-	riscv_set_abi (32, FLOAT_ABI_SINGLE, false);
+	riscv_set_abi (32, FLOAT_ABI_SINGLE, false, false);
       else if (strcmp (arg, "ilp32d") == 0)
-	riscv_set_abi (32, FLOAT_ABI_DOUBLE, false);
+	riscv_set_abi (32, FLOAT_ABI_DOUBLE, false, false);
       else if (strcmp (arg, "ilp32q") == 0)
-	riscv_set_abi (32, FLOAT_ABI_QUAD, false);
+	riscv_set_abi (32, FLOAT_ABI_QUAD, false, false);
       else if (strcmp (arg, "lp64") == 0)
-	riscv_set_abi (64, FLOAT_ABI_SOFT, false);
+	riscv_set_abi (64, FLOAT_ABI_SOFT, false, false);
       else if (strcmp (arg, "lp64f") == 0)
-	riscv_set_abi (64, FLOAT_ABI_SINGLE, false);
+	riscv_set_abi (64, FLOAT_ABI_SINGLE, false, false);
       else if (strcmp (arg, "lp64d") == 0)
-	riscv_set_abi (64, FLOAT_ABI_DOUBLE, false);
+	riscv_set_abi (64, FLOAT_ABI_DOUBLE, false, false);
       else if (strcmp (arg, "lp64q") == 0)
-	riscv_set_abi (64, FLOAT_ABI_QUAD, false);
+	riscv_set_abi (64, FLOAT_ABI_QUAD, false, false);
+      else if (strcmp (arg, "il32pc64") == 0)
+	riscv_set_abi (32, FLOAT_ABI_SOFT, false, true);
+      else if (strcmp (arg, "il32pc64e") == 0)
+	riscv_set_abi (32, FLOAT_ABI_SOFT, true, true);
+      else if (strcmp (arg, "il32pc64f") == 0)
+	riscv_set_abi (32, FLOAT_ABI_SINGLE, false, true);
+      else if (strcmp (arg, "il32pc64d") == 0)
+	riscv_set_abi (32, FLOAT_ABI_DOUBLE, false, true);
+      else if (strcmp (arg, "l64pc128") == 0)
+	riscv_set_abi (64, FLOAT_ABI_SOFT, false, true);
+      else if (strcmp (arg, "l64pc128f") == 0)
+	riscv_set_abi (64, FLOAT_ABI_SINGLE, false, true);
+      else if (strcmp (arg, "l64pc128d") == 0)
+	riscv_set_abi (64, FLOAT_ABI_DOUBLE, false, true);
+      else if (strcmp (arg, "l64pc128q") == 0)
+	riscv_set_abi (64, FLOAT_ABI_QUAD, false, true);
       else
 	return 0;
       explicit_mabi = true;
@@ -4813,6 +4839,13 @@ void
 riscv_elf_final_processing (void)
 {
   riscv_set_abi_by_arch ();
+  if (purecap_abi)
+    {
+      if (riscv_subset_supports (&riscv_rps_as, "y"))
+	elf_flags |= EF_RISCV_RVY;
+      else if (riscv_subset_supports (&riscv_rps_as, "xcheri"))
+	elf_flags |= EF_RISCV_CAPMODE;
+    }
   riscv_release_subset_list (riscv_rps_as.subset_list);
   elf_elfheader (stdoutput)->e_flags |= elf_flags;
 }
