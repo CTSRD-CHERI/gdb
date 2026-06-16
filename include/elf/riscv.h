@@ -133,6 +133,11 @@ END_RELOC_NUMBERS (R_RISCV_max)
 /* File uses the TSO model. */
 #define EF_RISCV_TSO 0x0010
 
+/* File uses the pure-capability RVY ABI.  */
+#define EF_RISCV_RVY 0x00000040
+
+#define EF_RISCV_IS_CAPMODE(flags) ((flags) & (EF_RISCV_CAPMODE | EF_RISCV_RVY))
+
 /* Additional section types.  */
 #define SHT_RISCV_ATTRIBUTES 0x70000003 /* Section holds attributes.  */
 

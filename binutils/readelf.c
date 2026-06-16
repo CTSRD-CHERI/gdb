@@ -4217,6 +4217,9 @@ decode_RISCV_machine_flags (char *out, unsigned e_flags)
 
   if (e_flags & EF_RISCV_CAPMODE)
     out = stpcpy (out, ", capmode");
+
+  if (e_flags & EF_RISCV_RVY)
+    out = stpcpy (out, ", RVY");
   return out;
 }
 

@@ -4073,6 +4073,14 @@ _bfd_riscv_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
       goto fail;
     }
 
+  /* Disallow linking RVY and non-RVY.  */
+  if ((old_flags ^ new_flags) & EF_RISCV_RVY)
+    {
+      (*_bfd_error_handler)
+       (_("%pB: can't link RVY (pure-capability) modules with other modules"), ibfd);
+      goto fail;
+    }
+
   /* Allow linking RVC and non-RVC, and keep the RVC flag.  */
   elf_elfheader (obfd)->e_flags |= new_flags & EF_RISCV_RVC;
 

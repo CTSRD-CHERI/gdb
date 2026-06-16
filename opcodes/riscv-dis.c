@@ -1312,7 +1312,7 @@ riscv_get_disassembler (bfd *abfd)
 	  default_arch = attr[Tag_RISCV_arch].s;
 	}
 
-      if (elf_elfheader (abfd)->e_flags & EF_RISCV_CAPMODE)
+      if (EF_RISCV_IS_CAPMODE (elf_elfheader (abfd)->e_flags))
 	capmode = true;
     }
 
