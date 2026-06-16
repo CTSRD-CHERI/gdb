@@ -2594,6 +2594,10 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_XCHERI_AND_A:
       return (riscv_subset_supports (rps, "xcheri")
 	      && riscv_subset_supports (rps, "a"));
+    case INSN_CLASS_XCHERI_AND_C:
+      return (riscv_subset_supports (rps, "xcheri")
+	      && (riscv_subset_supports (rps, "c")
+		  || riscv_subset_supports (rps, "zca")));
     case INSN_CLASS_RVY:
       return riscv_subset_supports (rps, "y");
     case INSN_CLASS_RVY_AND_ZBA:
@@ -2850,6 +2854,15 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
 	return "xcheri";
       else
 	return "a";
+    case INSN_CLASS_XCHERI_AND_C:
+      if (!riscv_subset_supports (rps, "xcheri")
+	  && !riscv_subset_supports (rps, "c")
+	  && !riscv_subset_supports (rps, "zca"))
+	return _("xcheri' and `c' or `zca'");
+      else if (!riscv_subset_supports (rps, "xcheri"))
+	return "xcheri";
+      else
+	return "c";
     case INSN_CLASS_RVY:
       return "y";
     case INSN_CLASS_RVY_AND_ZBA:
