@@ -1762,7 +1762,7 @@ riscv_parsing_subset_version (const char *p,
       if (major_p)
 	{
 	  *major_version = version;
-	  minor_version = 0;
+	  *minor_version = 0;
 	}
       else
 	*minor_version = version;
