@@ -2598,6 +2598,20 @@ const struct riscv_opcode riscv_capmode_opcodes[] =
 /* CHERI */
 
 /* Memory-Access Instructions */
+{"ly",         32, INSN_CLASS_RVY, "d,o(s)", MATCH_LY, MASK_LY, match_rs1_nonzero, INSN_DREF|INSN_8_BYTE},
+{"ly",         64, INSN_CLASS_RVY, "d,o(s)", MATCH_LY, MASK_LY, match_rs1_nonzero, INSN_DREF|INSN_16_BYTE},
+{"ly",        32, INSN_CLASS_RVY_AND_C, "d,Cn(Cc)",  MATCH_C_FLWSP, MASK_C_FLWSP, match_rd_nonzero, INSN_ALIAS|INSN_DREF|INSN_8_BYTE},
+{"ly",        32, INSN_CLASS_RVY_AND_C, "Ct,Cl(Cs)", MATCH_C_FLW,   MASK_C_FLW,   match_opcode,     INSN_ALIAS|INSN_DREF|INSN_8_BYTE},
+{"ly",        64, INSN_CLASS_RVY_AND_C, "d,Cq(Cc)",  MATCH_C_FLDSP, MASK_C_FLDSP, match_rd_nonzero, INSN_ALIAS|INSN_DREF|INSN_16_BYTE},
+{"ly",        64, INSN_CLASS_RVY_AND_C, "Ct,Cy(Cs)", MATCH_C_FLD,   MASK_C_FLD,   match_opcode,     INSN_ALIAS|INSN_DREF|INSN_16_BYTE},
+
+{"sy",         32, INSN_CLASS_RVY, "t,q(s)", MATCH_SY, MASK_SY, match_rs1_nonzero, INSN_DREF|INSN_8_BYTE},
+{"sy",         64, INSN_CLASS_RVY, "t,q(s)", MATCH_SY, MASK_SY, match_rs1_nonzero, INSN_DREF|INSN_16_BYTE},
+{"sy",        32, INSN_CLASS_RVY_AND_C, "CV,CN(Cc)", MATCH_C_FSWSP, MASK_C_FSWSP, match_opcode,     INSN_ALIAS|INSN_DREF|INSN_8_BYTE},
+{"sy",        32, INSN_CLASS_RVY_AND_C, "Ct,Cl(Cs)", MATCH_C_FSW,   MASK_C_FSW,   match_opcode,     INSN_ALIAS|INSN_DREF|INSN_8_BYTE},
+{"sy",        64, INSN_CLASS_RVY_AND_C, "CV,CQ(Cc)", MATCH_C_FSDSP, MASK_C_FSDSP, match_opcode,     INSN_ALIAS|INSN_DREF|INSN_16_BYTE},
+{"sy",        64, INSN_CLASS_RVY_AND_C, "Ct,Cy(Cs)", MATCH_C_FSD,   MASK_C_FSD,   match_opcode,     INSN_ALIAS|INSN_DREF|INSN_16_BYTE},
+
 {"clc",         32, INSN_CLASS_XCHERI, "XCd,o(XCs)", MATCH_LD, MASK_LD, match_opcode, INSN_DREF|INSN_8_BYTE},
 {"clc",         64, INSN_CLASS_XCHERI, "XCd,o(XCs)", MATCH_LQ, MASK_LQ, match_opcode, INSN_DREF|INSN_16_BYTE},
 {"clc",       32, INSN_CLASS_XCHERI_AND_C,   "XCd,Cm(XCCc)",  MATCH_C_FLWSP, MASK_C_FLWSP, match_opcode, INSN_ALIAS|INSN_DREF|INSN_8_BYTE },
@@ -2672,6 +2686,14 @@ const struct riscv_opcode riscv_capmode_opcodes[] =
 {"c.cld",     64, INSN_CLASS_XCHERI_AND_C,   "Ct,Cl(XCCs)", MATCH_C_LD, MASK_C_LD, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"c.csdsp",   64, INSN_CLASS_XCHERI_AND_C,   "CV,CN(XCCc)", MATCH_C_SDSP, MASK_C_SDSP, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"c.csd",     64, INSN_CLASS_XCHERI_AND_C,   "Ct,Cl(XCCs)", MATCH_C_SD, MASK_C_SD, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"c.lysp",   64, INSN_CLASS_RVY_AND_C, "d,Cq(Cc)",  MATCH_C_FLDSP, MASK_C_FLDSP, match_rd_nonzero, INSN_DREF|INSN_16_BYTE },
+{"c.lysp",   32, INSN_CLASS_RVY_AND_C, "d,Cn(Cc)",  MATCH_C_FLWSP, MASK_C_FLWSP, match_rd_nonzero, INSN_DREF|INSN_8_BYTE },
+{"c.ly",     64, INSN_CLASS_RVY_AND_C, "Ct,Cy(Cs)", MATCH_C_FLD, MASK_C_FLD, match_opcode, INSN_DREF|INSN_16_BYTE },
+{"c.ly",     32, INSN_CLASS_RVY_AND_C, "Ct,Cl(Cs)", MATCH_C_FLW, MASK_C_FLW, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"c.sysp",   64, INSN_CLASS_RVY_AND_C, "CV,CQ(Cc)", MATCH_C_FSDSP, MASK_C_FSDSP, match_opcode, INSN_DREF|INSN_16_BYTE },
+{"c.sysp",   32, INSN_CLASS_RVY_AND_C, "CV,CN(Cc)", MATCH_C_FSWSP, MASK_C_FSWSP, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"c.sy",     64, INSN_CLASS_RVY_AND_C, "Ct,Cy(Cs)", MATCH_C_FSD, MASK_C_FSD, match_opcode, INSN_DREF|INSN_16_BYTE },
+{"c.sy",     32, INSN_CLASS_RVY_AND_C, "Ct,Cl(Cs)", MATCH_C_FSW,   MASK_C_FSW,   match_opcode,     INSN_DREF|INSN_8_BYTE },
 {"c.clcsp",   64, INSN_CLASS_XCHERI_AND_C,   "XCd,Cn(XCCc)",  MATCH_C_FLDSP, MASK_C_FLDSP, match_opcode, INSN_DREF|INSN_16_BYTE },
 {"c.clcsp",   32, INSN_CLASS_XCHERI_AND_C,   "XCd,Cm(XCCc)",  MATCH_C_FLWSP, MASK_C_FLWSP, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"c.clc",     64, INSN_CLASS_XCHERI_AND_C,   "XCCt,Cl(XCCs)", MATCH_C_FLD, MASK_C_FLD, match_opcode, INSN_DREF|INSN_16_BYTE },

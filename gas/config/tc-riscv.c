@@ -1317,15 +1317,18 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'L': used_bits |= ENCODE_CITYPE_ADDI16SP_IMM (-1U); break;
 	    case 'm': used_bits |= ENCODE_CITYPE_LWSP_IMM (-1U); break;
 	    case 'n': used_bits |= ENCODE_CITYPE_LDSP_IMM (-1U); break;
+	    case 'q': used_bits |= ENCODE_CITYPE_LYSP64_IMM (-1U); break;
 	    case '6': used_bits |= ENCODE_CSSTYPE_IMM (-1U); break;
 	    case 'M': used_bits |= ENCODE_CSSTYPE_SWSP_IMM (-1U); break;
 	    case 'N': used_bits |= ENCODE_CSSTYPE_SDSP_IMM (-1U); break;
+	    case 'Q': used_bits |= ENCODE_CSSTYPE_SYSP64_IMM (-1U); break;
 	    case '8': used_bits |= ENCODE_CIWTYPE_IMM (-1U); break;
 	    case 'K': used_bits |= ENCODE_CIWTYPE_ADDI4SPN_IMM (-1U); break;
 	    /* CLTYPE and CSTYPE have the same immediate encoding.  */
 	    case '5': used_bits |= ENCODE_CLTYPE_IMM (-1U); break;
 	    case 'k': used_bits |= ENCODE_CLTYPE_LW_IMM (-1U); break;
 	    case 'l': used_bits |= ENCODE_CLTYPE_LD_IMM (-1U); break;
+	    case 'y': used_bits |= ENCODE_CLTYPE_LY64_IMM (-1U); break;
 	    case 'p': used_bits |= ENCODE_CBTYPE_IMM (-1U); break;
 	    case 'a': used_bits |= ENCODE_CJTYPE_IMM (-1U); break;
 	    case 'F': /* Compressed funct for .insn directive.  */
@@ -2835,6 +2838,15 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  ip->insn_opcode |= ENCODE_CLTYPE_LD_IMM (imm_expr->X_add_number);
 		  goto rvc_imm_done;
+		case 'y':
+		  if (riscv_handle_implicit_zero_offset (imm_expr, asarg))
+		    continue;
+		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+		      || imm_expr->X_op != O_constant
+		      || !VALID_CLTYPE_LY64_IMM ((valueT) imm_expr->X_add_number))
+		    break;
+		  ip->insn_opcode |= ENCODE_CLTYPE_LY64_IMM (imm_expr->X_add_number);
+		  goto rvc_imm_done;
 		case 'm':
 		  if (riscv_handle_implicit_zero_offset (imm_expr, asarg))
 		    continue;
@@ -2854,6 +2866,16 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  ip->insn_opcode |=
 		    ENCODE_CITYPE_LDSP_IMM (imm_expr->X_add_number);
+		  goto rvc_imm_done;
+		case 'q':
+		  if (riscv_handle_implicit_zero_offset (imm_expr, asarg))
+		    continue;
+		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+		      || imm_expr->X_op != O_constant
+		      || !VALID_CITYPE_LYSP64_IMM ((valueT) imm_expr->X_add_number))
+		    break;
+		  ip->insn_opcode |=
+		    ENCODE_CITYPE_LYSP64_IMM (imm_expr->X_add_number);
 		  goto rvc_imm_done;
 		case 'o':
 		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
@@ -2901,6 +2923,16 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  ip->insn_opcode |=
 		    ENCODE_CSSTYPE_SDSP_IMM (imm_expr->X_add_number);
+		  goto rvc_imm_done;
+		case 'Q':
+		  if (riscv_handle_implicit_zero_offset (imm_expr, asarg))
+		    continue;
+		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+		      || imm_expr->X_op != O_constant
+		      || !VALID_CSSTYPE_SYSP64_IMM ((valueT) imm_expr->X_add_number))
+		    break;
+		  ip->insn_opcode |=
+		    ENCODE_CSSTYPE_SYSP64_IMM (imm_expr->X_add_number);
 		  goto rvc_imm_done;
 		case 'u':
 		  p = percent_op_utype;
@@ -3579,16 +3611,12 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		{
 		case 'b': /* 'Yb': YBDSNWI immediate */
 		  {
-		    int encoded = 0;
-		    if (imm_expr->X_op == O_constant)
+		    int encoded = riscv_encode_ybndsw_imm (imm_expr->X_add_number);
+		    if (encoded < 0)
 		      {
-			encoded = riscv_encode_ybndsw_imm (imm_expr->X_add_number);
-			if (encoded < 0)
-			  {
-			    as_bad (_("improper immediate value (%"PRIu64")"),
-				    imm_expr->X_add_number);
-			    break;
-			  }
+			as_bad (_("improper immediate value (%"PRIu64")"),
+				imm_expr->X_add_number);
+			break;
 		      }
 		    INSERT_OPERAND (YBNDSWIMM, *ip, encoded);
 		  }
@@ -3596,8 +3624,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  continue;
 
 		case 's': /* 'Ys': SRLIY immediate */
-		  if (imm_expr->X_op == O_constant
-		      && (unsigned long) imm_expr->X_add_number != xlen)
+		  if ((unsigned long) imm_expr->X_add_number != xlen)
 		    {
 		      as_bad (_("improper shift amount (%"PRIu64")"),
 			      imm_expr->X_add_number);

@@ -26,5 +26,9 @@
 .*:13: Error: improper immediate value \(4097\)
 .*:13: Error: illegal operands .*
 .*:14: Error: instruction srliy requires absolute expression
+.*:14: Error: improper shift amount \(0\)
+.*:14: Error: illegal operands .*
 .*:15: Error: instruction ybndswi requires absolute expression
+.*:15: Error: improper immediate value \(0\)
+.*:15: Error: illegal operands .*
 

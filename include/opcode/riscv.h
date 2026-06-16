@@ -92,6 +92,22 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   ((RV_X(x, 6, 1) << 2) | (RV_X(x, 10, 3) << 3) | (RV_X(x, 5, 1) << 6))
 #define EXTRACT_CLTYPE_LD_IMM(x) \
   ((RV_X(x, 10, 3) << 3) | (RV_X(x, 5, 2) << 6))
+#define EXTRACT_CLTYPE_LY64_IMM(x) \
+  (EXTRACT_CLTYPE_LD_IMM(x) << 1)
+#define ENCODE_CLTYPE_LY64_IMM(x) \
+  ENCODE_CLTYPE_LD_IMM((x) >> 1)
+#define EXTRACT_CLTYPE_SY64_IMM(x) \
+  EXTRACT_CLTYPE_LY64_IMM(x)
+#define ENCODE_CLTYPE_SY64_IMM(x) \
+  ENCODE_CLTYPE_LY64_IMM(x)
+#define EXTRACT_CITYPE_LYSP64_IMM(x) \
+  (EXTRACT_CITYPE_LDSP_IMM(x) << 1)
+#define ENCODE_CITYPE_LYSP64_IMM(x) \
+  ENCODE_CITYPE_LDSP_IMM((x) >> 1)
+#define EXTRACT_CSSTYPE_SYSP64_IMM(x) \
+  (EXTRACT_CSSTYPE_SDSP_IMM(x) << 1)
+#define ENCODE_CSSTYPE_SYSP64_IMM(x) \
+  ENCODE_CSSTYPE_SDSP_IMM((x) >> 1)
 #define EXTRACT_CBTYPE_IMM(x) \
   ((RV_X(x, 3, 2) << 1) | (RV_X(x, 10, 2) << 3) | (RV_X(x, 2, 1) << 5) | (RV_X(x, 5, 2) << 6) | (-RV_X(x, 12, 1) << 8))
 #define EXTRACT_CJTYPE_IMM(x) \
@@ -184,6 +200,9 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define VALID_CLTYPE_IMM(x) (EXTRACT_CLTYPE_IMM(ENCODE_CLTYPE_IMM(x)) == (x))
 #define VALID_CLTYPE_LW_IMM(x) (EXTRACT_CLTYPE_LW_IMM(ENCODE_CLTYPE_LW_IMM(x)) == (x))
 #define VALID_CLTYPE_LD_IMM(x) (EXTRACT_CLTYPE_LD_IMM(ENCODE_CLTYPE_LD_IMM(x)) == (x))
+#define VALID_CLTYPE_LY64_IMM(x) (((x) & 15) == 0 && VALID_CLTYPE_LD_IMM((x) >> 1))
+#define VALID_CITYPE_LYSP64_IMM(x) (((x) & 15) == 0 && VALID_CITYPE_LDSP_IMM((x) >> 1))
+#define VALID_CSSTYPE_SYSP64_IMM(x) (((x) & 15) == 0 && VALID_CSSTYPE_SDSP_IMM((x) >> 1))
 #define VALID_CBTYPE_IMM(x) (EXTRACT_CBTYPE_IMM(ENCODE_CBTYPE_IMM(x)) == (x))
 #define VALID_CJTYPE_IMM(x) (EXTRACT_CJTYPE_IMM(ENCODE_CJTYPE_IMM(x)) == (x))
 #define VALID_RVV_VB_IMM(x) (EXTRACT_RVV_VB_IMM(ENCODE_RVV_VB_IMM(x)) == (x))
@@ -478,6 +497,7 @@ enum riscv_insn_class
   INSN_CLASS_RVY,
   INSN_CLASS_RVY_AND_ZBA,
   INSN_CLASS_RVY_AND_A,
+  INSN_CLASS_RVY_AND_C,
 };
 
 /* This structure holds information for a particular instruction.  */

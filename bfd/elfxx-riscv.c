@@ -2606,6 +2606,10 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
     case INSN_CLASS_RVY_AND_A:
       return (riscv_subset_supports (rps, "y")
 	      && riscv_subset_supports (rps, "a"));
+    case INSN_CLASS_RVY_AND_C:
+      return (riscv_subset_supports (rps, "y")
+	      && (riscv_subset_supports (rps, "c")
+		  || riscv_subset_supports (rps, "zca")));
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -2881,6 +2885,17 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
 	return "y";
       else
 	return "a";
+    case INSN_CLASS_RVY_AND_C:
+      if (!riscv_subset_supports (rps, "y"))
+	{
+	  if (!riscv_subset_supports (rps, "c")
+	      && !riscv_subset_supports (rps, "zca"))
+	    return _("y' and `c', or `y' and `zca'");
+	  else
+	    return "y";
+	}
+      else
+	return _("c' or `zca");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

@@ -283,6 +283,10 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	      print (info->stream, dis_style_address_offset, "%d",
 		     (int)EXTRACT_CLTYPE_LD_IMM (l));
 	      break;
+	    case 'y':
+	      print (info->stream, dis_style_address_offset, "%d",
+		     (int)EXTRACT_CLTYPE_LY64_IMM (l));
+	      break;
 	    case 'm':
 	      print (info->stream, dis_style_address_offset, "%d",
 		     (int)EXTRACT_CITYPE_LWSP_IMM (l));
@@ -290,6 +294,10 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	    case 'n':
 	      print (info->stream, dis_style_address_offset, "%d",
 		     (int)EXTRACT_CITYPE_LDSP_IMM (l));
+	      break;
+	    case 'q':
+	      print (info->stream, dis_style_address_offset, "%d",
+		     (int)EXTRACT_CITYPE_LYSP64_IMM (l));
 	      break;
 	    case 'K':
 	      print (info->stream, dis_style_immediate, "%d",
@@ -306,6 +314,10 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	    case 'N':
 	      print (info->stream, dis_style_address_offset, "%d",
 		     (int)EXTRACT_CSSTYPE_SDSP_IMM (l));
+	      break;
+	    case 'Q':
+	      print (info->stream, dis_style_address_offset, "%d",
+		     (int)EXTRACT_CSSTYPE_SYSP64_IMM (l));
 	      break;
 	    case 'p':
 	      info->target = EXTRACT_CBTYPE_IMM (l) + pc;
